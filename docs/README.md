@@ -14,6 +14,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`design/BRAND-ASSETS-PENDING.md`](design/BRAND-ASSETS-PENDING.md) | Open dependency — transparent/vector logo, horizontal lock-up, monochrome version. | **Yes** |
 | [`design/STUDENT-DATA-POLICY.md`](design/STUDENT-DATA-POLICY.md) | How we publish student information: consent-gated, conservative by default. | **Yes** |
 | [`PHASE-3-REPORT.md`](PHASE-3-REPORT.md) | Phase 3 completion report, verification evidence, and the open budget decision. | **Yes** |
+| [`PHASE-4-REPORT.md`](PHASE-4-REPORT.md) | Phase 4 completion report — data layer, enquiry pipeline, consent constraints. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

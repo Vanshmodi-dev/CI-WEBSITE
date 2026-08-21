@@ -1,0 +1,274 @@
+// Commerce Insight — data model
+// =============================================================================
+// Master Plan §11. Deliberately small: only content that genuinely changes on a
+// cadence, or that must be captured, gets a table.
+//
+// NOT IN HERE, ON PURPOSE:
+//   - Reviews  → the TP Reviews Engine payload is the source of truth (§13).
+//                Copying reviews here would fork it and bypass its publish gate.
+//   - Videos   → YouTube is already the database (§14).
+//   - Courses  → design-bearing long-form content; lives in the repo (§11).
+//   - Faculty  → same, and version control is the right audit trail for
+//                credential claims.
+//   - NAP      → src/config/institute.ts is the single source of truth (§17).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// ENQUIRIES — the only table that is unambiguously required.
+// =============================================================================
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  ENROLLED
+  CLOSED
+  SPAM
+}
+
+enum ClassLevel {
+  CLASS_11
+  CLASS_12
+  CA_FOUNDATION
+  CA_INTERMEDIATE
+  CMA
+  OTHER
+}
+
+/// A lead from the public enquiry form.
+///
+/// PRIVACY: we store what is needed to call the person back, and nothing else.
+/// The raw IP address is never persisted — `ipHash` is an HMAC-SHA256 keyed
+/// with a server secret, which supports rate limiting and abuse investigation
+/// without retaining an identifier we do not need.
+model Enquiry {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ---- what the visitor submitted --------------------------------------
+  name       String     @db.VarChar(80)
+  /// Normalised to digits with a country code, e.g. "919509017150".
+  phone      String     @db.VarChar(20)
+  email      String?    @db.VarChar(160)
+  classLevel ClassLevel
+  /// Slug of the course the enquiry came from, when it came from one.
+  courseSlug String?    @db.VarChar(64)
+  message    String?    @db.VarChar(2000)
+
+  // ---- attribution and handling ----------------------------------------
+  /// Path only — never a full URL with query string, which could carry PII.
+  sourcePage String        @db.VarChar(200)
+  status     EnquiryStatus @default(NEW)
+  /// Internal follow-up notes, written by staff in the admin (Phase 5).
+  notes      String?       @db.VarChar(2000)
+
+  // ---- consent and abuse control ---------------------------------------
+  /// When the visitor submitted the form with the consent line displayed.
+  consentAt DateTime
+  /// HMAC-SHA256 of the client IP. NEVER the raw address.
+  ipHash    String   @db.Char(64)
+
+  // Rate limiting reads (ipHash, createdAt); the admin list reads
+  // (status, createdAt); duplicate detection reads (phone, createdAt).
+  @@index([ipHash, createdAt])
+  @@index([status, createdAt])
+  @@index([phone, createdAt])
+  @@map("enquiries")
+}
+
+// =============================================================================
+// STUDENT DATA — consent-gated. See docs/design/STUDENT-DATA-POLICY.md.
+//
+// Publication is assumed NOT authorised until a specific record says otherwise.
+// `published` defaults to false everywhere, `displayNameMode` defaults to the
+// most private option, and database CHECK constraints (added in the migration)
+// make an unconsented published row impossible rather than merely discouraged.
+// =============================================================================
+
+/// What the institute is authorised to show. The UI renders the narrowest
+/// grant the record supports.
+enum ConsentScope {
+  /// Score, programme, year. No name, no photo.
+  RESULT_ONLY
+  /// Plus a partial name — "Priya G." or first name only.
+  RESULT_PARTIAL_NAME
+  /// Plus the full name. Still no photograph.
+  RESULT_FULL_NAME
+  /// Plus a photograph. The fullest grant.
+  RESULT_NAME_PHOTO
+  /// An extended narrative quoting the student. Always authorised separately.
+  STORY
+}
+
+enum DisplayNameMode {
+  INITIALS
+  FIRST_NAME_ONLY
+  FULL
+}
+
+enum Programme {
+  CLASS_11
+  CLASS_12
+  CA_FOUNDATION
+  CA_INTERMEDIATE
+  CMA
+}
+
+enum Board {
+  CBSE
+  RBSE
+  ICAI
+  OTHER
+}
+
+/// A highlighted achiever. Shown on the homepage band and /results.
+model Topper {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Stored in full; what is DISPLAYED is governed by displayNameMode and
+  /// consentScope, never by this field alone.
+  studentName     String          @db.VarChar(120)
+  displayNameMode DisplayNameMode @default(INITIALS)
+  photoUrl        String?         @db.VarChar(500)
+
+  score     Decimal   @db.Decimal(6, 2)
+  /// "percent" or "marks".
+  scoreUnit String    @db.VarChar(16)
+  programme Programme
+  board     Board?
+  year      Int
+  highlight String?   @db.VarChar(160)
+
+  subjectScores SubjectScore[]
+
+  // ---- publication control ---------------------------------------------
+  /// Reference to the signed authorisation the institute holds on file.
+  /// A published row cannot have this null — enforced by CHECK constraint.
+  consentRef   String?       @db.VarChar(200)
+  consentScope ConsentScope?
+  published    Boolean       @default(false)
+  publishedAt  DateTime?
+  sortOrder    Int           @default(0)
+
+  @@index([published, year])
+  @@index([programme, year])
+  @@map("toppers")
+}
+
+/// One line of the full results table behind the toppers band.
+model SubjectScore {
+  id       String @id @default(cuid())
+  topperId String
+  topper   Topper @relation(fields: [topperId], references: [id], onDelete: Cascade)
+
+  subject String  @db.VarChar(60)
+  score   Decimal @db.Decimal(6, 2)
+
+  @@index([topperId])
+  @@map("subject_scores")
+}
+
+/// A single result. Bulk-entered each results season.
+model ResultRecord {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  studentName     String          @db.VarChar(120)
+  displayNameMode DisplayNameMode @default(INITIALS)
+
+  score     Decimal   @db.Decimal(6, 2)
+  scoreUnit String    @db.VarChar(16)
+  programme Programme
+  board     Board?
+  year      Int
+
+  consentRef   String?       @db.VarChar(200)
+  consentScope ConsentScope?
+  published    Boolean       @default(false)
+  publishedAt  DateTime?
+
+  @@index([published, year])
+  @@index([programme, year, published])
+  @@map("result_records")
+}
+
+/// Owned editorial content — deeper than a Google review (Master Plan §18).
+model StudentStory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slug            String          @unique @db.VarChar(120)
+  studentName     String          @db.VarChar(120)
+  displayNameMode DisplayNameMode @default(INITIALS)
+  photoUrl        String?         @db.VarChar(500)
+
+  programme Programme
+  year      Int
+
+  challenge String @db.VarChar(2000)
+  journey   String @db.VarChar(4000)
+  outcome   String @db.VarChar(2000)
+  quote     String? @db.VarChar(600)
+
+  consentRef   String?       @db.VarChar(200)
+  consentScope ConsentScope?
+  published    Boolean       @default(false)
+  publishedAt  DateTime?
+
+  @@index([published, year])
+  @@map("student_stories")
+}
+
+// =============================================================================
+// ANNOUNCEMENTS AND BATCHES
+// Both exist to kill the class of bug found in the old site: a date hardcoded
+// into a component that silently went stale (Master Plan §00).
+// =============================================================================
+
+/// A time-boxed notice. The validity window means a stale notice removes
+/// itself rather than advertising a batch that started two months ago.
+model Announcement {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  message   String    @db.VarChar(300)
+  href      String?   @db.VarChar(300)
+  startsAt  DateTime
+  endsAt    DateTime
+  priority  Int       @default(0)
+  published Boolean   @default(false)
+
+  @@index([published, startsAt, endsAt])
+  @@map("announcements")
+}
+
+/// Upcoming batch for a course. Course pages read the next published batch,
+/// or show nothing at all.
+model Batch {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courseSlug String   @db.VarChar(64)
+  startsAt   DateTime
+  /// "Offline", "Online live", "Offline + online live".
+  mode       String   @db.VarChar(60)
+  seatsNote  String?  @db.VarChar(120)
+  published  Boolean  @default(false)
+
+  @@index([courseSlug, published, startsAt])
+  @@map("batches")
+}

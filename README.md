@@ -57,7 +57,8 @@ Master file: [`assets/brand/commerce-insight-logo-master.jpg`](assets/brand/comm
 git clone https://github.com/Vanshmodi-dev/CI-WEBSITE.git
 cd CI-WEBSITE
 npm ci
-cp .env.example .env.local
+cp .env.example .env.local   # set DATABASE_URL and ENQUIRY_SECRET
+npm run db:generate
 npm run dev
 ```
 
@@ -67,7 +68,9 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm run verify` | typecheck + lint + build |
+| `npm test` | Unit tests (Node's built-in runner) |
+| `npm run verify` | typecheck + lint + test + build |
+| `npm run db:migrate` | Apply migrations (needs `DATABASE_URL`) |
 
 > The site is **pre-launch**: `robots.ts` disallows all crawling and the root
 > metadata sets `noindex`. Both are flipped in Phase 7.
@@ -80,8 +83,8 @@ npm run dev
 | 1 | Content collection | ○ blocked on client — Master Plan §22 |
 | 2 | Design system | ● done — awaiting sign-off |
 | 3 | Foundation build | ● done — see [docs/PHASE-3-REPORT.md](docs/PHASE-3-REPORT.md) |
-| 4 | Core pages + enquiry | ○ next |
-| 5 | Evidence + integrations | ○ |
+| 4 | Core pages + enquiry | ● done — see [docs/PHASE-4-REPORT.md](docs/PHASE-4-REPORT.md) |
+| 5 | Evidence + integrations | ○ next |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |
 

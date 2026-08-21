@@ -56,3 +56,7 @@ __pycache__/
 *.pyc
 venv/
 .venv/
+
+# prisma - generated client. Recreated by the postinstall script, so it is
+# never stale and never pollutes a diff.
+/src/generated/
