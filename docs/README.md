@@ -1,0 +1,64 @@
+# Commerce Insight — project documents
+
+TradyPerch · Client project #1 · Started August 2026
+
+## What's here
+
+| Document | What it is | Editable? |
+| --- | --- | --- |
+| [`brief/01-master-directive.md`](brief/01-master-directive.md) | The formal build directive — vision, quality bar, architecture, design direction, content-integrity rules. | Source doc — preserve verbatim |
+| [`brief/02-vision-brief.md`](brief/02-vision-brief.md) | The vision / wish-list. Page-by-page picture of what the site should feel like. | Source doc — preserve verbatim |
+| [`MASTER-PLAN.html`](MASTER-PLAN.html) | The plan we actually build from. Answers the brief in 25 sections, with the audit findings that override parts of it. | **Yes — this is the living document** |
+| [`design/DESIGN-TOKENS.md`](design/DESIGN-TOKENS.md) | Phase 2 output. Brand colours sampled from the logo, every pairing verified against WCAG AA. | **Yes** |
+| [`design/tokens.css`](design/tokens.css) | The 80 tokens as shippable CSS. Consumed by the app in Phase 3. | **Yes** |
+
+**Source docs describe what we want. The Master Plan describes what we do.**
+When they disagree, the Master Plan says why. Don't edit the source docs to
+match decisions — that erases the reasoning.
+
+Published Master Plan (private, shareable): https://claude.ai/code/artifact/55bddc43-c746-4d1a-a97d-5f6f7d02390d
+Republish by writing to `docs/MASTER-PLAN.html` — same URL.
+
+## Where the vision brief and the Master Plan differ
+
+Both agree on almost everything: the positioning, the mobile-first stance, the
+tech stack, the design taste, the anti-template rules, and the "connected
+ecosystem, not a brochure" idea. Four places where the plan deliberately
+diverges, each argued in the section named:
+
+| Topic | Vision brief | Master Plan | § |
+| --- | --- | --- | --- |
+| Page count | ~14 top-level areas, incl. `/toppers`, `/students`, `/resources` | 9 — toppers merged into `/results`, `/resources` deferred until content exists | 01 |
+| Admin panel | All 9 content types | 5 that actually change; courses/faculty/gallery stay in code | 12 |
+| Reviews data flow | Engine → Database → Website | Engine → payload → Website (the engine *is* the backend) | 13 |
+| "95%+ Success Rate" | In the trust bar | Dropped — no standard definition, invites challenge. Replaced with the live Google rating. | 03 |
+
+## ✅ Resolved — brand colour
+
+*Was an open conflict. The logo arrived 21 Aug 2026 and settled it.*
+
+The two source docs proposed different palettes — the master directive said
+deep blue + white + orange from the logo; the vision brief said navy/charcoal +
+**gold/amber**. Both deferred to the logo, and the logo is unambiguous:
+
+| | Sampled from the mark | Share |
+| --- | --- | ---: |
+| Navy | `#002D66` | 7.63% |
+| Orange | `#EA853F` | 1.32% |
+| White | `#FFFFFF` | 81.64% |
+
+**Blue + white + orange. There is no gold in the mark.** The gold direction was
+almost certainly carried over from the old Lovable site's navy/gold/crimson
+palette — the AI builder's invention, never Commerce Insight's brand.
+
+Full derivation, the AA contrast evidence, and the one constraint this creates
+(the logo orange fails AA as text on white, 2.65:1) are in
+[`design/DESIGN-TOKENS.md`](design/DESIGN-TOKENS.md).
+
+## Standing rule
+
+Nothing reaches the website that the institute hasn't confirmed in writing.
+Both source docs contain illustrative placeholder numbers (`5000+ Students`,
+`4.9★`, `Rahul Sharma 98.6%`). They are examples of *shape*. The previous site
+shipped invented toppers and testimonials as if they were real — see Master Plan
+§00. That is the failure this project exists to correct.

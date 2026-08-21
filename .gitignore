@@ -1,0 +1,58 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/versions
+
+# next.js
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# production
+*.tsbuildinfo
+
+# env — NEVER commit these (Master Plan §19)
+.env
+.env.*
+!.env.example
+
+# database
+prisma/*.db
+prisma/*.db-journal
+
+# testing / reports
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+.lighthouseci/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# vercel
+.vercel
+
+# python (used only for brand-colour tooling)
+__pycache__/
+*.pyc
+venv/
+.venv/

@@ -1,0 +1,197 @@
+/* ============================================================================
+   COMMERCE INSIGHT — DESIGN TOKENS
+   ----------------------------------------------------------------------------
+   Source of truth: assets/brand/commerce-insight-logo-master.jpg
+   Brand colours are SAMPLED from that file, not chosen:
+     navy   #002D66   7.63% of logo pixels
+     orange #EA853F   1.32% of logo pixels
+     white  #FFFFFF  81.64% of logo pixels
+
+   Every pairing shipped below is verified against WCAG 2.2 AA.
+   See docs/design/DESIGN-TOKENS.md for the contrast evidence table.
+
+   ⚠ THE ONE RULE THAT MATTERS
+   --accent (#EA853F, the true logo orange) scores 2.65:1 on white.
+   That FAILS AA for text at any size. It is a FILL colour — rules, arcs,
+   indicators, badges, icons. For orange TEXT on a light ground use
+   --accent-text (#BC5915, 4.59:1). This is enforced, not advisory.
+   ========================================================================== */
+
+:root {
+  /* ---- brand ramp · navy (h214 s100) ---------------------------------- */
+  --navy-950: #00142E;
+  --navy-900: #001D42;
+  --navy-800: #002D66;  /* ← THE LOGO NAVY */
+  --navy-700: #003D8A;
+  --navy-600: #0051B8;
+  --navy-500: #0065E6;
+  --navy-300: #529EFF;
+  --navy-100: #CCE2FF;
+  --navy-50:  #EBF4FF;
+
+  /* ---- brand ramp · orange (h25 s80) ---------------------------------- */
+  --accent-700: #A14C12;
+  --accent-600: #BC5915;  /* AA-safe orange for TEXT on light — 4.59:1 */
+  --accent-500: #EA853F;  /* ← THE LOGO ORANGE. Fills only. */
+  --accent-300: #F1AD7E;
+  --accent-100: #FAE2D1;
+  --accent-50:  #FCF0E8;
+
+  /* ---- neutrals · biased to the brand hue (h214 s22), never pure grey -- */
+  --ink-950: #0B0E11;
+  --ink-900: #181E25;
+  --ink-800: #242D38;
+  --ink-700: #384557;
+  --ink-600: #50637C;
+  --ink-500: #6A81A0;
+  --ink-400: #8FA1B7;
+  --ink-300: #BBC5D3;
+  --ink-200: #DDE2E9;
+  --ink-100: #EFF2F5;
+  --ink-50:  #F8F9FB;
+
+  /* ---- semantic · LIGHT (the complete palette lives here) -------------- */
+  --paper:        #FFFFFF;
+  --surface:      var(--ink-50);
+  --surface-2:    var(--ink-100);
+  --text:         var(--ink-900);
+  --text-muted:   var(--ink-600);
+  --text-heading: var(--navy-800);
+  --link:         var(--navy-600);
+  --link-hover:   var(--navy-700);
+  --rule:         var(--ink-200);
+  --rule-strong:  var(--ink-300);
+
+  --accent:       var(--accent-500);  /* fills / rules / indicators ONLY */
+  --accent-text:  var(--accent-600);  /* orange text + orange links      */
+  --accent-wash:  var(--accent-50);
+
+  /* brand band — white text on logo navy, 13.40:1 */
+  --band:            var(--navy-800);
+  --band-text:       #FFFFFF;
+  --band-text-muted: var(--navy-100);
+
+  /* status — separate from the accent hue, so they never compete */
+  --ok:      #1A6449;
+  --ok-bg:   #E6F2EC;
+  --warn:    #8A5A00;
+  --warn-bg: #FBF0DC;
+  --danger:  #A82A20;
+  --danger-bg:#FAECEA;
+
+  --focus: var(--navy-600);
+
+  /* ---- elevation · navy-tinted, never black --------------------------- */
+  --shadow-1: 0 1px 2px rgba(0,45,102,.07);
+  --shadow-2: 0 2px 4px rgba(0,45,102,.06), 0 8px 20px -10px rgba(0,45,102,.18);
+  --shadow-3: 0 4px 8px rgba(0,45,102,.07), 0 20px 40px -16px rgba(0,45,102,.24);
+
+  /* ---- radii — restrained. Heavy rounding reads as template. ---------- */
+  --r-sm: 4px;   /* inputs, badges */
+  --r-md: 8px;   /* cards          */
+  --r-lg: 12px;  /* modals         */
+  --r-full: 999px; /* avatars only */
+
+  /* ---- spacing · 4px base, restricted set ----------------------------- */
+  --s-1: 4px;   --s-2: 8px;   --s-3: 12px;  --s-4: 16px;
+  --s-6: 24px;  --s-8: 32px;  --s-12: 48px; --s-16: 64px;
+  --s-24: 96px; --s-32: 128px;
+
+  /* ---- typography ------------------------------------------------------
+     Source Serif 4 mirrors the logo's own serif wordmark.
+     IBM Plex Sans mirrors the tagline's humanist sans.
+     Both carry Devanagari cuts, so a Hindi surface needs no new family.   */
+  --font-display: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+
+  --measure: 68ch;
+
+  /* ---- motion — three effects, that is all ---------------------------- */
+  --ease: cubic-bezier(.2,.6,.3,1);
+  --dur-fast: 120ms;
+  --dur-base: 320ms;
+}
+
+/* ---- semantic · DARK -------------------------------------------------
+   Redefines ONLY the semantic tokens. The ramps above stay put.
+   Guarded so an explicit light choice beats a dark OS setting.          */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:        #0A121C;
+    --surface:      #111C2A;
+    --surface-2:    #182534;
+    --text:         #DCE6F4;
+    --text-muted:   #8FA0BA;
+    --text-heading: #7FB0FF;
+    --link:         #7FB0FF;
+    --link-hover:   #A8C8FF;
+    --rule:         #22303F;
+    --rule-strong:  #33455A;
+
+    --accent:       #EA853F;  /* 7.10:1 on dark ground — safe for text here */
+    --accent-text:  #F0995F;
+    --accent-wash:  #2A1C10;
+
+    --band:            #001D42;
+    --band-text:       #FFFFFF;
+    --band-text-muted: #A8C8FF;
+
+    --ok:      #7FCCA6;  --ok-bg:   #0F241B;
+    --warn:    #E0B25C;  --warn-bg: #241C0C;
+    --danger:  #F0958E;  --danger-bg:#2C1613;
+
+    --focus: #7FB0FF;
+
+    --shadow-1: 0 1px 2px rgba(0,0,0,.45);
+    --shadow-2: 0 2px 4px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.65);
+    --shadow-3: 0 4px 8px rgba(0,0,0,.45), 0 20px 40px -16px rgba(0,0,0,.7);
+  }
+}
+
+/* explicit dark choice wins in the other direction too */
+:root[data-theme="dark"] {
+  --paper:        #0A121C;
+  --surface:      #111C2A;
+  --surface-2:    #182534;
+  --text:         #DCE6F4;
+  --text-muted:   #8FA0BA;
+  --text-heading: #7FB0FF;
+  --link:         #7FB0FF;
+  --link-hover:   #A8C8FF;
+  --rule:         #22303F;
+  --rule-strong:  #33455A;
+
+  --accent:       #EA853F;
+  --accent-text:  #F0995F;
+  --accent-wash:  #2A1C10;
+
+  --band:            #001D42;
+  --band-text:       #FFFFFF;
+  --band-text-muted: #A8C8FF;
+
+  --ok:      #7FCCA6;  --ok-bg:   #0F241B;
+  --warn:    #E0B25C;  --warn-bg: #241C0C;
+  --danger:  #F0958E;  --danger-bg:#2C1613;
+
+  --focus: #7FB0FF;
+
+  --shadow-1: 0 1px 2px rgba(0,0,0,.45);
+  --shadow-2: 0 2px 4px rgba(0,0,0,.4), 0 8px 20px -10px rgba(0,0,0,.65);
+  --shadow-3: 0 4px 8px rgba(0,0,0,.45), 0 20px 40px -16px rgba(0,0,0,.7);
+}
+
+/* ---- type scale ------------------------------------------------------ */
+:root {
+  --t-display: 36px; --t-h1: 30px; --t-h2: 24px; --t-h3: 18px;
+  --t-body: 16px;    --t-small: 14px; --t-label: 11px;
+}
+@media (min-width: 1024px) {
+  :root {
+    --t-display: 60px; --t-h1: 44px; --t-h2: 32px; --t-h3: 20px;
+    --t-body: 17px;
+  }
+}
+
+/* Body text never below 16px on mobile: iOS Safari zooms on input focus
+   below that and the layout jumps. This is a functional floor, not taste. */

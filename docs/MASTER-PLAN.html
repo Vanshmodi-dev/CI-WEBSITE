@@ -1,0 +1,1163 @@
+<title>Commerce Insight Master Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --paper:#ffffff; --surface:#F3F6FB; --surface-2:#E7EEF8;
+  --ink:#111C2B; --muted:#576782; --rule:#DBE3EF;
+  --brand:#0A2A5E; --brand-mid:#1D5BBF; --brand-soft:#E9F0FC;
+  --accent:#C85E08; --accent-soft:#FBEEE1;
+  --flag:#A82A20; --flag-soft:#FAECEA;
+  --ok:#1A6449; --ok-soft:#E6F2EC;
+  --shadow:0 1px 2px rgba(10,42,94,.06),0 8px 24px -12px rgba(10,42,94,.18);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0A111B; --surface:#111A28; --surface-2:#182434;
+    --ink:#DEE7F4; --muted:#93A3BC; --rule:#243146;
+    --brand:#93B9F2; --brand-mid:#6FA0EA; --brand-soft:#14243A;
+    --accent:#EE9445; --accent-soft:#2B1C0F;
+    --flag:#F0958E; --flag-soft:#2C1613;
+    --ok:#7FCCA6; --ok-soft:#0F241B;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0A111B; --surface:#111A28; --surface-2:#182434;
+  --ink:#DEE7F4; --muted:#93A3BC; --rule:#243146;
+  --brand:#93B9F2; --brand-mid:#6FA0EA; --brand-soft:#14243A;
+  --accent:#EE9445; --accent-soft:#2B1C0F;
+  --flag:#F0958E; --flag-soft:#2C1613;
+  --ok:#7FCCA6; --ok-soft:#0F241B;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px; margin:0 auto; padding:0 24px}
+@media (min-width:1080px){
+  .layout{display:grid; grid-template-columns:246px minmax(0,1fr); gap:56px; align-items:start}
+}
+
+.masthead{border-bottom:1px solid var(--rule); padding:64px 0 40px; margin-bottom:48px}
+.kicker{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--accent); margin:0 0 18px;
+}
+.masthead h1{
+  font-family:"Source Serif 4",Georgia,serif; font-weight:700;
+  font-size:clamp(2.15rem,5.2vw,3.5rem); line-height:1.08; letter-spacing:-.02em;
+  color:var(--brand); margin:0 0 20px; text-wrap:balance; max-width:16ch;
+}
+.standfirst{font-size:1.115rem; line-height:1.65; color:var(--muted); max-width:62ch; margin:0}
+.meta{
+  display:flex; flex-wrap:wrap; gap:14px 34px; margin-top:34px; padding-top:22px;
+  border-top:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em; color:var(--muted);
+}
+.meta b{display:block; color:var(--ink); font-weight:500; letter-spacing:0; font-size:12.5px; margin-top:3px; font-family:"IBM Plex Sans",sans-serif}
+
+.toc{margin-bottom:56px}
+@media (min-width:1080px){
+  .toc{position:sticky; top:0; max-height:100vh; overflow-y:auto; padding:48px 0 40px; margin:0}
+}
+.toc-h{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600; letter-spacing:.15em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 6px;
+}
+.toc-note{font-size:12px; color:var(--muted); line-height:1.5; margin:0 0 18px; padding-bottom:16px; border-bottom:1px solid var(--rule); max-width:none}
+.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px}
+.toc li{margin:0; max-width:none}
+.toc a{
+  display:grid; grid-template-columns:26px 1fr; gap:8px; align-items:baseline;
+  text-decoration:none; color:var(--ink); font-size:13.2px; line-height:1.42;
+  padding:4px 8px 4px 4px; border-radius:4px;
+}
+.toc a:hover{background:var(--brand-soft); color:var(--brand-mid)}
+.toc a span{font-family:"IBM Plex Mono",monospace; font-size:10.5px; color:var(--muted); font-weight:500}
+.toc a.z span{color:var(--accent)}
+
+.sec{padding-top:8px; margin-bottom:64px; scroll-margin-top:24px}
+.sec-n{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; letter-spacing:.14em;
+  color:var(--accent); display:block; margin-bottom:9px;
+}
+h2{
+  font-family:"Source Serif 4",Georgia,serif; font-weight:700; font-size:clamp(1.5rem,3vw,1.95rem);
+  line-height:1.18; letter-spacing:-.015em; color:var(--brand); margin:0 0 8px; text-wrap:balance;
+}
+h3{
+  font-family:"IBM Plex Sans",sans-serif; font-weight:600; font-size:1.03rem; line-height:1.35;
+  color:var(--ink); margin:34px 0 10px; letter-spacing:-.005em;
+}
+h4{
+  font-family:"IBM Plex Mono",monospace; font-weight:600; font-size:11px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--muted); margin:26px 0 8px;
+}
+.dek{color:var(--muted); font-size:1.01rem; margin:0 0 22px; max-width:66ch; border-bottom:1px solid var(--rule); padding-bottom:18px}
+p{margin:0 0 15px; max-width:68ch}
+li{margin:0 0 7px; max-width:66ch}
+ul,ol{padding-left:20px; margin:0 0 16px}
+strong{font-weight:600; color:var(--ink)}
+a{color:var(--brand-mid)}
+code{
+  font-family:"IBM Plex Mono",monospace; font-size:.855em; background:var(--surface);
+  border:1px solid var(--rule); border-radius:3px; padding:.08em .34em; color:var(--ink);
+}
+
+.box{
+  border:1px solid var(--rule); border-left:3px solid var(--muted); background:var(--surface);
+  border-radius:0 6px 6px 0; padding:16px 20px; margin:20px 0; max-width:72ch;
+}
+.box p:last-child,.box ul:last-child,.box ol:last-child{margin-bottom:0}
+.box .lbl{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:600; letter-spacing:.14em;
+  text-transform:uppercase; display:block; margin-bottom:7px; color:var(--muted);
+}
+.box.flag{border-left-color:var(--flag); background:var(--flag-soft)}
+.box.flag .lbl{color:var(--flag)}
+.box.call{border-left-color:var(--brand-mid); background:var(--brand-soft)}
+.box.call .lbl{color:var(--brand-mid)}
+.box.need{border-left-color:var(--accent); background:var(--accent-soft)}
+.box.need .lbl{color:var(--accent)}
+.box.ok{border-left-color:var(--ok); background:var(--ok-soft)}
+.box.ok .lbl{color:var(--ok)}
+
+.tw{overflow-x:auto; margin:20px 0; border:1px solid var(--rule); border-radius:6px}
+table{border-collapse:collapse; width:100%; font-size:13.6px; min-width:540px}
+th,td{text-align:left; padding:9px 14px; border-bottom:1px solid var(--rule); vertical-align:top; line-height:1.5}
+th{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:600; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--muted); background:var(--surface); white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-variant-numeric:tabular-nums; white-space:nowrap}
+td code{font-size:.9em}
+.tag{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:600; letter-spacing:.08em;
+  text-transform:uppercase; padding:2px 7px; border-radius:3px; white-space:nowrap; display:inline-block;
+}
+.t-have{background:var(--ok-soft); color:var(--ok); border:1px solid var(--ok)}
+.t-need{background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent)}
+.t-risk{background:var(--flag-soft); color:var(--flag); border:1px solid var(--flag)}
+.t-code{background:var(--brand-soft); color:var(--brand-mid); border:1px solid var(--brand-mid)}
+
+pre{
+  font-family:"IBM Plex Mono",monospace; font-size:12.4px; line-height:1.62;
+  background:var(--surface); border:1px solid var(--rule); border-radius:6px;
+  padding:16px 18px; overflow-x:auto; margin:18px 0; color:var(--ink);
+}
+pre b{color:var(--brand-mid); font-weight:600}
+pre i{color:var(--muted); font-style:normal}
+
+.cards{display:grid; grid-template-columns:1fr; gap:14px; margin:26px 0 0}
+@media (min-width:640px){.cards{grid-template-columns:1fr 1fr}}
+.card{border:1px solid var(--rule); border-radius:8px; padding:16px 18px; background:var(--surface); box-shadow:var(--shadow)}
+.card .lbl{font-family:"IBM Plex Mono",monospace; font-size:10px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:8px}
+.card p{margin:0; font-size:13.9px; line-height:1.55; color:var(--ink); max-width:none}
+.card p+p{margin-top:8px; color:var(--muted); font-size:13.2px}
+
+.endnote{border-top:1px solid var(--rule); margin-top:20px; padding:28px 0 64px; color:var(--muted); font-size:13.5px}
+.endnote p{max-width:70ch}
+
+:focus-visible{outline:2px solid var(--brand-mid); outline-offset:2px; border-radius:3px}
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="kicker">TradyPerch &middot; Client Engagement &middot; Phases 1&ndash;5 Deliverable</p>
+  <h1>Commerce Insight Master Plan</h1>
+  <p class="standfirst">The strategy, architecture, and design system for rebuilding Commerce Insight's digital presence &mdash; written after auditing the existing site and the Review Engine, so these recommendations answer to what actually exists rather than to a template.</p>
+  <div class="meta">
+    <div>Prepared for<b>Commerce Insight &middot; Pratap Nagar, Jaipur</b></div>
+    <div>Date<b>21 August 2026</b></div>
+    <div>Status<b>Awaiting approval &mdash; no code written</b></div>
+    <div>Supersedes<b>commerce-insight-website (Lovable build)</b></div>
+  </div>
+</header>
+
+<div class="layout">
+
+<nav class="toc" aria-label="Contents">
+  <p class="toc-h">Contents</p>
+  <p class="toc-note">Sections 1&ndash;25 answer the brief's required deliverables in its order. Section 0 comes first because what it found changes several of them.</p>
+  <ol>
+    <li><a class="z" href="#s0"><span>00</span>What the audit found</a></li>
+    <li><a href="#s1"><span>01</span>Recommended sitemap</a></li>
+    <li><a href="#s2"><span>02</span>Page inventory</a></li>
+    <li><a href="#s3"><span>03</span>Homepage architecture</a></li>
+    <li><a href="#s4"><span>04</span>Page-by-page UX strategy</a></li>
+    <li><a href="#s5"><span>05</span>Student journeys</a></li>
+    <li><a href="#s6"><span>06</span>Parent journeys</a></li>
+    <li><a href="#s7"><span>07</span>Conversion strategy</a></li>
+    <li><a href="#s8"><span>08</span>Brand &amp; design direction</a></li>
+    <li><a href="#s9"><span>09</span>Design system</a></li>
+    <li><a href="#s10"><span>10</span>Component architecture</a></li>
+    <li><a href="#s11"><span>11</span>Data model</a></li>
+    <li><a href="#s12"><span>12</span>Admin architecture</a></li>
+    <li><a href="#s13"><span>13</span>Review Engine integration</a></li>
+    <li><a href="#s14"><span>14</span>YouTube integration</a></li>
+    <li><a href="#s15"><span>15</span>Location &amp; Maps</a></li>
+    <li><a href="#s16"><span>16</span>Enquiry &amp; lead system</a></li>
+    <li><a href="#s17"><span>17</span>SEO architecture</a></li>
+    <li><a href="#s18"><span>18</span>Performance</a></li>
+    <li><a href="#s19"><span>19</span>Security</a></li>
+    <li><a href="#s20"><span>20</span>Accessibility</a></li>
+    <li><a href="#s21"><span>21</span>Responsive strategy</a></li>
+    <li><a href="#s22"><span>22</span>Client inputs required</a></li>
+    <li><a href="#s23"><span>23</span>Development phases</a></li>
+    <li><a href="#s24"><span>24</span>Risks</a></li>
+    <li><a href="#s25"><span>25</span>Implementation roadmap</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<section class="sec" id="s0">
+  <span class="sec-n">SECTION 00</span>
+  <h2>What the audit found</h2>
+  <p class="dek">Before planning anything, I read the existing site and the Review Engine. Four findings change the shape of this project, and one of them is urgent.</p>
+
+  <div class="box flag">
+    <span class="lbl">Urgent &mdash; content integrity</span>
+    <p><strong>The current live site publishes fabricated evidence.</strong> The AI builder invented the proof that matters most:</p>
+    <ul>
+      <li><strong>Five toppers are fictional.</strong> Aarav Sharma 98.2%, Priya Gupta 97.6%, Rohan Mehta 97.0%, Sneha Jain 96.4%, Karan Verma 95.8% &mdash; generic names attached to generated portrait images hosted on the builder's CDN.</li>
+      <li><strong>Three testimonials are fictional</strong> &mdash; "Anushka G.", "Yash B.", "Riya K.", complete with invented scores and invented quotes.</li>
+      <li><strong>Faculty bios contain unverifiable claims</strong> &mdash; "students consistently break previous marks records", "known across Jaipur as&hellip;", plus invented nicknames ("The Concept King", "The Corporate Link") and a Ph.D. credential.</li>
+      <li><strong>The page title claims "Best CA &amp; Commerce Coaching in Jaipur"</strong> &mdash; a superlative with no substantiation.</li>
+    </ul>
+    <p>This is a live liability, not just a quality problem. A parent who recognises a stock face, or a competitor who checks a topper's name, damages the institute permanently. My recommendation is to <strong>take the fabricated sections down now</strong>, ahead of the rebuild, rather than waiting for launch. Section 22 lists what must replace them.</p>
+  </div>
+
+  <div class="box flag">
+    <span class="lbl">Live now &mdash; the site advertises an expired batch</span>
+    <p>The homepage is hardcoded with <code>BATCH_DATE = "21st June 2026"</code> and runs a scrolling banner reading <em>"NEW BATCH STARTS 21ST JUNE 2026 &mdash; Limited seats"</em>. That date passed two months ago. This is exactly the failure the new architecture must prevent: a fact that changes on a cadence was written into source code, so it silently went stale. Section 11 makes dates like this a database record with a validity window, and Section 12 gives the institute the ability to change it without a developer.</p>
+  </div>
+
+  <div class="box ok">
+    <span class="lbl">Good news &mdash; the reviews problem is already solved</span>
+    <p>The <code>tp-reviews-engine</code> is substantially more mature than the brief assumes. It is a complete, tested system (2,296 offline tests, 26 merged phases) that harvests Google reviews on a schedule, reconciles them against a private ledger, and publishes a small static JSON payload with a versioned public schema. It ships a <code>frontend/</code> integration kit including a Next.js App Router recipe that reaches <strong>zero client-side requests</strong>.</p>
+    <p><strong>This means the brief's proposed chain &mdash; Review Engine &rarr; Backend &rarr; Database &rarr; Website &mdash; has one hop too many.</strong> The engine <em>is</em> the backend. Copying reviews into our own Postgres would fork the source of truth and defeat the engine's publish gate. Section 13 sets out the corrected architecture.</p>
+  </div>
+
+  <div class="box need">
+    <span class="lbl">Blocked &mdash; the engine is not yet cleared for production</span>
+    <p>The Commerce Insight config exists as <code>clients/_commerce-insight.config.json</code> but is inert twice over: the leading underscore keeps it out of the registry, and <code>enabled</code> is <code>false</code>. Every identifying value is still a <code>REPLACE-</code> placeholder. Activating it needs client action, not developer action &mdash; see Sections 13 and 22.</p>
+  </div>
+
+  <h3>Facts carried over from the old site</h3>
+  <p>These were in the previous build. They look genuine, but given what else that build invented, <strong>every one needs re-confirmation in writing</strong> before it goes near the new site.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Fact</th><th>Value found</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Address</td><td>Near Pannadhay Circle, Pratap Nagar, Jaipur, Rajasthan &ndash; 302033</td><td>Must match the Google Business Profile character for character</td></tr>
+      <tr><td>Phone 1</td><td class="num">+91 95090 17150</td><td>Used as the WhatsApp number</td></tr>
+      <tr><td>Phone 2</td><td class="num">+91 96641 10109</td><td>Two numbers weakens local SEO &mdash; nominate one primary</td></tr>
+      <tr><td>Email</td><td><code>vanmogaming333@gmail.com</code></td><td><span class="tag t-risk">Blocker</span> A personal gaming handle. Unusable for an institute. Needs a domain mailbox.</td></tr>
+      <tr><td>Courses</td><td>Class XI, Class XII (CBSE/RBSE), CA Foundation, CA Intermediate, CMA Foundation &amp; Inter, XII+CAF combo</td><td>Broader than the brief's list, which omitted CA Inter and CMA</td></tr>
+      <tr><td>Faculty</td><td>Vishnu Sir (Accounts), Dr. Aniket Sir (Economics), CA Akhil Sir (Business Studies)</td><td>Names plausible; the bios around them were embellished</td></tr>
+      <tr><td>Branches</td><td class="num">1 &mdash; Pratap Nagar</td><td>Single-location local SEO strategy</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box call">
+    <span class="lbl">Note on the brief</span>
+    <p>The brief states the logo has been provided. <strong>No logo file is present in the project folder</strong> and none exists elsewhere on this machine. Section 8's colour direction is therefore built from the brief's written description of the logo (deep academic blue, white, orange accent, book / graduate / nib symbolism) and will be re-derived from the actual artwork the moment it arrives. The topper images in the old build are remote assets on the builder's CDN and will disappear when that project is deleted &mdash; they are not recoverable, and should not be recovered.</p>
+  </div>
+
+  <h3>The four decisions that shape everything after this</h3>
+  <div class="cards">
+    <div class="card">
+      <span class="lbl">Decision 01</span>
+      <p>Evidence is the product. Design is the delivery.</p>
+      <p>The site's persuasive power comes from real results, real faces, real reviews. Every section is designed to degrade honestly when the evidence isn't there yet, so we can launch before all of it arrives.</p>
+    </div>
+    <div class="card">
+      <span class="lbl">Decision 02</span>
+      <p>The Review Engine stays the source of truth for reviews.</p>
+      <p>We read its published payload server-side and render it in our own components. We never copy it into our database, and the visitor's browser never contacts Google.</p>
+    </div>
+    <div class="card">
+      <span class="lbl">Decision 03</span>
+      <p>Content that changes gets a database. Content that carries design stays in code.</p>
+      <p>Results, toppers, announcements and enquiries go to Postgres with an admin UI. Course and faculty pages stay typed content in the repo, because a generic CMS shape would flatten exactly the layouts that make this site feel bespoke.</p>
+    </div>
+    <div class="card">
+      <span class="lbl">Decision 04</span>
+      <p>WhatsApp is the primary conversion, not the form.</p>
+      <p>For a Jaipur institute reached from Instagram and Google on a phone, the realistic next step is a WhatsApp message. The form exists for parents who prefer it; the architecture captures both as leads.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="s1">
+  <span class="sec-n">SECTION 01</span>
+  <h2>Final recommended sitemap</h2>
+  <p class="dek">The brief proposed roughly fourteen top-level areas. I recommend nine. Thin pages hurt both trust and search rankings, and several of the proposed pages would launch nearly empty.</p>
+
+<pre>/                                  <i>Home</i>
+├── /about                         <i>Story, founder, philosophy, why CI</i>
+├── /courses                       <i>All programmes</i>
+│   ├── /courses/class-11-commerce
+│   ├── /courses/class-12-commerce
+│   ├── /courses/ca-foundation
+│   ├── /courses/ca-intermediate
+│   └── /courses/cma
+├── /results                       <i>Results + toppers + student stories</i>
+│   └── /results/[year]            <i>e.g. /results/2026</i>
+├── /faculty                       <i>All mentors</i>
+│   └── /faculty/[slug]            <i>Individual profile</i>
+├── /reviews                       <i>Google reviews, from the engine</i>
+├── /videos                        <i>YouTube library</i>
+├── /gallery                       <i>Institute life</i>
+├── /contact                       <i>NAP, map, directions, hours</i>
+└── /admissions                    <i>Enquiry + admission process</i>
+
+<b>Utility</b>
+/privacy · /terms · /sitemap.xml · /robots.txt · /opensearch
+/admin/*                          <i>Authenticated, noindex</i>
+
+<b>Deferred until content exists (Section 23, Phase 6)</b>
+/resources · /resources/[slug]     <i>Notes, exam updates, articles</i>
+</pre>
+
+  <h3>What I merged, and why</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Brief proposed</th><th>Recommendation</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>/results and /toppers as separate pages</td><td>Merge into <code>/results</code></td><td>A topper <em>is</em> a result. Splitting them halves the evidence on each page and creates two pages competing for the same search query. One page with a toppers band above a full results table is stronger on both counts.</td></tr>
+      <tr><td>/students, /students/testimonials, /students/stories, /reviews</td><td><code>/reviews</code> for Google reviews; student stories live as a band on <code>/results</code> and full stories at <code>/results#stories</code></td><td>The brief is right that owned stories and Google reviews are different things. But four pages of social proof is three too many when the institute currently has zero written stories ready. Stories earn their own route once there are five or more.</td></tr>
+      <tr><td>/youtube</td><td><code>/videos</code></td><td>Names the content, not the platform. Survives the institute later posting to Instagram, and reads as a library rather than a follow request.</td></tr>
+      <tr><td>/enquiry and /admission</td><td><code>/admissions</code></td><td>One page. The enquiry form is the bottom half of the admission process page &mdash; the reader wants the process before the form.</td></tr>
+      <tr><td>/resources</td><td>Deferred</td><td>An empty resources page is worse than no resources page: it signals abandonment to visitors and gets crawled as thin content. Build it when there are at least six items to put in it.</td></tr>
+      <tr><td>Announcements page</td><td>No page</td><td>Announcements are a homepage band and an admissions-page notice, driven by the same database record. A dedicated page for two announcements is not a page.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box call">
+    <span class="lbl">Navigation</span>
+    <p>Seven items in the primary bar &mdash; <strong>About &middot; Courses &middot; Results &middot; Faculty &middot; Reviews &middot; Videos &middot; Contact</strong> &mdash; plus a single visually distinct <strong>Enquire</strong> action. Courses is the only dropdown. Gallery lives inside the About menu and the footer, because it is a page people browse after they are already interested, not one they navigate to first.</p>
+  </div>
+</section>
+
+<section class="sec" id="s2">
+  <span class="sec-n">SECTION 02</span>
+  <h2>Complete page inventory</h2>
+  <p class="dek">Every route, its rendering strategy, its data source, and its single conversion goal. "Blocked" means the page cannot be built to a launchable standard until the client input in Section 22 arrives.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Route</th><th>Render</th><th>Data source</th><th>Primary goal</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>ISR 1h</td><td>Config + DB + engine payload + YouTube</td><td>Understand &amp; segment</td><td><span class="tag t-need">Needs evidence</span></td></tr>
+      <tr><td><code>/about</code></td><td>Static</td><td>MDX</td><td>Trust the people</td><td><span class="tag t-risk">Blocked &mdash; founder story</span></td></tr>
+      <tr><td><code>/courses</code></td><td>Static</td><td>Typed content</td><td>Choose a programme</td><td><span class="tag t-need">Needs fees/batches</span></td></tr>
+      <tr><td><code>/courses/[slug]</code> &times;5</td><td>Static</td><td>MDX + typed frontmatter</td><td>Enquire about this course</td><td><span class="tag t-need">Needs syllabus detail</span></td></tr>
+      <tr><td><code>/results</code></td><td>ISR 1h</td><td>Postgres</td><td>Believe the outcomes</td><td><span class="tag t-risk">Blocked &mdash; real results</span></td></tr>
+      <tr><td><code>/results/[year]</code></td><td>ISR 1h</td><td>Postgres</td><td>Believe the outcomes</td><td><span class="tag t-risk">Blocked</span></td></tr>
+      <tr><td><code>/faculty</code></td><td>Static</td><td>Typed content</td><td>Trust the teaching</td><td><span class="tag t-risk">Blocked &mdash; photos, real bios</span></td></tr>
+      <tr><td><code>/faculty/[slug]</code></td><td>Static</td><td>MDX</td><td>Trust one mentor</td><td><span class="tag t-risk">Blocked</span></td></tr>
+      <tr><td><code>/reviews</code></td><td>ISR 6h</td><td>Engine payload</td><td>External validation</td><td><span class="tag t-need">Needs engine activation</span></td></tr>
+      <tr><td><code>/videos</code></td><td>ISR 6h</td><td>YouTube Data API</td><td>Sample the teaching</td><td><span class="tag t-need">Needs channel ID</span></td></tr>
+      <tr><td><code>/gallery</code></td><td>Static</td><td>Curated manifest</td><td>Feel the place</td><td><span class="tag t-risk">Blocked &mdash; photography</span></td></tr>
+      <tr><td><code>/contact</code></td><td>Static</td><td>Config module</td><td>Call, WhatsApp, or visit</td><td><span class="tag t-have">Data available</span></td></tr>
+      <tr><td><code>/admissions</code></td><td>Static + action</td><td>Config + POST route</td><td>Submit enquiry</td><td><span class="tag t-need">Needs process detail</span></td></tr>
+      <tr><td><code>/privacy</code>, <code>/terms</code></td><td>Static</td><td>MDX</td><td>Compliance</td><td><span class="tag t-need">Needs legal entity name</span></td></tr>
+      <tr><td><code>/admin/*</code></td><td>Dynamic</td><td>Postgres</td><td>Self-service updates</td><td><span class="tag t-code">Build task</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box">
+    <span class="lbl">Reading this table</span>
+    <p>Nine of fifteen route groups are blocked or partially blocked on client input, and none of them are blocked on engineering. That ratio is the single most important fact in this plan, and it is why Section 25 front-loads the content collection rather than the build.</p>
+  </div>
+</section>
+
+<section class="sec" id="s3">
+  <span class="sec-n">SECTION 03</span>
+  <h2>Homepage architecture</h2>
+  <p class="dek">Section by section, with the job each one does and how it behaves when the evidence behind it is missing. The order follows the brief's recommended flow with two changes, both argued below.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>Band</th><th>Job</th><th>Content</th><th>If data is missing</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Announcement bar</td><td>Time-sensitive news</td><td>Active <code>Announcement</code> record with a validity window</td><td><strong>Band does not render.</strong> No expired batch dates &mdash; the bug in Section 0 becomes structurally impossible.</td></tr>
+      <tr><td class="num">2</td><td>Header</td><td>Navigate + convert</td><td>7 links, Enquire button</td><td>&mdash;</td></tr>
+      <tr><td class="num">3</td><td>Hero</td><td>Say what this is, for whom</td><td>Headline, one-line positioning, two CTAs, one real photograph</td><td>Photo slot falls back to a typographic composition on deep blue &mdash; never a stock classroom.</td></tr>
+      <tr><td class="num">4</td><td>Credibility strip</td><td>Immediate proof</td><td>Google rating + review count <strong>live from the engine</strong>, years teaching, programmes offered</td><td>Each metric renders independently; unverified ones are simply absent. No "success rate" &mdash; see below.</td></tr>
+      <tr><td class="num">5</td><td>Course finder</td><td>Segment the visitor</td><td>5 course cards: who it's for, subjects, mode, next batch</td><td>Cards render without batch dates rather than with stale ones.</td></tr>
+      <tr><td class="num">6</td><td>Results &amp; toppers</td><td>The core proof</td><td>Top achievers band + headline numbers + link to <code>/results</code></td><td><strong>Entire band hidden.</strong> An empty results band is worse than none.</td></tr>
+      <tr><td class="num">7</td><td>Why Commerce Insight</td><td>Differentiate</td><td>4 pillars, each tied to something observable</td><td>Only confirmed pillars render.</td></tr>
+      <tr><td class="num">8</td><td>Faculty</td><td>Put faces to teaching</td><td>3 mentor cards &rarr; <code>/faculty</code></td><td>Monogram tiles in brand blue if photos are pending &mdash; deliberate, not broken.</td></tr>
+      <tr><td class="num">9</td><td>Google reviews</td><td>Independent validation</td><td>Rating summary + 3 recent reviews + "Review us" CTA</td><td>Band hidden until the engine publishes. Degraded states in Section 13.</td></tr>
+      <tr><td class="num">10</td><td>Videos</td><td>Sample the teaching</td><td>3 latest videos, thumbnail + title</td><td>Band hidden if the channel has fewer than 3 videos.</td></tr>
+      <tr><td class="num">11</td><td>Student stories</td><td>Human depth</td><td>1&ndash;2 featured stories</td><td>Band hidden.</td></tr>
+      <tr><td class="num">12</td><td>Gallery strip</td><td>Show the place</td><td>5&ndash;6 images &rarr; <code>/gallery</code></td><td>Band hidden.</td></tr>
+      <tr><td class="num">13</td><td>Location</td><td>Prove it's real and near</td><td>Map, address, hours, directions, call, WhatsApp</td><td>&mdash;</td></tr>
+      <tr><td class="num">14</td><td>Final CTA</td><td>Convert</td><td>Enquire / WhatsApp / Call</td><td>&mdash;</td></tr>
+      <tr><td class="num">15</td><td>Footer</td><td>Complete the map</td><td>Links, NAP, social, legal</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Two changes from the brief's flow</h3>
+  <p><strong>Results moved above Why Commerce Insight.</strong> The brief places the value-proposition pillars before results. But pillars are claims and results are evidence, and evidence read first makes the claims that follow credible. Reversed, the pillars read as marketing the reader has to take on faith.</p>
+  <p><strong>Videos moved above student stories.</strong> Video is the one piece of proof where a visitor can judge teaching quality directly, in seconds, without trusting anyone's word. It belongs higher than written stories.</p>
+
+  <div class="box flag">
+    <span class="lbl">Metric I recommend refusing</span>
+    <p>The brief lists <strong>"Success Rate"</strong> among the credibility metrics. I recommend dropping it entirely. There is no standard definition &mdash; percentage clearing CA Foundation, percentage above 90%, percentage passing? &mdash; so any number invites the question "of what?", and the honest answer is usually smaller than the headline suggests. It is the metric most likely to be challenged and least likely to survive the challenge.</p>
+    <p>Replace it with the strongest number available: <strong>the live Google rating and review count read from the engine.</strong> Unlike every other statistic on the page, a visitor can verify it in one tap. That is a genuine differentiator over every competitor site in Jaipur, and it costs nothing because the engine already produces it.</p>
+  </div>
+</section>
+
+<section class="sec" id="s4">
+  <span class="sec-n">SECTION 04</span>
+  <h2>Page-by-page UX strategy</h2>
+  <p class="dek">What each page is for, what it must do differently from every other page, and the one decision it is trying to unblock.</p>
+
+  <h3>/about &mdash; the founder page in disguise</h3>
+  <p>The brief is right that a 300-word paragraph fails here. But the mistake most institute About pages make is describing the <em>institute</em> when readers want the <em>person</em>. Structure: a short statement of what Commerce Insight is &rarr; the founder's story at real length, with a photograph &rarr; teaching philosophy stated as method, not adjectives &rarr; the four differentiators &rarr; faculty preview &rarr; CTA. The YouTube channel belongs here too, as evidence the founder teaches publicly and can be judged before enrolment.</p>
+
+  <h3>/courses &mdash; a comparison tool, not a list</h3>
+  <p>A visitor arriving here is choosing between two or three options, so the page must support comparison rather than scrolling. Cards carry the same four fields in the same positions &mdash; who it's for, subjects, mode, duration &mdash; so the eye can scan a column. A short "not sure which?" prompt routes the genuinely undecided to WhatsApp rather than leaving them to guess.</p>
+
+  <h3>/courses/[slug] &mdash; the highest-intent page on the site</h3>
+  <p>Follows the brief's structure with one addition: <strong>"Who this is not for"</strong> placed immediately after "Who this is for". Naming who should not enrol is the single cheapest trust signal available to an institute, it costs nothing, and no competitor does it. Sticky bottom enquiry bar on mobile, pre-filled with the course name so the lead arrives attributed.</p>
+
+  <h3>/results &mdash; make it auditable</h3>
+  <p>Toppers band, then a full filterable table by year, programme and board. Table over cards for the body of the data: a table looks like a record and cards look like marketing, and here the reader is deciding whether to believe you. Each entry carries year, programme, board and score. Student stories sit at the bottom as depth for readers who want it.</p>
+
+  <h3>/faculty &mdash; qualifications, not adjectives</h3>
+  <p>Given Section 0's findings, this page gets the strictest content rule on the site: every claim must be a verifiable credential or an observable fact. "Ph.D., Economics, [university]" is publishable. "The Academic Edge" is not. Each profile carries subjects taught, qualifications, years teaching, and optionally a short statement in the mentor's own words.</p>
+
+  <h3>/reviews &mdash; show the engine's honesty</h3>
+  <p>Rating summary, distribution bars, full review list with owner replies, and &mdash; unusually &mdash; a quiet freshness line reading "Last updated [date]". Most sites hide this. Showing it is a trust signal precisely because it proves the reviews are synced rather than typed.</p>
+
+  <h3>/videos, /gallery, /contact, /admissions</h3>
+  <p><strong>/videos:</strong> latest first, filtered by subject only once each filter has three or more videos. <strong>/gallery:</strong> masonry grid, category filters, keyboard-navigable lightbox, every image with real alt text. <strong>/contact:</strong> actions before information &mdash; call, WhatsApp, directions as large touch targets at the top, then hours, then map, then form. <strong>/admissions:</strong> process as a numbered sequence (numbered because it genuinely is one), then fees if the client publishes them, then the form.</p>
+</section>
+
+<section class="sec" id="s5">
+  <span class="sec-n">SECTION 05</span>
+  <h2>Student journeys</h2>
+  <p class="dek">Three real paths, each with the moment it typically fails and the design response.</p>
+
+  <h3>A &mdash; the Instagram tap (highest volume)</h3>
+<pre>Instagram bio link → <b>/</b> → hero → course finder → <b>/courses/class-12-commerce</b>
+→ sticky bar → <b>WhatsApp</b>, course pre-filled</pre>
+  <p><strong>Fails at:</strong> the hero, on a mid-range phone over patchy mobile data. If the largest element takes four seconds, the visitor is gone before reading a word. <strong>Response:</strong> the hero is the performance budget's first claim &mdash; see Section 18.</p>
+
+  <h3>B &mdash; the Google search (highest intent)</h3>
+<pre>"ca foundation coaching pratap nagar" → <b>/courses/ca-foundation</b> <i>(no homepage)</i>
+→ scan → <b>/results</b> → <b>/reviews</b> → back → enquire</pre>
+  <p><strong>Fails at:</strong> orientation. This visitor never saw the homepage, so a course page that assumes context loses them. <strong>Response:</strong> every course page opens by restating what Commerce Insight is in one line, and carries breadcrumbs and full contact access in the footer. Every deep page is treated as a potential entry point.</p>
+
+  <h3>C &mdash; the researcher</h3>
+<pre>Multiple visits over days → <b>/</b> → <b>/faculty</b> → <b>/videos</b> → watches
+→ <b>/results</b> → <b>/reviews</b> → <b>/gallery</b> → <b>/admissions</b> → form</pre>
+  <p><strong>Fails at:</strong> nothing sudden &mdash; this journey fails by attrition when a page has nothing new to offer. <strong>Response:</strong> every page ends with a contextual next step rather than a generic CTA, and the video library gives this visitor a reason to return before deciding.</p>
+</section>
+
+<section class="sec" id="s6">
+  <span class="sec-n">SECTION 06</span>
+  <h2>Parent journeys</h2>
+  <p class="dek">Parents are usually the decision-makers and almost never the first visitors. They arrive second, sceptical, and looking for different things.</p>
+
+  <h3>D &mdash; the verification visit</h3>
+<pre>Student shows parent → parent opens later, alone → <b>/</b> → <b>/faculty</b> → <b>/results</b>
+→ <b>/reviews</b> → <b>/contact</b> → <b>calls</b> <i>(does not fill the form)</i></pre>
+  <p><strong>What a parent checks, in order:</strong> Is this a real place with a real address? Who teaches? What have their students actually scored? What do other parents say? Can I speak to someone now?</p>
+  <p><strong>Design response.</strong> Four things matter for this visitor:</p>
+  <ul>
+    <li><strong>The phone number is always reachable</strong> &mdash; in the header on desktop, in a sticky bar on mobile. Parents call. They do not fill forms.</li>
+    <li><strong>Faculty credentials are legible without jargon</strong> &mdash; qualification, subject, years teaching, stated plainly.</li>
+    <li><strong>Results read as a record, not a poster</strong> &mdash; the table format in Section 4 exists for this reader.</li>
+    <li><strong>Google reviews carry more weight than testimonials</strong> &mdash; a parent knows the institute cannot edit them. This is the strongest argument for prioritising the engine integration.</li>
+  </ul>
+
+  <h3>E &mdash; the WhatsApp forward</h3>
+<pre>Parent receives a forwarded link → opens in the WhatsApp in-app browser
+→ lands mid-page → judges in ~5 seconds</pre>
+  <p><strong>Fails at:</strong> the link preview and the in-app browser. A forward with no image and a truncated title reads as spam. <strong>Response:</strong> every page gets a deliberate Open Graph image and title (Section 17), and every page is verified in the WhatsApp and Instagram in-app browsers &mdash; not just Chrome &mdash; because that is where a large share of this audience actually reads the site.</p>
+
+  <div class="box call">
+    <span class="lbl">The design conflict this creates</span>
+    <p>Students respond to energy and momentum; parents respond to restraint and evidence. These pull in opposite directions, and most coaching sites resolve it by shouting, which wins the student and loses the parent who holds the money.</p>
+    <p><strong>Resolution: the design stays calm and the evidence does the persuading.</strong> Energy comes from photography, real faces and real numbers &mdash; not from colour saturation or motion. This is also precisely what the brief's "premium, not flashy" direction asks for, so the two constraints agree.</p>
+  </div>
+</section>
+
+<section class="sec" id="s7">
+  <span class="sec-n">SECTION 07</span>
+  <h2>Conversion strategy</h2>
+  <p class="dek">One primary action per page, chosen to match where the reader actually is, plus a persistent low-friction escape hatch.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Page</th><th>Primary</th><th>Secondary</th><th>Why this one</th></tr></thead>
+    <tbody>
+      <tr><td><code>/</code></td><td>Explore Courses</td><td>Talk to Us</td><td>Nobody enrols from a homepage. The job is segmentation.</td></tr>
+      <tr><td><code>/courses</code></td><td>View course</td><td>Not sure? WhatsApp</td><td>Still choosing.</td></tr>
+      <tr><td><code>/courses/[slug]</code></td><td>Enquire about this course</td><td>Call</td><td>Highest intent on the site. Pre-fill the course.</td></tr>
+      <tr><td><code>/results</code></td><td>Explore Courses</td><td>Enquire</td><td>Just convinced by evidence &mdash; send them to choose.</td></tr>
+      <tr><td><code>/faculty</code></td><td>Explore Courses</td><td>Watch on YouTube</td><td>Trust the person, now find their programme.</td></tr>
+      <tr><td><code>/reviews</code></td><td>Enquire Now</td><td>Leave a Google review</td><td>Peak trust. Also the right place to ask existing students for reviews &mdash; which feeds the engine.</td></tr>
+      <tr><td><code>/videos</code></td><td>Subscribe on YouTube</td><td>Explore Courses</td><td>Low intent. A subscription is a realistic ask; enrolment is not.</td></tr>
+      <tr><td><code>/contact</code></td><td>Call</td><td>WhatsApp / Directions</td><td>Someone on this page wants a human now.</td></tr>
+      <tr><td><code>/admissions</code></td><td>Submit enquiry</td><td>WhatsApp</td><td>End of funnel.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>The persistent action</h3>
+  <p>A single floating WhatsApp button, bottom-right, on every page except <code>/admin</code>. One button, brand-coloured rather than WhatsApp green so it does not fight the palette, with an <code>aria-label</code> and a real touch target. Its message is pre-filled with the page context, so an enquiry from <code>/courses/ca-foundation</code> arrives already saying which course.</p>
+
+  <div class="box call">
+    <span class="lbl">On CTA density</span>
+    <p>The brief says don't spam CTAs, and this is where most coaching sites fail: a CTA after every band trains readers to ignore all of them. The rule here is <strong>one primary action per screenful, maximum</strong>. If a band already sits next to a CTA, it does not get its own.</p>
+  </div>
+
+  <h3>Measuring it</h3>
+  <p>Without measurement none of the above is more than an opinion. Minimum instrumentation at launch: WhatsApp clicks by source page, phone-tap clicks, form submissions by source page, course-page depth, and video plays. Section 18 covers doing this with a privacy-respecting, lightweight analytics tool rather than the full Google Analytics bundle.</p>
+</section>
+
+<section class="sec" id="s8">
+  <span class="sec-n">SECTION 08</span>
+  <h2>Brand &amp; design direction</h2>
+  <p class="dek">Derived from the brief's description of the logo, and to be re-derived from the artwork itself once it arrives. This document is set in the proposed palette and typography, so it doubles as the first proof of the system.</p>
+
+  <h3>The positioning idea</h3>
+  <p><strong>The record, not the pitch.</strong> Commerce is a discipline of ledgers, statements and audited numbers &mdash; work where a claim is only worth what its evidence supports. That is also, precisely, the problem with the old site. So the design direction and the content-integrity requirement come from the same place: <em>a site that looks like a record and reads like a record is both more honest and more persuasive than one that looks like an advertisement.</em></p>
+  <p>Practically, this means ruled tables over floating cards where the content is data; generous white space over decorative fills; typographic hierarchy over colour to signal importance; and orange used the way an accountant uses a highlighter &mdash; rarely, and always to mean something.</p>
+
+  <h3>Colour</h3>
+  <p>Blue and white dominate; orange is reserved. The discipline is a ratio: <strong>roughly 60% white/paper, 30% blue, under 5% orange.</strong> If orange ever appears twice in one viewport, one of them is wrong.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Token</th><th>Light</th><th>Dark</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td><code>brand-900</code></td><td class="num">#0A2A5E</td><td class="num">#93B9F2</td><td>Headings, primary surfaces, footer</td></tr>
+      <tr><td><code>brand-600</code></td><td class="num">#1D5BBF</td><td class="num">#6FA0EA</td><td>Links, interactive states, focus rings</td></tr>
+      <tr><td><code>brand-50</code></td><td class="num">#E9F0FC</td><td class="num">#14243A</td><td>Tinted panels, active nav</td></tr>
+      <tr><td><code>accent</code></td><td class="num">#C85E08</td><td class="num">#EE9445</td><td>Section eyebrows, active indicator, achievement marks &mdash; nothing else</td></tr>
+      <tr><td><code>ink</code></td><td class="num">#111C2B</td><td class="num">#DEE7F4</td><td>Body text &mdash; blue-biased near-black, not neutral grey</td></tr>
+      <tr><td><code>muted</code></td><td class="num">#576782</td><td class="num">#93A3BC</td><td>Secondary text, captions</td></tr>
+      <tr><td><code>rule</code></td><td class="num">#DBE3EF</td><td class="num">#243146</td><td>Borders, dividers, table rules</td></tr>
+      <tr><td><code>paper</code> / <code>surface</code></td><td class="num">#FFFFFF / #F3F6FB</td><td class="num">#0A111B / #111A28</td><td>Page ground and raised panels</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>The neutrals carry a slight blue bias throughout rather than being pure grey &mdash; it is a small thing that makes the palette read as one considered system instead of brand colours dropped onto a default template.</p>
+
+  <div class="box need">
+    <span class="lbl">Pending the logo file</span>
+    <p>These hex values are a considered starting point, not a match. Once the logo artwork arrives, the exact blue and orange are sampled from it and these tokens are corrected &mdash; a change in one file, because everything derives from the tokens. Contrast is re-verified after sampling, since brand oranges frequently fail AA on white and need darkening for text use while the original stays for fills.</p>
+  </div>
+
+  <h3>Typography</h3>
+  <p>Two families, three roles. <strong>Source Serif 4</strong> for display and headings &mdash; academic weight and editorial authority without period costume; it is what makes the site read as an institution rather than a startup. <strong>IBM Plex Sans</strong> for body and interface &mdash; institutional, highly legible at small sizes on Android, and a genuine complement rather than a neutral default. <strong>IBM Plex Mono</strong> for labels, eyebrows, scores and tabular data, which also gives numbers a deliberate treatment &mdash; appropriate for a commerce institute where numbers are the proof.</p>
+  <p>Both families are on Google Fonts, cover Latin comprehensively, and are subset and self-hosted at build time (Section 18). Notably, IBM Plex also has a Devanagari cut, so a future Hindi surface would not need a new typeface.</p>
+
+  <h3>Motion</h3>
+  <p>Three effects, total: a short fade-and-rise on band entry (16px, 320ms, once); a 120ms elevation change on card hover; and a count-up on the credibility strip only. Everything respects <code>prefers-reduced-motion</code>. No parallax, no scroll-jacking, no page transitions &mdash; page transitions in particular cost real perceived performance on the mid-range Android devices most of this audience uses.</p>
+</section>
+
+<section class="sec" id="s9">
+  <span class="sec-n">SECTION 09</span>
+  <h2>Design system</h2>
+  <p class="dek">Tokens first, components second. Every value below lives in one Tailwind theme file so a brand change is a single edit.</p>
+
+  <h3>Scale and spacing</h3>
+  <p>A 4px base unit with a restricted spacing set &mdash; <code>4 8 12 16 24 32 48 64 96 128</code>. Restricting the set is the point: unrestricted spacing is how a site drifts into looking assembled rather than designed. Section padding is <code>64px</code> mobile, <code>96px</code> tablet, <code>128px</code> desktop. Container max width <code>1200px</code>, gutters <code>20/32/48</code>.</p>
+
+  <h3>Type scale</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Role</th><th>Family</th><th>Mobile</th><th>Desktop</th><th>Weight / spacing</th></tr></thead>
+    <tbody>
+      <tr><td>Display</td><td>Source Serif 4</td><td class="num">36px</td><td class="num">60px</td><td>700 / &minus;0.02em / 1.05</td></tr>
+      <tr><td>H1</td><td>Source Serif 4</td><td class="num">30px</td><td class="num">44px</td><td>700 / &minus;0.02em / 1.12</td></tr>
+      <tr><td>H2</td><td>Source Serif 4</td><td class="num">24px</td><td class="num">32px</td><td>700 / &minus;0.015em / 1.2</td></tr>
+      <tr><td>H3</td><td>IBM Plex Sans</td><td class="num">18px</td><td class="num">20px</td><td>600 / 1.35</td></tr>
+      <tr><td>Body</td><td>IBM Plex Sans</td><td class="num">16px</td><td class="num">17px</td><td>400 / 1.65 / max 68ch</td></tr>
+      <tr><td>Small</td><td>IBM Plex Sans</td><td class="num">14px</td><td class="num">14px</td><td>400 / 1.55</td></tr>
+      <tr><td>Label</td><td>IBM Plex Mono</td><td class="num">11px</td><td class="num">11px</td><td>600 / 0.14em / uppercase</td></tr>
+      <tr><td>Data</td><td>IBM Plex Mono</td><td class="num">14px</td><td class="num">14px</td><td>500 / tabular-nums</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Body text never goes below 16px on mobile &mdash; below that, iOS Safari zooms on input focus and the layout jumps.</p>
+
+  <h3>Other primitives</h3>
+  <ul>
+    <li><strong>Radius:</strong> <code>4px</code> inputs and badges, <code>8px</code> cards, <code>12px</code> modals. Nothing fully rounded except avatars. The brief's warning about "excessive rounded cards" is a real one &mdash; heavy rounding is what makes a site read as a template.</li>
+    <li><strong>Elevation:</strong> three levels only, all blue-tinted rather than black, so shadows sit in the palette instead of muddying it.</li>
+    <li><strong>Borders:</strong> 1px <code>rule</code> is the default separator. This system prefers a rule to a shadow &mdash; it reads as a document.</li>
+    <li><strong>Buttons:</strong> primary (blue fill), secondary (blue outline), tertiary (text + underline), plus WhatsApp and Call as distinct icon-led variants. Minimum target 44&times;44px. Every state defined: rest, hover, active, focus-visible, disabled, loading.</li>
+    <li><strong>Forms:</strong> labels always visible above the field &mdash; never placeholder-as-label, which fails accessibility and memory both. Errors sit below the field, in words, tied by <code>aria-describedby</code>.</li>
+  </ul>
+</section>
+
+<section class="sec" id="s10">
+  <span class="sec-n">SECTION 10</span>
+  <h2>Component architecture</h2>
+  <p class="dek">Three tiers. Server Components by default; <code>'use client'</code> only where interaction genuinely requires it, which keeps the JavaScript budget in Section 18 achievable.</p>
+
+<pre><b>primitives/</b>   <i>no domain knowledge</i>
+  Button · Input · Select · Textarea · Badge · Tag · Card
+  Dialog · Disclosure · Tabs · Skeleton · Rule · Prose
+
+<b>patterns/</b>     <i>composition, still domain-free</i>
+  Section · SectionHeader · Grid · Lightbox · Carousel
+  Breadcrumbs · Pagination · FilterBar · EmptyState
+
+<b>domain/</b>       <i>knows Commerce Insight</i>
+  SiteHeader · SiteFooter · AnnouncementBar · Hero
+  CredibilityStrip · CourseCard · CourseDetailLayout
+  ResultsTable · TopperCard · FacultyCard · FacultyProfile
+  ReviewCard · ReviewSummary · ReviewFreshness
+  VideoCard · VideoGrid · StoryCard · GalleryGrid
+  MapPanel · EnquiryForm · WhatsAppButton · StickyActionBar</pre>
+
+  <div class="box call">
+    <span class="lbl">EmptyState is a first-class component</span>
+    <p>Given how much of this site is blocked on client content (Section 2), the empty state is not an edge case &mdash; it is the launch state for several bands. Building it as a real component with a considered design, rather than an afterthought <code>if</code> branch, is what lets us ship on schedule and fill in evidence as it arrives. Every domain component declares what it renders with no data, and in most cases the answer is deliberately <em>nothing at all</em>.</p>
+  </div>
+
+  <h3>Client-component boundary</h3>
+  <p>Only these are client components: <code>SiteHeader</code> (mobile menu), <code>FilterBar</code>, <code>Lightbox</code>, <code>EnquiryForm</code>, <code>Tabs</code>, <code>Dialog</code>, and the count-up in <code>CredibilityStrip</code>. Everything else &mdash; including all review, video, result and course rendering &mdash; is server-rendered. Reviews and videos in particular arrive as HTML with zero client JavaScript, which is the entire performance argument for Next.js on this project.</p>
+</section>
+
+<section class="sec" id="s11">
+  <span class="sec-n">SECTION 11</span>
+  <h2>Data model</h2>
+  <p class="dek">PostgreSQL via Prisma. Deliberately small: only content that genuinely changes on a cadence, or that must be captured, gets a table.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Model</th><th>Key fields</th><th>Why a table</th></tr></thead>
+    <tbody>
+      <tr><td><code>Enquiry</code></td><td>id, name, phone, email?, classLevel, courseSlug, message, source, sourcePage, status, notes, consentAt, ip, createdAt</td><td>Leads must be captured and worked. The only table that is unambiguously required.</td></tr>
+      <tr><td><code>Topper</code></td><td>id, name, photoUrl?, score, scoreUnit, programme, board?, year, subjectScores[], highlight?, consentRef, published, sortOrder</td><td>Changes every results season. <code>consentRef</code> is mandatory &mdash; see Section 19.</td></tr>
+      <tr><td><code>ResultRecord</code></td><td>id, name, score, programme, board?, year, published</td><td>The full results table behind the toppers band.</td></tr>
+      <tr><td><code>Announcement</code></td><td>id, message, href?, startsAt, endsAt, priority, published</td><td><strong>Fixes the expired-batch bug.</strong> The validity window means a stale notice removes itself.</td></tr>
+      <tr><td><code>StudentStory</code></td><td>id, slug, studentName, programme, year, photoUrl?, challenge, journey, outcome, quote, consentRef, published</td><td>Editorial, added occasionally.</td></tr>
+      <tr><td><code>Batch</code></td><td>id, courseSlug, startsAt, mode, seatsNote?, published</td><td>The other stale-date source. Course pages read the next published batch, or show nothing.</td></tr>
+      <tr><td><code>AdminUser</code></td><td>id, email, passwordHash, role, lastLoginAt</td><td>Two or three rows, ever.</td></tr>
+      <tr><td><code>AuditLog</code></td><td>id, actorId, action, entity, entityId, at</td><td>Who published which topper, and when. Cheap now, invaluable in a dispute about published marks.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Deliberately not in the database</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Content</th><th>Lives in</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Reviews</td><td>Engine payload, fetched server-side</td><td>Copying them forks the source of truth and bypasses the engine's publish gate. Section 13.</td></tr>
+      <tr><td>Videos</td><td>YouTube API, ISR-cached</td><td>YouTube is already the database. Section 14.</td></tr>
+      <tr><td>Courses</td><td>MDX + typed frontmatter in the repo</td><td>Course pages are long-form and design-bearing. A generic CMS shape would flatten exactly the layouts that make the site feel bespoke &mdash; and they change once a year at most.</td></tr>
+      <tr><td>Faculty</td><td>Typed content in the repo</td><td>Same reasoning. Three people. Version control is the right audit trail for credential claims.</td></tr>
+      <tr><td>Gallery</td><td>Curated manifest + optimised assets</td><td>Images need art direction and build-time optimisation; an upload form produces neither.</td></tr>
+      <tr><td>NAP, hours, socials</td><td><code>src/config/institute.ts</code></td><td><strong>One typed module is the single source of truth</strong> for address, phones, email, hours and social links &mdash; consumed by the footer, contact page, map, and schema.org output. This is what makes the NAP consistency in Section 17 structural rather than a matter of remembering.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="sec" id="s12">
+  <span class="sec-n">SECTION 12</span>
+  <h2>Admin architecture</h2>
+  <p class="dek">The brief wants a full CMS across twelve content areas. I recommend building roughly a third of that, and explaining the omission rather than quietly shipping it.</p>
+
+  <div class="box call">
+    <span class="lbl">The recommendation</span>
+    <p>A bespoke CMS for twelve content types means twelve CRUD surfaces, a media pipeline, role management and a permanent security surface &mdash; for an institute that will realistically log in <strong>a handful of times a year</strong>. That is a maintenance liability disguised as a feature, and its most likely end state is an admin panel nobody logs into and a developer still making the edits.</p>
+    <p>Build the admin for content that <strong>actually changes on a cadence</strong>, and leave design-bearing content in code where it is version-controlled, reviewable, and cannot be visually broken by a well-meaning edit. This is the same split as Section 11.</p>
+  </div>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Area</th><th>Phase 1</th><th>Rationale</th></tr></thead>
+    <tbody>
+      <tr><td>Enquiries</td><td><span class="tag t-have">Build</span></td><td>The reason the admin exists. List, filter, status, notes, CSV export.</td></tr>
+      <tr><td>Toppers</td><td><span class="tag t-have">Build</span></td><td>The "beta, ek topper add karna hai" case from the brief, exactly.</td></tr>
+      <tr><td>Results</td><td><span class="tag t-have">Build</span></td><td>Bulk entry each results season.</td></tr>
+      <tr><td>Announcements</td><td><span class="tag t-have">Build</span></td><td>Directly prevents the expired-batch bug recurring.</td></tr>
+      <tr><td>Batches</td><td><span class="tag t-have">Build</span></td><td>Same reason.</td></tr>
+      <tr><td>Student stories</td><td><span class="tag t-need">Phase 2</span></td><td>Wait until there are enough to justify the editor.</td></tr>
+      <tr><td>Courses, Faculty, Gallery</td><td><span class="tag t-code">Code</span></td><td>Design-bearing, rarely changed, and better served by a reviewed pull request than a form.</td></tr>
+      <tr><td>Reviews, YouTube</td><td><span class="tag t-code">Automatic</span></td><td>Nothing to manage &mdash; both sync themselves.</td></tr>
+      <tr><td>Resources</td><td><span class="tag t-need">Deferred</span></td><td>Ships with the resources section, if it ships.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>How it works</h3>
+  <p>Auth.js with credentials, Argon2id hashes, HTTP-only session cookies, and a rate-limited login. No public sign-up &mdash; accounts are seeded. Everything under <code>/admin</code> is protected in middleware, returns <code>noindex</code>, and is excluded from the sitemap. Photo uploads go to Vercel Blob through a server-issued token, with MIME and size validated server-side and every image re-encoded with <code>sharp</code> so an uploaded file is never served back as it arrived.</p>
+  <p>The topper flow the brief describes is the design target: <strong>log in &rarr; Add Topper &rarr; upload photo &rarr; enter marks &rarr; confirm consent on record &rarr; publish</strong>, with the site reflecting it within the hour via revalidation. The consent step is not optional &mdash; Section 19 explains why.</p>
+</section>
+
+<section class="sec" id="s13">
+  <span class="sec-n">SECTION 13</span>
+  <h2>Review Engine integration</h2>
+  <p class="dek">The most technically interesting part of this project, and the one where the brief's proposed architecture should be simplified rather than followed.</p>
+
+  <h3>Corrected architecture</h3>
+<pre><i>Brief proposed:</i>
+  Google Business Profile → Review Engine → Backend → Database → Website
+
+<i>Recommended:</i>
+  Google Business Profile
+        ↓  <i>scheduled harvest, offline</i>
+  <b>tp-reviews-engine</b> → private ledger (state branch)
+        ↓  <i>publish gate</i>
+  <b>reviews.json</b> (public data branch, HTTPS)
+        ↓  <i>server-side fetch, revalidate 6h</i>
+  <b>Next.js Server Component</b> → HTML
+        ↓
+  Visitor  <i>— zero client requests, never contacts Google</i></pre>
+
+  <p>The engine already <em>is</em> the backend: it maintains the durable ledger, reconciles changes, and gates publication on invariants. Adding our own database between it and the site would fork the source of truth, bypass the publish gate the engine exists to enforce, and create a second thing that can be stale. We fetch the published payload and render it.</p>
+
+  <h3>Implementation</h3>
+  <p>The engine ships a Next.js App Router recipe. We follow its data contract but render with our own components rather than its reference DOM renderer &mdash; the bundled widget is deliberately unopinionated, and this site needs review cards that match the design system. What we <strong>do</strong> adopt from the kit is its safety discipline, which is well-reasoned:</p>
+  <ul>
+    <li><strong>Review text is rendered as text, never as HTML.</strong> React escapes by default; the rule is that <code>dangerouslySetInnerHTML</code> never touches payload data. This is the kit's first safety rule and it is correct.</li>
+    <li><strong>Server-side fetch with <code>next: { revalidate: 21600 }</code></strong> &mdash; matched to the harvest cadence, not to visitor traffic. Per-request fetching would turn a static file into load proportional to traffic.</li>
+    <li><strong>Reserve the container height</strong> before the payload renders, so no layout shift reaches Core Web Vitals.</li>
+    <li><strong>A failure is never the visitor's problem.</strong> If the fetch fails, the band does not render &mdash; no error text, no empty box.</li>
+  </ul>
+
+  <h3>Degraded states &mdash; and why we show them</h3>
+  <p>The payload carries honest freshness signals that most integrations discard: <code>notices</code>, <code>stats.completeness</code>, and <code>last_full_harvest_at</code>. We surface them, quietly:</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Payload state</th><th>What the site shows</th></tr></thead>
+    <tbody>
+      <tr><td><code>completeness: "full"</code></td><td>Everything, plus "Synced from Google &middot; [date]"</td></tr>
+      <tr><td><code>notices: ["harvest_partial"]</code></td><td>Reviews render; the count is labelled "showing recent reviews" rather than presented as a total</td></tr>
+      <tr><td><code>notices: ["awaiting_first_full_harvest"]</code></td><td>Band hidden entirely</td></tr>
+      <tr><td>Fetch fails or payload absent</td><td>Band hidden entirely</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box flag">
+    <span class="lbl">Recommendation &mdash; leave schema_org disabled</span>
+    <p>The config has <code>publish.schema_org: false</code>. <strong>Keep it false, and do not emit <code>AggregateRating</code> or <code>Review</code> structured data for Google-sourced reviews.</strong> Google's structured-data guidelines restrict marking up reviews collected on another platform as your own, and misuse risks a manual action against the whole domain &mdash; a far larger loss than the star snippets are worth. The reviews still display beautifully on the page; they simply are not claimed as first-party structured data.</p>
+  </div>
+
+  <div class="box need">
+    <span class="lbl">Activation &mdash; client action required</span>
+    <p>The engine is code-complete but not cleared for production. Recommended path is the <strong>Business Profile API</strong> adapter, not the DOM adapter &mdash; it is sanctioned by Google, free, complete, and needs no written authorisation record. To activate:</p>
+    <ol>
+      <li>Confirm who owns and has admin access to the Commerce Insight Google Business Profile.</li>
+      <li>Complete Google's Business Profile API access request for that account.</li>
+      <li>Obtain the <code>accounts/{id}/locations/{id}</code> identifier and a refresh token (stored as a secret, never in the repo).</li>
+      <li>Rename <code>_commerce-insight.config.json</code>, replace every <code>REPLACE-</code> value including the exact listing name, set <code>enabled: true</code>.</li>
+      <li>Run a harvest, confirm the payload, then point the site at the published URL.</li>
+    </ol>
+    <p>Steps 1&ndash;3 are client-dependent and are the long pole. The site is built to launch without them, with the reviews band simply absent until the payload exists.</p>
+  </div>
+</section>
+
+<section class="sec" id="s14">
+  <span class="sec-n">SECTION 14</span>
+  <h2>YouTube integration</h2>
+  <p class="dek">Dynamic, server-side, and quota-aware. The naive implementation exhausts the daily quota and is the most common way this integration fails in production.</p>
+
+<pre>YouTube channel
+   ↓  <i>playlistItems.list on the uploads playlist — 1 quota unit</i>
+Server-side route, API key in env
+   ↓  <i>ISR, revalidate 6h + on-demand webhook</i>
+Next.js Server Component → HTML
+   ↓
+Visitor  <i>— no YouTube JS until a video is actually played</i></pre>
+
+  <div class="box call">
+    <span class="lbl">The quota trap</span>
+    <p>The obvious call is <code>search.list</code> filtered by channel. It costs <strong>100 quota units</strong> against a 10,000/day default. Called per request, a modest traffic day exhausts the quota and the videos band disappears &mdash; usually noticed weeks later.</p>
+    <p>The correct call is <code>playlistItems.list</code> against the channel's uploads playlist, which costs <strong>1 unit</strong>, returns the same videos in upload order, and includes thumbnails and titles. Cached for six hours, that is four calls a day regardless of traffic.</p>
+  </div>
+
+  <ul>
+    <li><strong>The API key never reaches the browser.</strong> Server-side only, in an environment variable, restricted to the YouTube Data API in Google Cloud.</li>
+    <li><strong>No YouTube iframe until play.</strong> We render our own thumbnail and title, and load the embed only on click &mdash; via <code>youtube-nocookie.com</code>. A YouTube iframe costs roughly half a megabyte and sets tracking cookies before the visitor has asked for anything.</li>
+    <li><strong>Graceful failure.</strong> API error, quota exhaustion, or fewer than three videos &rarr; the band does not render.</li>
+    <li><strong>Curated override.</strong> A small config array can pin specific videos ahead of chronological order &mdash; useful when the channel is young and the best video is not the newest.</li>
+  </ul>
+
+  <div class="box need">
+    <span class="lbl">Client input</span>
+    <p>Needs the channel URL or ID, and confirmation of how many videos exist. <strong>If the channel has fewer than six videos, I recommend not building <code>/videos</code> at launch</strong> &mdash; a three-video library reads as abandoned. Put the three videos on the homepage and About page instead, and add the route when the library justifies it.</p>
+  </div>
+</section>
+
+<section class="sec" id="s15">
+  <span class="sec-n">SECTION 15</span>
+  <h2>Location &amp; Maps</h2>
+  <p class="dek">Pratap Nagar is a large sector. For a local institute, "can I find it and is it near me?" is a genuine conversion question, not a footer detail.</p>
+
+  <p>The location experience appears twice: as a band on the homepage and as the substance of <code>/contact</code>. Both render the same component reading the same config module, so the NAP cannot drift.</p>
+
+  <h3>What it contains</h3>
+  <ul>
+    <li><strong>Actions before information.</strong> Get Directions, Call, WhatsApp as large targets at the top &mdash; Directions opens the native maps app on mobile via a <code>geo:</code>-aware Google Maps link, which is what people actually want.</li>
+    <li><strong>Full address exactly as it appears on the Google Business Profile</strong>, plus a human landmark line, because "Near Pannadhay Circle" is how people in Jaipur actually navigate.</li>
+    <li><strong>Opening hours</strong> as structured data and as readable text, with the current open/closed state computed server-side in IST.</li>
+    <li><strong>The map, loaded on interaction.</strong> A static styled map image or a lightweight placeholder renders first; the interactive embed loads on click. An eagerly-loaded Google Maps iframe is typically the heaviest thing on a page and it sits below the fold &mdash; there is no reason to pay for it on every visit.</li>
+  </ul>
+
+  <div class="box need">
+    <span class="lbl">Client input</span>
+    <p>Needs the Google Business Profile link or Place ID, exact coordinates, the address string as Google holds it, opening hours per day, and any landmark directions the institute gives over the phone. If a Maps Embed API key is used it is restricted by HTTP referrer; the no-key embed is also acceptable and avoids the key entirely.</p>
+  </div>
+</section>
+
+<section class="sec" id="s16">
+  <span class="sec-n">SECTION 16</span>
+  <h2>Enquiry &amp; lead system</h2>
+  <p class="dek">Two capture paths, one lead record, and enough anti-abuse that the institute's inbox stays usable.</p>
+
+<pre>WhatsApp button  ──┐                    <i>pre-filled, page-attributed</i>
+                   ├──→ <b>lead</b>
+Enquiry form  ─────┘
+     ↓ POST /api/enquiry  <i>(Zod validated, rate limited, honeypot)</i>
+  Postgres <b>Enquiry</b>
+     ↓
+  Email notification → institute inbox
+     ↓
+  <b>/admin/enquiries</b>  <i>status · notes · CSV export</i></pre>
+
+  <h3>Fields</h3>
+  <p>Name, phone, class/level, course of interest, and an optional message. Nothing else. Every additional field measurably reduces completion, and none of the others are needed to make a follow-up call. Email is optional, not required &mdash; this audience converts on phone.</p>
+
+  <h3>Abuse and integrity</h3>
+  <ul>
+    <li><strong>Server-side validation with Zod</strong>, including a real Indian mobile format check. Client validation is for the user's benefit only and is never trusted.</li>
+    <li><strong>Honeypot field plus a minimum time-to-submit</strong> &mdash; catches most naive bots at zero cost to real users.</li>
+    <li><strong>Rate limiting by IP</strong> on the route. Cloudflare Turnstile added only if spam actually materialises; a challenge on every form is friction paid in advance for a problem that may not arrive.</li>
+    <li><strong>Consent line</strong> above the button, with the submission timestamp stored as <code>consentAt</code>.</li>
+  </ul>
+
+  <div class="box call">
+    <span class="lbl">On WhatsApp automation</span>
+    <p>The brief raises automated WhatsApp follow-up. I recommend against it for now. The WhatsApp Business API requires Meta business verification, a template approval process and a messaging cost, and none of that is justified before there is lead volume to justify it. The <code>wa.me</code> deep link delivers the conversion path today, at zero cost and zero approval. Revisit when enquiries exceed what a person can follow up manually &mdash; the data model already captures everything an automation would need.</p>
+  </div>
+
+  <p><strong>Email delivery</strong> via Resend or Postmark on the institute's own domain, with SPF and DKIM configured &mdash; notification emails sent from a Gmail address land in spam, which silently loses leads. The lead is written to the database <em>before</em> the email is attempted, so a mail failure never loses an enquiry.</p>
+</section>
+
+<section class="sec" id="s17">
+  <span class="sec-n">SECTION 17</span>
+  <h2>SEO architecture</h2>
+  <p class="dek">For a single-location institute, local search is nearly the whole game. National keyword ambition is a distraction; ranking for "commerce classes near Pannadhay Circle" is worth more than any generic term.</p>
+
+  <h3>Priority</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tier</th><th>Intent</th><th>Target</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Local + programme</td><td><code>/courses/[slug]</code> &mdash; e.g. CA Foundation coaching in Pratap Nagar, Jaipur</td></tr>
+      <tr><td class="num">2</td><td>Local + general</td><td><code>/</code> and <code>/contact</code> &mdash; commerce coaching Pratap Nagar</td></tr>
+      <tr><td class="num">3</td><td>Brand</td><td><code>/</code> &mdash; must rank first for "Commerce Insight Jaipur", unambiguously</td></tr>
+      <tr><td class="num">4</td><td>Evidence</td><td><code>/results</code>, <code>/faculty</code> &mdash; the queries a parent runs before deciding</td></tr>
+      <tr><td class="num">5</td><td>Informational</td><td>Deferred with <code>/resources</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Implementation</h3>
+  <ul>
+    <li><strong>Metadata per route</strong> via the Next.js Metadata API &mdash; unique title and description on every page, no templated duplication.</li>
+    <li><strong>Structured data:</strong> <code>EducationalOrganization</code> + <code>LocalBusiness</code> on the homepage with NAP generated from the config module, <code>Course</code> on each course page, <code>BreadcrumbList</code> site-wide, <code>VideoObject</code> on <code>/videos</code>. <strong>No <code>AggregateRating</code> or <code>Review</code></strong> &mdash; Section 13.</li>
+    <li><strong>NAP consistency is structural</strong>, because the footer, contact page, map and schema.org output all read the same typed module. Human error is designed out rather than watched for.</li>
+    <li><strong>Open Graph images per page</strong>, generated at build with the brand system. This matters more than usual here: Journey E in Section 6 is a WhatsApp forward, and the preview card <em>is</em> the first impression.</li>
+    <li><code>sitemap.xml</code> generated from actual routes, <code>robots.txt</code> disallowing <code>/admin</code> and <code>/api</code>, canonical URLs everywhere, one <code>&lt;h1&gt;</code> per page with a real heading hierarchy beneath it.</li>
+  </ul>
+
+  <div class="box flag">
+    <span class="lbl">Claims to remove</span>
+    <p>The old site's title tag reads <em>"Best CA &amp; Commerce Coaching in Jaipur"</em>. Unsubstantiated superlatives are a poor ranking signal, they invite ASCI-style scrutiny of advertising claims, and &mdash; most practically &mdash; every competitor makes the same claim, so it differentiates nothing. Replace with something specific and defensible: the programmes taught and the locality served. Specificity ranks better than superlatives anyway.</p>
+  </div>
+
+  <p><strong>Off-site, which matters more than anything on-site here:</strong> a complete and active Google Business Profile with correct hours, categories and photos, and a steady flow of genuine reviews. The <code>/reviews</code> page's "Leave us a Google review" CTA feeds this loop directly &mdash; and the Review Engine then displays the result. That circuit is the highest-leverage thing in this entire plan.</p>
+</section>
+
+<section class="sec" id="s18">
+  <span class="sec-n">SECTION 18</span>
+  <h2>Performance</h2>
+  <p class="dek">Budgets, not aspirations. The target device is a mid-range Android phone on a congested mobile network in Jaipur &mdash; not a laptop on office wifi.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Metric</th><th>Budget</th><th>Measured on</th></tr></thead>
+    <tbody>
+      <tr><td>LCP</td><td class="num">&lt; 2.0s</td><td>Moto G Power class, Slow 4G</td></tr>
+      <tr><td>INP</td><td class="num">&lt; 200ms</td><td>Same</td></tr>
+      <tr><td>CLS</td><td class="num">&lt; 0.05</td><td>Same</td></tr>
+      <tr><td>JS shipped, homepage</td><td class="num">&lt; 120KB gzip</td><td>Build output</td></tr>
+      <tr><td>Hero image</td><td class="num">&lt; 120KB</td><td>AVIF, responsive srcset</td></tr>
+      <tr><td>Total homepage weight</td><td class="num">&lt; 600KB</td><td>First visit, cold cache</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>How the budgets are met</h3>
+  <ul>
+    <li><strong>Server Components by default.</strong> Reviews, videos, results and course content ship as HTML with no accompanying JavaScript. This is the single largest lever.</li>
+    <li><strong>Fonts subset and self-hosted</strong> at build via <code>next/font</code>, <code>font-display: swap</code>, preloaded for the two faces used above the fold. No render-blocking request to a third-party font host in production.</li>
+    <li><strong>Images through <code>next/image</code></strong> &mdash; AVIF with WebP fallback, explicit dimensions on every image so CLS stays near zero, lazy below the fold, and the hero eagerly loaded with <code>fetchPriority="high"</code>.</li>
+    <li><strong>Nothing third-party loads eagerly.</strong> The map, the YouTube embed and any chat widget load on interaction. Between them these are typically 80% of a coaching site's weight.</li>
+    <li><strong>ISR everywhere</strong> &mdash; pages are served from cache and revalidated on a schedule, so a visitor never waits on the reviews or YouTube fetch.</li>
+    <li><strong>Analytics</strong> via a lightweight, cookieless tool (Vercel Analytics or Plausible, ~1KB) rather than GA4's ~45KB. If GA4 is required for the client's reporting, it loads deferred and after interaction.</li>
+  </ul>
+
+  <p>Budgets are enforced in CI with Lighthouse CI on pull requests, so a regression fails the build rather than being discovered months later.</p>
+</section>
+
+<section class="sec" id="s19">
+  <span class="sec-n">SECTION 19</span>
+  <h2>Security</h2>
+  <p class="dek">Standard web hygiene, plus one obligation specific to this project that most coaching sites get wrong.</p>
+
+  <div class="box flag">
+    <span class="lbl">Minors' data &mdash; the obligation specific to this site</span>
+    <p>This site publishes <strong>photographs, full names and examination marks of Class 11 and 12 students</strong>. Most of them are under 18. Under India's Digital Personal Data Protection Act 2023, a person under 18 is a child, and processing a child's personal data requires <strong>verifiable parental consent</strong>. Publishing marks alongside a named photograph is exactly that kind of processing.</p>
+    <p>This is not a theoretical concern &mdash; it is the most likely source of a real complaint against the institute, and the current site publishes fabricated versions of precisely this data.</p>
+    <p><strong>Requirements:</strong> a written parental consent form for every topper and student story before publication; a <code>consentRef</code> field on the record, which the admin publish action requires; a documented takedown route in the privacy policy; and a default of initials-plus-surname rather than full names where consent covers the result but not the identification.</p>
+  </div>
+
+  <h3>Everything else</h3>
+  <ul>
+    <li><strong>Secrets in environment variables only</strong> &mdash; database URL, YouTube key, admin session secret, mail key, Blob token. Never in the repo, never in a <code>NEXT_PUBLIC_</code> variable, and <code>.env*</code> in <code>.gitignore</code> from the first commit. A pre-commit secret scan is worth the five minutes it takes to configure.</li>
+    <li><strong>Admin auth:</strong> Argon2id, HTTP-only <code>SameSite=Lax</code> cookies, short session lifetime, rate-limited login with generic failure messages, no public registration, middleware-enforced route protection.</li>
+    <li><strong>Every input validated server-side with Zod</strong>, including admin forms. Prisma's parameterised queries handle SQL injection; the discipline is to never bypass them with raw SQL on user input.</li>
+    <li><strong>Uploads:</strong> server-issued tokens, MIME and size validated server-side, re-encoded with <code>sharp</code>, randomised filenames, served from Blob storage rather than the app origin.</li>
+    <li><strong>Headers:</strong> a real Content-Security-Policy (no <code>unsafe-inline</code>), HSTS, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, and a restrictive <code>Permissions-Policy</code>. Note the Review Engine's integration kit is explicitly built to work under a strict CSP &mdash; that alignment is deliberate on their part and we should not weaken the policy to accommodate anything else.</li>
+    <li><strong>Dependencies:</strong> minimal surface, Dependabot enabled, <code>npm audit</code> in CI.</li>
+  </ul>
+</section>
+
+<section class="sec" id="s20">
+  <span class="sec-n">SECTION 20</span>
+  <h2>Accessibility</h2>
+  <p class="dek">Target WCAG 2.2 AA. Beyond the ethical case, an accessible site is a better site for the low-end devices and bright-sunlight conditions much of this audience browses in.</p>
+  <ul>
+    <li><strong>Contrast verified against the final logo colours</strong>, not assumed. Brand oranges frequently fail AA as text on white &mdash; the plan is a darkened orange for text and the original for fills, verified rather than eyeballed.</li>
+    <li><strong>Semantic HTML throughout</strong> &mdash; real <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;table&gt;</code> for the results table, buttons that are buttons and links that are links. This single discipline resolves most keyboard and screen-reader issues before they exist.</li>
+    <li><strong>Full keyboard operability</strong> &mdash; including the mobile menu, the gallery lightbox (Escape closes, arrows navigate, focus is trapped while open and restored on close), and every filter control.</li>
+    <li><strong>Visible focus states</strong> everywhere &mdash; a 2px brand-blue ring with offset. Never removed, only restyled.</li>
+    <li><strong>Forms:</strong> visible persistent labels, errors in text tied by <code>aria-describedby</code>, error summary focused on failed submit, no colour-only error signalling.</li>
+    <li><strong>Images:</strong> meaningful alt text written per image &mdash; "Class 12 students in the Pratap Nagar classroom", not "image1" &mdash; and empty <code>alt</code> on genuinely decorative ones.</li>
+    <li><strong><code>prefers-reduced-motion</code> honoured</strong> for all three motion effects, including the count-up, which jumps to its final value.</li>
+    <li><strong>Skip-to-content link</strong>, correct language attribute, and a page title that identifies the page first.</li>
+  </ul>
+  <p>Verification is automated (axe in CI) <em>and</em> manual &mdash; a full keyboard pass and a screen-reader pass on the homepage, a course page, the results table and the enquiry form. Automated tools catch perhaps 40% of real issues.</p>
+</section>
+
+<section class="sec" id="s21">
+  <span class="sec-n">SECTION 21</span>
+  <h2>Responsive strategy</h2>
+  <p class="dek">Mobile-first as a working method, not a label: every component is designed and built at 360px first, then allowed to expand.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Breakpoint</th><th>Width</th><th>Represents</th></tr></thead>
+    <tbody>
+      <tr><td><code>base</code></td><td class="num">360&ndash;639</td><td>The primary target. Most traffic.</td></tr>
+      <tr><td><code>sm</code></td><td class="num">640&ndash;767</td><td>Large phones, small phones landscape</td></tr>
+      <tr><td><code>md</code></td><td class="num">768&ndash;1023</td><td>Tablets</td></tr>
+      <tr><td><code>lg</code></td><td class="num">1024&ndash;1279</td><td>Laptops &mdash; where desktop nav appears</td></tr>
+      <tr><td><code>xl</code></td><td class="num">1280+</td><td>Desktop; container caps at 1200px</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Per-component behaviour</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Component</th><th>Mobile</th><th>Tablet</th><th>Desktop</th></tr></thead>
+    <tbody>
+      <tr><td>Header</td><td>Logo + call icon + hamburger; full-screen drawer with Enquire pinned at the bottom, in thumb reach</td><td>Same</td><td>Full nav, one dropdown, Enquire button</td></tr>
+      <tr><td>Hero</td><td>Stacked, image below text, single-column CTAs</td><td>Stacked, wider</td><td>Split &mdash; text left, image right</td></tr>
+      <tr><td>Credibility strip</td><td>2&times;2 grid</td><td>4 across</td><td>4 across, rules between</td></tr>
+      <tr><td>Course cards</td><td>1 column, full width</td><td>2 columns</td><td>3 columns</td></tr>
+      <tr><td>Results table</td><td><strong>Stacked cards</strong> &mdash; a 5-column table does not survive 360px</td><td>Scrollable table</td><td>Full table</td></tr>
+      <tr><td>Topper cards</td><td>Horizontal snap-scroll carousel</td><td>2&ndash;3 columns</td><td>4 columns</td></tr>
+      <tr><td>Faculty</td><td>1 column</td><td>2 columns</td><td>3 columns</td></tr>
+      <tr><td>Reviews</td><td>1 column, snap carousel on home</td><td>2 columns</td><td>3 columns</td></tr>
+      <tr><td>Gallery</td><td>2-column masonry</td><td>3 columns</td><td>4 columns</td></tr>
+      <tr><td>Forms</td><td>Full width, 16px inputs, correct <code>inputmode</code> and <code>autocomplete</code></td><td>Same</td><td>Two-column where fields pair naturally</td></tr>
+      <tr><td>Footer</td><td>Accordion sections</td><td>2 columns</td><td>4 columns</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>On course pages, mobile gets a <strong>sticky bottom action bar</strong> (Enquire + WhatsApp) once the reader passes the hero &mdash; the single highest-value mobile pattern on this site, because it removes the scroll-back that kills enquiries.</p>
+
+  <p><strong>Testing includes the in-app browsers</strong> &mdash; WhatsApp, Instagram and Chrome on real Android hardware, not just devtools emulation. Journeys A and E in Sections 5 and 6 both land there, and in-app browsers have their own viewport and font-scaling quirks that emulation hides.</p>
+</section>
+
+<section class="sec" id="s22">
+  <span class="sec-n">SECTION 22</span>
+  <h2>Client inputs required</h2>
+  <p class="dek">The critical path. Nothing here is blocked on engineering, and most of the site cannot reach launch quality without it. Grouped by urgency.</p>
+
+  <h3>Blocking &mdash; needed before design can be finalised</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Item</th><th>Detail</th><th>Blocks</th></tr></thead>
+    <tbody>
+      <tr><td>Logo artwork</td><td>Vector (SVG/AI/PDF) if possible; high-res PNG minimum. Horizontal and stacked variants, plus a monochrome version.</td><td>Colour tokens, header, favicon, OG images</td></tr>
+      <tr><td>Decision on fabricated content</td><td>Written confirmation to remove the invented toppers, testimonials and bios from the live site.</td><td>Ethical launch; also removes a live liability today</td></tr>
+      <tr><td>Real results data</td><td>Year, student name, programme, board, score. Whatever genuinely exists, however modest.</td><td><code>/results</code>, homepage results band</td></tr>
+      <tr><td>Parental consent forms</td><td>Signed, per student, for every published name, photo and mark.</td><td>Any topper or story publication &mdash; Section 19</td></tr>
+      <tr><td>Faculty facts</td><td>Real qualification, subjects, years teaching, per mentor. No embellishment.</td><td><code>/faculty</code>, homepage faculty band</td></tr>
+      <tr><td>Founder's story</td><td>An interview is fine &mdash; we can write from a recorded conversation.</td><td><code>/about</code></td></tr>
+      <tr><td>Photography</td><td>Faculty portraits, classrooms, students at work, the building exterior and entrance.</td><td>Hero, faculty, gallery, OG images &mdash; the largest single quality risk</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Blocking &mdash; needed before launch</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Item</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Professional email address</td><td><code>vanmogaming333@gmail.com</code> cannot appear on an institute's website. A domain mailbox is also required for reliable enquiry notifications (Section 16).</td></tr>
+      <tr><td>Domain name</td><td>Plus registrar access for DNS.</td></tr>
+      <tr><td>Confirmed NAP</td><td>Address, primary phone, WhatsApp number, hours per day &mdash; matching the Google Business Profile exactly. Nominate <em>one</em> primary phone.</td></tr>
+      <tr><td>Google Business Profile access</td><td>Owner/admin confirmation, profile URL or Place ID &mdash; and the API access steps in Section 13.</td></tr>
+      <tr><td>YouTube channel URL</td><td>Plus video count, to decide whether <code>/videos</code> ships at launch.</td></tr>
+      <tr><td>Course details</td><td>Per course: who it's for, subjects, duration, mode, batch timings, and whether fees are published.</td></tr>
+      <tr><td>Admission process</td><td>The actual steps, including whether a demo class is offered.</td></tr>
+      <tr><td>Legal entity name</td><td>For the privacy policy and terms.</td></tr>
+      <tr><td>Verified statistics</td><td>Only those the institute can substantiate. Any it cannot are simply not published.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Useful, not blocking</h3>
+  <p>Instagram and other verified social handles; student stories with consent; event and achievement photographs; FAQs from questions actually asked on the phone; any notes or study material for the deferred resources section.</p>
+
+  <div class="box need">
+    <span class="lbl">On photography &mdash; the recommendation</span>
+    <p>Site quality will track photography quality more closely than any other single input. A half-day shoot with a local photographer, art-directed against a shot list we provide, is the highest-return spend on this project. Deliverables: three faculty portraits against a clean background in consistent lighting; four to six classroom images with students genuinely working; the building exterior and entrance for the location section; and a hero-candidate frame with room for text overlay. Until it exists, the design uses honest fallbacks rather than stock imagery &mdash; a stock classroom on a real institute's website is a trust cost, not a placeholder.</p>
+  </div>
+</section>
+
+<section class="sec" id="s23">
+  <span class="sec-n">SECTION 23</span>
+  <h2>Development phases</h2>
+  <p class="dek">Sequenced so that work blocked on client content never blocks work that isn't. Each phase has an exit gate.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phase</th><th>Work</th><th>Exit gate</th></tr></thead>
+    <tbody>
+      <tr><td class="num">0 &mdash; Triage</td><td>Remove fabricated content from the live site. Set up the repo, git, CI. Collect Section 22 blocking items.</td><td>Nothing false is publicly live; logo received</td></tr>
+      <tr><td class="num">1 &mdash; Content</td><td>Founder interview, faculty facts, course details, results collection, consent forms, photography shoot.</td><td>Real content exists for home, about, courses, faculty</td></tr>
+      <tr><td class="num">2 &mdash; Design system</td><td>Tokens sampled from the real logo, type scale, primitives, contrast verification. Homepage and one course page designed at 360px and 1280px.</td><td>Design approved; contrast passes AA</td></tr>
+      <tr><td class="num">3 &mdash; Foundation</td><td>Next.js + TS + Tailwind scaffold, config module, layout, header, footer, primitives, SEO infrastructure, CI with Lighthouse and axe.</td><td>Empty shell deploys, passes budgets</td></tr>
+      <tr><td class="num">4 &mdash; Core pages</td><td>Home, About, Courses, course details, Faculty, Contact, Admissions + enquiry API + database + email.</td><td>A visitor can find a course and enquire, end to end</td></tr>
+      <tr><td class="num">5 &mdash; Evidence &amp; integrations</td><td>Results, toppers, gallery, Review Engine, YouTube, admin dashboard.</td><td>Reviews and videos live; institute can publish a topper unaided</td></tr>
+      <tr><td class="num">6 &mdash; Audit</td><td>Functional, UX, mobile-on-device, performance, SEO, accessibility, security, and a full content-integrity pass.</td><td>Every audit signed off</td></tr>
+      <tr><td class="num">7 &mdash; Launch</td><td>DNS, redirects from old URLs, Search Console, GBP link, analytics, handover documentation and admin training.</td><td>Live, indexed, and the client can operate it</td></tr>
+      <tr><td class="num">8 &mdash; Post-launch</td><td>Monitor Core Web Vitals and enquiry conversion. Resources section and student stories if content materialises.</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box call">
+    <span class="lbl">Phase 0 is not optional</span>
+    <p>Removing the fabricated toppers and testimonials should not wait for the new site. It is a small change to the existing build, it removes a live risk today, and it costs nothing to do this week.</p>
+  </div>
+</section>
+
+<section class="sec" id="s24">
+  <span class="sec-n">SECTION 24</span>
+  <h2>Risks</h2>
+  <p class="dek">Ordered by expected impact. The top four are all content or consent risks, not technical ones &mdash; which is the honest shape of this project.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>#</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Fabricated content survives into the new site, or is re-requested because the real numbers look modest</td><td>Medium</td><td>Severe</td><td>Phase 0 removal; a written content-integrity rule in the project; every published claim traced to a source. If real results are modest, we frame them honestly &mdash; a small verified set outperforms an impressive unverifiable one.</td></tr>
+      <tr><td class="num">2</td><td>Photography never arrives</td><td>High</td><td>High</td><td>Designed fallbacks that look deliberate; art-directed shot list; treat the shoot as a Phase 1 gate rather than a nice-to-have.</td></tr>
+      <tr><td class="num">3</td><td>Parental consent not obtained for published minors' data</td><td>Medium</td><td>Severe</td><td>Admin publish action requires <code>consentRef</code>; initials-only default; documented takedown route. Section 19.</td></tr>
+      <tr><td class="num">4</td><td>Little or no real results data exists yet</td><td>Medium</td><td>High</td><td>Decide early. If the institute is young, replace the results band with teaching evidence &mdash; video, methodology, faculty credentials &mdash; rather than shipping an empty page. This changes the homepage, so it must be settled in Phase 1.</td></tr>
+      <tr><td class="num">5</td><td>Review Engine activation stalls on Google API access</td><td>Medium</td><td>Medium</td><td>The site launches without it; the band appears when the payload does. Start the API request in Phase 0 &mdash; it is the longest lead time in the project.</td></tr>
+      <tr><td class="num">6</td><td>Scope creep from the admin/CMS ambition</td><td>High</td><td>Medium</td><td>The Section 12 split is written down and agreed. Additions go to a Phase 8 list, not into Phase 5.</td></tr>
+      <tr><td class="num">7</td><td>NAP inconsistency across site, GBP and directories</td><td>Medium</td><td>Medium</td><td>Single typed config module; one nominated primary phone; a pre-launch audit against the live GBP.</td></tr>
+      <tr><td class="num">8</td><td>YouTube channel too small to fill <code>/videos</code></td><td>Medium</td><td>Low</td><td>Threshold rule &mdash; fewer than six videos and the route ships later.</td></tr>
+      <tr><td class="num">9</td><td>Third-party embeds erode the performance budget after launch</td><td>Medium</td><td>Medium</td><td>Lighthouse CI as a merge gate; interaction-loading for map and video is architectural, not a convention.</td></tr>
+      <tr><td class="num">10</td><td>Handover gap &mdash; institute cannot operate the site</td><td>Medium</td><td>Medium</td><td>Phase 7 training on the admin, plus a short written runbook for the five things they will actually do.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="sec" id="s25">
+  <span class="sec-n">SECTION 25</span>
+  <h2>Implementation roadmap</h2>
+  <p class="dek">Sequenced by dependency rather than dated, because the true critical path runs through client content, not engineering. Engineering durations are estimates; the gates are firm.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Stage</th><th>Track</th><th>Est.</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr><td>Remove fabricated content from live site</td><td>Triage</td><td class="num">1 day</td><td>Client sign-off</td></tr>
+      <tr><td>Repo, git, CI, environments</td><td>Engineering</td><td class="num">1 day</td><td>&mdash;</td></tr>
+      <tr><td>Start Google Business Profile API request</td><td>Client + TP</td><td class="num">Start now</td><td>GBP ownership &mdash; <strong>longest lead time</strong></td></tr>
+      <tr><td>Content collection + founder interview</td><td>Content</td><td class="num">1&ndash;2 weeks</td><td>Client availability</td></tr>
+      <tr><td>Photography shoot</td><td>Content</td><td class="num">1 day + edit</td><td>Scheduling</td></tr>
+      <tr><td>Design system from real logo</td><td>Design</td><td class="num">3&ndash;4 days</td><td>Logo artwork</td></tr>
+      <tr><td>Homepage + course page designs</td><td>Design</td><td class="num">4&ndash;5 days</td><td>Design system, content</td></tr>
+      <tr><td>Foundation build</td><td>Engineering</td><td class="num">3&ndash;4 days</td><td>Design system</td></tr>
+      <tr><td>Core pages + enquiry system</td><td>Engineering</td><td class="num">1.5&ndash;2 weeks</td><td>Foundation, content</td></tr>
+      <tr><td>Results, toppers, gallery</td><td>Engineering</td><td class="num">4&ndash;5 days</td><td>Real results, consent, photos</td></tr>
+      <tr><td>Review Engine integration</td><td>Engineering</td><td class="num">2 days</td><td>Engine activated</td></tr>
+      <tr><td>YouTube integration</td><td>Engineering</td><td class="num">2 days</td><td>Channel ID</td></tr>
+      <tr><td>Admin dashboard</td><td>Engineering</td><td class="num">4&ndash;5 days</td><td>Database</td></tr>
+      <tr><td>Eight-part audit</td><td>QA</td><td class="num">3&ndash;4 days</td><td>Feature complete</td></tr>
+      <tr><td>Launch + handover training</td><td>All</td><td class="num">2 days</td><td>Audits signed off</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="box call">
+    <span class="lbl">The three things to start this week</span>
+    <ol>
+      <li><strong>Take the fabricated toppers and testimonials off the live site.</strong> One day's work, removes a live risk.</li>
+      <li><strong>Begin the Google Business Profile API access request.</strong> It has the longest lead time and nothing else depends on us to start it.</li>
+      <li><strong>Book the photography.</strong> It gates the design phase, and it is the input most likely to slip.</li>
+    </ol>
+    <p>Everything else can proceed in parallel once the logo arrives.</p>
+  </div>
+</section>
+
+<div class="endnote">
+  <p><strong>Status:</strong> This plan is complete and awaiting approval. No application code has been written. On approval, work begins at Phase 0 &mdash; and the open questions in Section 22 should be answered in parallel, since they, not the engineering, set the launch date.</p>
+  <p>Prepared by TradyPerch &middot; 21 August 2026</p>
+</div>
+
+</main>
+</div>
+</div>
