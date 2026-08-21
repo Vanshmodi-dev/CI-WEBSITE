@@ -10,7 +10,10 @@ TradyPerch · Client project #1 · Started August 2026
 | [`brief/02-vision-brief.md`](brief/02-vision-brief.md) | The vision / wish-list. Page-by-page picture of what the site should feel like. | Source doc — preserve verbatim |
 | [`MASTER-PLAN.html`](MASTER-PLAN.html) | The plan we actually build from. Answers the brief in 25 sections, with the audit findings that override parts of it. | **Yes — this is the living document** |
 | [`design/DESIGN-TOKENS.md`](design/DESIGN-TOKENS.md) | Phase 2 output. Brand colours sampled from the logo, every pairing verified against WCAG AA. | **Yes** |
-| [`design/tokens.css`](design/tokens.css) | The 80 tokens as shippable CSS. Consumed by the app in Phase 3. | **Yes** |
+| [`design/tokens.css`](design/tokens.css) | The 80 tokens as shippable CSS. Canonical reference; the app implements them in `src/app/globals.css`. | **Yes** |
+| [`design/BRAND-ASSETS-PENDING.md`](design/BRAND-ASSETS-PENDING.md) | Open dependency — transparent/vector logo, horizontal lock-up, monochrome version. | **Yes** |
+| [`design/STUDENT-DATA-POLICY.md`](design/STUDENT-DATA-POLICY.md) | How we publish student information: consent-gated, conservative by default. | **Yes** |
+| [`PHASE-3-REPORT.md`](PHASE-3-REPORT.md) | Phase 3 completion report, verification evidence, and the open budget decision. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

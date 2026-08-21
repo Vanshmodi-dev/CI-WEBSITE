@@ -1,0 +1,240 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/cn';
+import { primaryNav } from '@/config/nav';
+import { institute, telHref } from '@/config/institute';
+import { Button } from '@/components/primitives/button';
+import { LogoLockup } from '@/components/domain/logo';
+
+/**
+ * SiteHeader — Master Plan §21.
+ *
+ * One of only a handful of client components in the app (§10); everything else
+ * is server-rendered. The interactivity here is the mobile drawer.
+ *
+ * Mobile: logo + call icon + hamburger. The drawer pins Enquire at the BOTTOM,
+ * in thumb reach — the top of a full-height drawer is the hardest place to
+ * reach one-handed, and Enquire is the action we most want tapped.
+ */
+export function SiteHeader() {
+  const pathname = usePathname();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * The drawer records WHICH route it was opened on, and is open only while
+   * that still matches. Navigating therefore closes it during render, with no
+   * effect and no cascading re-render — an effect that called setState here
+   * would fire after paint, so the drawer would flash over the new page.
+   */
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const open = openPath !== null && openPath === pathname;
+
+  const setOpen = (next: boolean) => setOpenPath(next ? pathname : null);
+
+  // Escape closes; focus returns to the trigger. Master Plan §20.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        // setOpenPath, not setOpen: the state setter is referentially stable,
+        // so the effect does not need to re-subscribe on every render.
+        setOpenPath(null);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    closeButtonRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur-sm">
+      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 md:px-8 lg:h-20 lg:px-12">
+        <LogoLockup priority />
+
+        {/* Desktop navigation — appears at lg, per §21 */}
+        <nav aria-label="Primary" className="hidden lg:block">
+          <ul className="flex items-center gap-1">
+            {primaryNav.map((item) => {
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'relative inline-flex min-h-11 items-center rounded-sm px-3 text-[15px] transition-colors',
+                      active
+                        ? 'text-heading font-medium'
+                        : 'text-muted hover:text-heading',
+                    )}
+                  >
+                    {item.label}
+                    {/* The active indicator is the one orange element in the
+                        header. It is a rule, not text — the logo orange is
+                        safe as a fill and fails AA as text on white. */}
+                    {active ? (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
+                      />
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="flex items-center gap-2">
+          {/* Parents call; they do not fill forms (Master Plan §06). The
+              number is reachable from every page at every breakpoint. */}
+          <a
+            href={telHref}
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted transition-colors hover:bg-surface hover:text-heading lg:px-4"
+            aria-label={`Call ${institute.name} on ${institute.phonePrimary.display}`}
+          >
+            <PhoneIcon />
+            <span className="ml-2 hidden text-[15px] xl:inline">
+              {institute.phonePrimary.display}
+            </span>
+          </a>
+
+          <Button href="/admissions" className="hidden lg:inline-flex">
+            Enquire
+          </Button>
+
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-expanded={open}
+            aria-controls="mobile-nav"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-heading transition-colors hover:bg-surface lg:hidden"
+          >
+            <span className="sr-only">Open menu</span>
+            <MenuIcon />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile drawer */}
+      {open ? (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close menu"
+            tabIndex={-1}
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 bg-navy-950/50"
+          />
+          <div
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Site menu"
+            className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-paper shadow-e3"
+          >
+            <div className="flex h-16 items-center justify-between border-b border-rule px-5">
+              <LogoLockup />
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={() => setOpen(false)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-heading hover:bg-surface"
+              >
+                <span className="sr-only">Close menu</span>
+                <CloseIcon />
+              </button>
+            </div>
+
+            <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-5 py-4">
+              <ul className="flex flex-col">
+                {primaryNav.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <li key={item.href} className="border-b border-rule/70">
+                      <Link
+                        href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={cn(
+                          'flex min-h-14 items-center text-[17px]',
+                          active ? 'font-medium text-heading' : 'text-text',
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            {/* Pinned in thumb reach */}
+            <div className="border-t border-rule bg-surface px-5 py-4">
+              <Button href="/admissions" size="lg" className="w-full">
+                Enquire now
+              </Button>
+              <a
+                href={telHref}
+                className="mt-3 flex min-h-11 items-center justify-center gap-2 text-[15px] text-link"
+              >
+                <PhoneIcon />
+                {institute.phonePrimary.display}
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </header>
+  );
+}
+
+/* Inline icons — no icon library. A dependency for four glyphs would cost
+   more than it saves (Master Plan §18). */
+
+function PhoneIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.3 2.2Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M4 7h16M4 12h16M4 17h16"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}

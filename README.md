@@ -53,22 +53,34 @@ Master file: [`assets/brand/commerce-insight-logo-master.jpg`](assets/brand/comm
 
 ## Local setup
 
-Nothing to install yet — the app is scaffolded in Phase 3.
-
 ```bash
 git clone https://github.com/Vanshmodi-dev/CI-WEBSITE.git
 cd CI-WEBSITE
+npm ci
+cp .env.example .env.local
+npm run dev
 ```
+
+| Script | Does |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run verify` | typecheck + lint + build |
+
+> The site is **pre-launch**: `robots.ts` disallows all crawling and the root
+> metadata sets `noindex`. Both are flipped in Phase 7.
 
 ## Phases
 
 | | Phase | State |
 | --- | --- | --- |
-| 0 | Triage · repo · CI | ◐ repo done, CI pending |
+| 0 | Triage · repo · CI | ● done |
 | 1 | Content collection | ○ blocked on client — Master Plan §22 |
 | 2 | Design system | ● done — awaiting sign-off |
-| 3 | Foundation build | ○ next |
-| 4 | Core pages + enquiry | ○ |
+| 3 | Foundation build | ● done — see [docs/PHASE-3-REPORT.md](docs/PHASE-3-REPORT.md) |
+| 4 | Core pages + enquiry | ○ next |
 | 5 | Evidence + integrations | ○ |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |

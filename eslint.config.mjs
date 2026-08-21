@@ -1,0 +1,35 @@
+import coreWebVitals from 'eslint-config-next/core-web-vitals';
+import typescript from 'eslint-config-next/typescript';
+
+/**
+ * ESLint flat config.
+ *
+ * eslint-config-next v16 exports flat configs directly, so no @eslint/eslintrc
+ * FlatCompat shim is needed — one fewer dependency (Master Plan §18).
+ */
+const config = [
+  { ignores: ['.next/**', 'node_modules/**', 'out/**', 'next-env.d.ts'] },
+  ...coreWebVitals,
+  ...typescript,
+  {
+    rules: {
+      // Content integrity and performance: a raw <img> bypasses the
+      // optimisation and explicit-dimension rules that keep CLS near zero.
+      // next/image is not optional on this project (Master Plan §18).
+      '@next/next/no-img-element': 'error',
+
+      // Destructuring to drop keys before a rest spread is the intended use
+      // of ignoreRestSiblings; those bindings are never meant to be read.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          ignoreRestSiblings: true,
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+];
+
+export default config;
