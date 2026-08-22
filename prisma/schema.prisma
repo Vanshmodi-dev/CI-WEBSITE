@@ -98,7 +98,7 @@ model Enquiry {
 enum ConsentScope {
   /// Score, programme, year. No name, no photo.
   RESULT_ONLY
-  /// Plus a partial name — "Priya G." or first name only.
+  /// Plus a partial name — "Sample T." or first name only.
   RESULT_PARTIAL_NAME
   /// Plus the full name. Still no photograph.
   RESULT_FULL_NAME

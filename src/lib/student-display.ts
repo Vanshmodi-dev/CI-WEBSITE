@@ -53,7 +53,7 @@ function nameParts(fullName: string): string[] {
   return fullName.trim().split(/\s+/).filter(Boolean);
 }
 
-/** "Priya Gupta" → "PG". Always safe: initials identify nobody on their own. */
+/** "Sample Testcase" → "ST". Always safe: initials identify nobody on their own. */
 export function monogramOf(fullName: string): string {
   const parts = nameParts(fullName);
   if (parts.length === 0) return '?';
@@ -62,7 +62,7 @@ export function monogramOf(fullName: string): string {
   return (first + last).toUpperCase() || '?';
 }
 
-/** "Priya Gupta" → "Priya G." */
+/** "Sample Testcase" → "Sample T." */
 function partialName(fullName: string): string {
   const parts = nameParts(fullName);
   if (parts.length === 0) return '';

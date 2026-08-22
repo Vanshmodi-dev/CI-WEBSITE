@@ -16,7 +16,7 @@ const COURSES = ['class-11-commerce', 'class-12-commerce', 'ca-foundation'];
 /** A submission that should always pass, so each test varies one thing. */
 function valid(overrides: Record<string, unknown> = {}) {
   return {
-    name: 'Priya Gupta',
+    name: 'Sample Testcase',
     phone: '9509017150',
     classLevel: 'CLASS_12',
     consent: 'on',
@@ -58,7 +58,7 @@ describe('normalisePhone', () => {
 
 describe('isPlausibleEmail', () => {
   test('accepts ordinary addresses', () => {
-    for (const e of ['a@b.co', 'priya.gupta@example.com', 'x+tag@sub.example.in']) {
+    for (const e of ['a@b.co', 'sample.testcase@example.com', 'x+tag@sub.example.in']) {
       assert.equal(isPlausibleEmail(e), true, `should accept ${e}`);
     }
   });
@@ -81,8 +81,8 @@ describe('isPlausibleEmail', () => {
 
 describe('sanitisers', () => {
   test('clean strips control characters and collapses whitespace', () => {
-    assert.equal(clean('  Priya   Gupta  '), 'Priya Gupta');
-    assert.equal(clean('Priya\u0000Gupta'), 'Priya Gupta');
+    assert.equal(clean('  Sample   Testcase  '), 'Sample Testcase');
+    assert.equal(clean('Sample\u0000Testcase'), 'Sample Testcase');
     assert.equal(clean('line\nbreak'), 'line break');
     assert.equal(clean('bell\u0007here'), 'bell here');
     assert.equal(clean(undefined), '');
@@ -116,7 +116,7 @@ describe('validateEnquiry — happy path', () => {
     const result = validateEnquiry(valid(), COURSES);
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.equal(result.value.name, 'Priya Gupta');
+    assert.equal(result.value.name, 'Sample Testcase');
     assert.equal(result.value.phone, '919509017150');
     assert.equal(result.value.classLevel, 'CLASS_12');
     assert.equal(result.value.email, null);
@@ -124,10 +124,10 @@ describe('validateEnquiry — happy path', () => {
   });
 
   test('lowercases email', () => {
-    const result = validateEnquiry(valid({ email: 'Priya@Example.COM' }), COURSES);
+    const result = validateEnquiry(valid({ email: 'Sample@Example.COM' }), COURSES);
     assert.equal(result.ok, true);
     if (!result.ok) return;
-    assert.equal(result.value.email, 'priya@example.com');
+    assert.equal(result.value.email, 'sample@example.com');
   });
 
   test('keeps a known course slug and drops an unknown one', () => {

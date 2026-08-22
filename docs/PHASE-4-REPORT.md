@@ -77,11 +77,16 @@ PostgreSQL instance, no Docker and no `DATABASE_URL` on this machine, so
 
 - `prisma/migrations/20260821000000_init/migration.sql` — 309 lines, generated
   offline with `prisma migrate diff`, then extended by hand.
+
+> **Correction (Phase 4.5, 21 Aug 2026):** this report originally said *26*
+> CHECK constraints. The real figure is **25** — the original count matched
+> `ADD CONSTRAINT`, which also matched the one FOREIGN KEY. Corrected here and
+> in the summary below.
 - Schema validates; the Prisma client generates.
 - **The migration has never been executed against a real database.** It must be
   applied to a staging database and the constraints exercised before launch.
 
-### 26 CHECK constraints enforce consent at the database level
+### 25 CHECK constraints enforce consent at the database level
 
 Prisma cannot express CHECK constraints, so they were written by hand. This
 matters: application logic can be bypassed by a direct query, a data-fix
