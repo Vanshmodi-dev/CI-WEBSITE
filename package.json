@@ -26,7 +26,8 @@
     "verify:e2e": "node scripts/verify-e2e.mjs",
     "verify:scale": "node scripts/scale-check.mjs",
     "verify:public": "node scripts/verify-public-isolation.mjs",
-    "verify:revalidation": "node scripts/verify-revalidation.mjs"
+    "verify:revalidation": "node scripts/verify-revalidation.mjs",
+    "verify:integration": "node scripts/verify-integration.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

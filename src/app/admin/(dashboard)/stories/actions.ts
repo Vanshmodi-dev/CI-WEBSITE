@@ -20,6 +20,25 @@ export type StoryFormState = {
 const PROGRAMMES = ['CLASS_11', 'CLASS_12', 'CA_FOUNDATION', 'CA_INTERMEDIATE', 'CMA'] as const;
 const NAME_MODES = ['INITIALS', 'FIRST_NAME_ONLY', 'FULL'] as const;
 
+/**
+ * Find a free slug, appending -2, -3 … on collision.
+ *
+ * Bounded so a pathological case cannot loop; after that it falls back to a
+ * timestamp, which is ugly but always unique and never blocks the teacher.
+ */
+async function uniqueSlug(base: string): Promise<string> {
+  const prisma = getPrisma();
+  for (let attempt = 1; attempt <= 25; attempt += 1) {
+    const candidate = attempt === 1 ? base : `${base}-${attempt}`;
+    const clash = await prisma.studentStory.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!clash) return candidate;
+  }
+  return `${base}-${Date.now()}`;
+}
+
 function slugify(value: string): string {
   return value
     .toLowerCase()
@@ -98,7 +117,24 @@ export async function saveStory(
     }
   }
 
-  const slug = slugify(`${studentName}-${year}`) || `story-${Date.now()}`;
+  /**
+   * The slug is UNIQUE in the database, and two students can genuinely share a
+   * name and year — siblings, or simply a common name among a thousand
+   * students. The collision surfaced as "we could not save this, please try
+   * again", which is both wrong and unactionable: retrying never works.
+   *
+   * On EDIT the existing slug is kept. Regenerating it on every save would
+   * change a record's identity because someone corrected a spelling.
+   */
+  let slug: string;
+  if (id) {
+    const existing = await getPrisma()
+      .studentStory.findUnique({ where: { id }, select: { slug: true } })
+      .catch(() => null);
+    slug = existing?.slug ?? (slugify(`${studentName}-${year}`) || `story-${Date.now()}`);
+  } else {
+    slug = await uniqueSlug(slugify(`${studentName}-${year}`) || 'story');
+  }
 
   const data = {
     slug,

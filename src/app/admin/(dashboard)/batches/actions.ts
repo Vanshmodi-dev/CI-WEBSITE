@@ -77,9 +77,20 @@ export async function saveBatch(
     published: input.published,
   };
 
+  // Moving a batch between courses changes TWO public pages: the one it left
+  // and the one it joined. Revalidating only the new slug leaves the old course
+  // page advertising a batch it no longer has, for up to an hour.
+  let previousCourseSlug: string | null = null;
+
   try {
     const prisma = getPrisma();
     if (id) {
+      const existing = await prisma.batch.findUnique({
+        where: { id },
+        select: { courseSlug: true },
+      });
+      previousCourseSlug = existing?.courseSlug ?? null;
+
       await prisma.batch.update({ where: { id }, data });
       await recordAudit(admin, input.published ? 'published' : 'updated', 'Batch', id, input.courseSlug);
     } else {
@@ -94,6 +105,9 @@ export async function saveBatch(
   revalidatePath('/admin/batches');
   revalidatePath('/admin');
   revalidateBatches(input.courseSlug);
+  if (previousCourseSlug && previousCourseSlug !== input.courseSlug) {
+    revalidateBatches(previousCourseSlug);
+  }
   redirect('/admin/batches?saved=1');
 }
 
