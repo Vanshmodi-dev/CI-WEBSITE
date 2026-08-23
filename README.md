@@ -71,6 +71,7 @@ npm run dev
 | `npm test` | Unit tests (Node's built-in runner) |
 | `npm run verify` | typecheck + lint + test + build |
 | `npm run db:migrate` | Apply migrations (needs `DATABASE_URL`) |
+| `npm run create-admin` | Create the admin account (needs a database) |
 
 > The site is **pre-launch**: `robots.ts` disallows all crawling and the root
 > metadata sets `noindex`. Both are flipped in Phase 7.
@@ -84,7 +85,8 @@ npm run dev
 | 2 | Design system | ● done — awaiting sign-off |
 | 3 | Foundation build | ● done — see [docs/PHASE-3-REPORT.md](docs/PHASE-3-REPORT.md) |
 | 4 | Core pages + enquiry | ● done — see [docs/PHASE-4-REPORT.md](docs/PHASE-4-REPORT.md) |
-| 5 | Evidence + integrations | ○ next |
+| 5 | Admin panel | ● done — see [docs/PHASE-5-REPORT.md](docs/PHASE-5-REPORT.md) |
+| 5b | Evidence + integrations (reviews, video) | ○ next |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |
 

@@ -16,6 +16,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-3-REPORT.md`](PHASE-3-REPORT.md) | Phase 3 completion report, verification evidence, and the open budget decision. | **Yes** |
 | [`PHASE-4-REPORT.md`](PHASE-4-REPORT.md) | Phase 4 completion report — data layer, enquiry pipeline, consent constraints. | **Yes** |
 | [`PHASE-4.5-DB-VERIFICATION.md`](PHASE-4.5-DB-VERIFICATION.md) | Offline migration audit, 9 findings, and the database provisioning checklist. **Live migration still pending.** | **Yes** |
+| [`PHASE-5-REPORT.md`](PHASE-5-REPORT.md) | Admin panel — auth, authorisation, the four-permission consent model, and what was deliberately not built. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

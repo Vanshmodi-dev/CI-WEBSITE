@@ -93,20 +93,26 @@ model Enquiry {
 // make an unconsented published row impossible rather than merely discouraged.
 // =============================================================================
 
-/// What the institute is authorised to show. The UI renders the narrowest
-/// grant the record supports.
-enum ConsentScope {
-  /// Score, programme, year. No name, no photo.
-  RESULT_ONLY
-  /// Plus a partial name — "Sample T." or first name only.
-  RESULT_PARTIAL_NAME
-  /// Plus the full name. Still no photograph.
-  RESULT_FULL_NAME
-  /// Plus a photograph. The fullest grant.
-  RESULT_NAME_PHOTO
-  /// An extended narrative quoting the student. Always authorised separately.
-  STORY
-}
+// CONSENT IS FOUR INDEPENDENT PERMISSIONS, NOT A LADDER.
+//
+// This replaced an ordered `ConsentScope` enum. The enum could not express the
+// rule the institute actually requires: that authorising a STORY must not also
+// authorise a PHOTOGRAPH. An ordered scale forces every higher grant to imply
+// every lower one, which is wrong for permissions that people grant separately
+// on a paper form.
+//
+// Each flag answers one question, defaults to false, and is NOT NULL — so
+// unlike a nullable enum these can never make a CHECK constraint evaluate to
+// NULL, which is what made the old constraints quietly permissive
+// (docs/PHASE-4.5-DB-VERIFICATION.md, Finding 3).
+//
+//   consentResult  may we publish the score at all?
+//   consentName    may we show a name rather than initials?
+//   consentPhoto   may we show a photograph?
+//   consentStory   may we publish a written story about them?
+//
+// `consentRef` still points at the signed paperwork and is still required
+// before anything is published.
 
 enum DisplayNameMode {
   INITIALS
@@ -154,11 +160,13 @@ model Topper {
   // ---- publication control ---------------------------------------------
   /// Reference to the signed authorisation the institute holds on file.
   /// A published row cannot have this null — enforced by CHECK constraint.
-  consentRef   String?       @db.VarChar(200)
-  consentScope ConsentScope?
-  published    Boolean       @default(false)
-  publishedAt  DateTime?
-  sortOrder    Int           @default(0)
+  consentRef    String? @db.VarChar(200)
+  consentResult Boolean @default(false)
+  consentName   Boolean @default(false)
+  consentPhoto  Boolean @default(false)
+  published     Boolean @default(false)
+  publishedAt   DateTime?
+  sortOrder     Int     @default(0)
 
   @@index([published, year])
   @@index([programme, year])
@@ -193,10 +201,11 @@ model ResultRecord {
   board     Board?
   year      Int
 
-  consentRef   String?       @db.VarChar(200)
-  consentScope ConsentScope?
-  published    Boolean       @default(false)
-  publishedAt  DateTime?
+  consentRef    String? @db.VarChar(200)
+  consentResult Boolean @default(false)
+  consentName   Boolean @default(false)
+  published     Boolean @default(false)
+  publishedAt   DateTime?
 
   @@index([published, year])
   @@index([programme, year, published])
@@ -222,9 +231,11 @@ model StudentStory {
   outcome   String @db.VarChar(2000)
   quote     String? @db.VarChar(600)
 
-  consentRef   String?       @db.VarChar(200)
-  consentScope ConsentScope?
-  published    Boolean       @default(false)
+  consentRef   String? @db.VarChar(200)
+  consentStory Boolean @default(false)
+  consentName  Boolean @default(false)
+  consentPhoto Boolean @default(false)
+  published    Boolean @default(false)
   publishedAt  DateTime?
 
   @@index([published, year])
@@ -271,4 +282,61 @@ model Batch {
 
   @@index([courseSlug, published, startsAt])
   @@map("batches")
+}
+
+// =============================================================================
+// ADMIN
+// A single institute owner, plus a record of what was published and when.
+// =============================================================================
+
+/// An account that can sign in to /admin.
+///
+/// There is no self-registration and no password-reset flow: accounts are
+/// seeded deliberately. One role only — see docs/PHASE-5-REPORT.md for why a
+/// role column was not added yet.
+model AdminUser {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  email       String @unique @db.VarChar(160)
+  /// Shown in the admin header. "Sir", a first name — whatever the owner wants.
+  displayName String @db.VarChar(80)
+  /// scrypt, encoded as "scrypt$N$r$p$salt$hash". NEVER a plaintext password.
+  passwordHash String @db.VarChar(255)
+
+  lastLoginAt DateTime?
+  /// Deactivating is preferred to deleting, so audit entries keep their actor.
+  active      Boolean   @default(true)
+
+  auditEntries AuditLog[]
+
+  @@map("admin_users")
+}
+
+/// Who published what, and when.
+///
+/// Deliberately records the SHAPE of an action, never its content: an entity
+/// type and id, not a student's name or marks. Cheap now, and the only way to
+/// answer "who published this student's photo?" in a dispute.
+model AuditLog {
+  id String   @id @default(cuid())
+  at DateTime @default(now())
+
+  actorId String?
+  actor   AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  /// Denormalised so the entry stays readable if the account is ever removed.
+  actorLabel String @db.VarChar(80)
+
+  /// "created" | "updated" | "published" | "unpublished" | "deleted"
+  action   String  @db.VarChar(30)
+  /// "Topper" | "ResultRecord" | "StudentStory" | "Announcement" | "Batch" | "Enquiry"
+  entity   String  @db.VarChar(40)
+  entityId String  @db.VarChar(40)
+  /// Short, human-readable, and free of personal data. Optional.
+  summary  String? @db.VarChar(200)
+
+  @@index([at])
+  @@index([entity, entityId])
+  @@map("audit_log")
 }

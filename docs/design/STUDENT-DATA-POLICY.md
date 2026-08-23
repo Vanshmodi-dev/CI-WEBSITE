@@ -45,36 +45,54 @@ Every model that can identify a student carries:
 | Field | Purpose |
 | --- | --- |
 | `consentRef` | Pointer to the signed authorisation the institute holds. **Not nullable on a published record.** |
-| `consentScope` | What was authorised — see the scope ladder below. |
+| `consentResult` / `consentName` / `consentPhoto` / `consentStory` | The four independent permissions. All default to `false`. |
 | `published` | Defaults to `false`. Never defaults to true on create. |
 | `displayNameMode` | `full` \| `initials` \| `firstNameOnly` — defaults to the most private. |
 
 The publish action is gated: a record cannot move to `published: true` without
-a `consentRef` and a `consentScope` that covers what is actually on screen.
-This is enforced in the mutation, not merely in the form, so it cannot be
-bypassed by a direct call.
+a `consentRef` and the permissions covering what is actually on screen. This is
+enforced in the mutation, not merely in the form, so it cannot be bypassed by a
+direct call — and again by database CHECK constraints, so it cannot be bypassed
+by a direct query either.
 
-### The scope ladder
+### The four permissions
 
-Consent is not one switch. These are separable, and the UI respects the
-narrowest grant:
+Consent is **four independent questions**, not a ladder. This replaced an
+ordered scope enum in Phase 5, on explicit instruction from the institute:
 
-1. **Result only** — score, programme, year. No name, no photo.
-2. **Result + partial name** — e.g. "Priya G." or first name only.
-3. **Result + full name** — no photograph.
-4. **Result + full name + photograph** — the fullest grant.
-5. **Story** — extended narrative quoting the student. Always separate.
+> "A story must NOT automatically grant permission to publish a photograph."
 
-Default rendering is the lowest rung the record supports. A topper card with
-scope 2 renders a monogram tile, not a blank photo frame — which is also why
-`EmptyState` and the monogram fallback exist in the component library already.
+An ordered scale cannot express that — it forces every higher grant to imply
+every lower one. People do not grant permission that way on a paper form.
+
+| Permission | Authorises |
+| --- | --- |
+| `consentResult` | Publishing the score at all |
+| `consentName` | Showing a name rather than initials |
+| `consentPhoto` | Showing a photograph — **never implied by anything else** |
+| `consentStory` | Publishing a written story about them |
+
+Each is `BOOLEAN NOT NULL DEFAULT false`. Because none of them is nullable,
+none can make a CHECK constraint evaluate to NULL — which is what made the
+earlier nullable-enum constraints quietly permissive
+(`docs/PHASE-4.5-DB-VERIFICATION.md`, Finding 3).
+
+Default rendering is always the narrowest the permissions allow. A record with
+`consentResult` but not `consentName` renders a monogram tile, not a name —
+which is why the monogram fallback exists in the component library.
 
 ### Admin UI (Phase 5)
 
-- Consent scope is a required field on the create form, not an optional toggle.
-- The publish button is disabled, with a visible reason, until scope is set.
-- `AuditLog` records who published which student record and when.
-- Unpublishing is one click and takes effect on the next revalidation.
+- The four permissions are separate tick boxes, each with a plain-language
+  explanation of what it authorises.
+- **The publish control is disabled until the permissions allow it**, with the
+  missing ones listed in words the teacher can act on — "Tick Photograph, or
+  remove the photo." Nobody ever meets a database error.
+- A live preview shows exactly what a visitor would see, before publishing.
+- `AuditLog` records who published which record and when — the action and the
+  entity id, never the student's name or marks.
+- "Hide from website" is one click, keeps the record, and is offered separately
+  from deleting.
 
 ### Public site
 
@@ -89,8 +107,9 @@ scope 2 renders a monogram tile, not a blank photo frame — which is also why
 1. Confirmation of how consent is collected today, if at all.
 2. A consent form the institute is willing to use — we can draft one for their
    adviser to review, but we should not be the last word on its wording.
-3. A decision on the **default** display mode. Our recommendation is initials
-   plus surname unless the fuller grant is explicitly on record.
+3. A decision on the **default** display mode. The implemented default is
+   initials only, which is the most private option available.
 
 Until those arrive, the results and toppers bands render nothing (Master Plan
-§03), which is already the behaviour built in Phase 3.
+§03), which is already the behaviour built in Phase 3. No student record of any
+kind exists in this project — real or synthetic.

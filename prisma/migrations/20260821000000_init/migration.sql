@@ -8,9 +8,6 @@ CREATE TYPE "EnquiryStatus" AS ENUM ('NEW', 'CONTACTED', 'ENROLLED', 'CLOSED', '
 CREATE TYPE "ClassLevel" AS ENUM ('CLASS_11', 'CLASS_12', 'CA_FOUNDATION', 'CA_INTERMEDIATE', 'CMA', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "ConsentScope" AS ENUM ('RESULT_ONLY', 'RESULT_PARTIAL_NAME', 'RESULT_FULL_NAME', 'RESULT_NAME_PHOTO', 'STORY');
-
--- CreateEnum
 CREATE TYPE "DisplayNameMode" AS ENUM ('INITIALS', 'FIRST_NAME_ONLY', 'FULL');
 
 -- CreateEnum
@@ -54,7 +51,9 @@ CREATE TABLE "toppers" (
     "year" INTEGER NOT NULL,
     "highlight" VARCHAR(160),
     "consentRef" VARCHAR(200),
-    "consentScope" "ConsentScope",
+    "consentResult" BOOLEAN NOT NULL DEFAULT false,
+    "consentName" BOOLEAN NOT NULL DEFAULT false,
+    "consentPhoto" BOOLEAN NOT NULL DEFAULT false,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "publishedAt" TIMESTAMP(3),
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
@@ -85,7 +84,8 @@ CREATE TABLE "result_records" (
     "board" "Board",
     "year" INTEGER NOT NULL,
     "consentRef" VARCHAR(200),
-    "consentScope" "ConsentScope",
+    "consentResult" BOOLEAN NOT NULL DEFAULT false,
+    "consentName" BOOLEAN NOT NULL DEFAULT false,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "publishedAt" TIMESTAMP(3),
 
@@ -108,7 +108,9 @@ CREATE TABLE "student_stories" (
     "outcome" VARCHAR(2000) NOT NULL,
     "quote" VARCHAR(600),
     "consentRef" VARCHAR(200),
-    "consentScope" "ConsentScope",
+    "consentStory" BOOLEAN NOT NULL DEFAULT false,
+    "consentName" BOOLEAN NOT NULL DEFAULT false,
+    "consentPhoto" BOOLEAN NOT NULL DEFAULT false,
     "published" BOOLEAN NOT NULL DEFAULT false,
     "publishedAt" TIMESTAMP(3),
 
@@ -142,6 +144,34 @@ CREATE TABLE "batches" (
     "published" BOOLEAN NOT NULL DEFAULT false,
 
     CONSTRAINT "batches_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "admin_users" (
+    "id" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "email" VARCHAR(160) NOT NULL,
+    "displayName" VARCHAR(80) NOT NULL,
+    "passwordHash" VARCHAR(255) NOT NULL,
+    "lastLoginAt" TIMESTAMP(3),
+    "active" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "admin_users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "audit_log" (
+    "id" TEXT NOT NULL,
+    "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "actorId" TEXT,
+    "actorLabel" VARCHAR(80) NOT NULL,
+    "action" VARCHAR(30) NOT NULL,
+    "entity" VARCHAR(40) NOT NULL,
+    "entityId" VARCHAR(40) NOT NULL,
+    "summary" VARCHAR(200),
+
+    CONSTRAINT "audit_log_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -180,47 +210,49 @@ CREATE INDEX "announcements_published_startsAt_endsAt_idx" ON "announcements"("p
 -- CreateIndex
 CREATE INDEX "batches_courseSlug_published_startsAt_idx" ON "batches"("courseSlug", "published", "startsAt");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "admin_users_email_key" ON "admin_users"("email");
+
+-- CreateIndex
+CREATE INDEX "audit_log_at_idx" ON "audit_log"("at");
+
+-- CreateIndex
+CREATE INDEX "audit_log_entity_entityId_idx" ON "audit_log"("entity", "entityId");
+
 -- AddForeignKey
 ALTER TABLE "subject_scores" ADD CONSTRAINT "subject_scores_topperId_fkey" FOREIGN KEY ("topperId") REFERENCES "toppers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 
 -- =============================================================================
 -- CONSENT AND INTEGRITY CONSTRAINTS
 -- -----------------------------------------------------------------------------
--- Added by hand on top of the Prisma-generated DDL. Prisma cannot express CHECK
--- constraints in schema.prisma, but the guarantees below are the whole point of
--- docs/design/STUDENT-DATA-POLICY.md: an unconsented published row must be
--- IMPOSSIBLE, not merely discouraged by application code.
+-- Written by hand: Prisma cannot express CHECK constraints in schema.prisma.
 --
--- Application logic can be bypassed by a direct query, a migration script or a
--- future admin bug. These cannot.
+-- Why this matters: application logic can be bypassed by a direct query, a
+-- data-fix script, or a future admin bug. These cannot.
+--
+-- Every consent column is BOOLEAN NOT NULL DEFAULT false, so none of these can
+-- evaluate to NULL. A PostgreSQL CHECK only rejects FALSE and passes on NULL,
+-- which is what made the previous nullable-enum constraints quietly permissive
+-- (docs/PHASE-4.5-DB-VERIFICATION.md, Finding 3). That class of hole is now
+-- closed by the column types themselves.
 -- =============================================================================
 
 -- ---- toppers ----------------------------------------------------------------
 
--- A published record must point at a signed authorisation and name its scope.
 ALTER TABLE "toppers" ADD CONSTRAINT "toppers_published_requires_consent"
-  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentScope" IS NOT NULL));
+  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentResult"));
 
--- A photograph may only be published under the fullest grant.
+-- A photograph needs its OWN permission. Nothing else grants it.
 ALTER TABLE "toppers" ADD CONSTRAINT "toppers_photo_requires_photo_consent"
-  CHECK (NOT "published" OR "photoUrl" IS NULL OR "consentScope" = 'RESULT_NAME_PHOTO');
+  CHECK (NOT "published" OR "photoUrl" IS NULL OR "consentPhoto");
 
--- A full name may only be displayed when the grant covers a full name.
-ALTER TABLE "toppers" ADD CONSTRAINT "toppers_full_name_requires_consent"
-  CHECK (
-    NOT "published"
-    OR "displayNameMode" <> 'FULL'
-    OR "consentScope" IN ('RESULT_FULL_NAME', 'RESULT_NAME_PHOTO')
-  );
-
--- A partial name still needs at least a partial-name grant.
-ALTER TABLE "toppers" ADD CONSTRAINT "toppers_partial_name_requires_consent"
-  CHECK (
-    NOT "published"
-    OR "displayNameMode" = 'INITIALS'
-    OR "consentScope" <> 'RESULT_ONLY'
-  );
+-- Showing anything other than initials needs name permission.
+ALTER TABLE "toppers" ADD CONSTRAINT "toppers_name_requires_name_consent"
+  CHECK (NOT "published" OR "displayNameMode" = 'INITIALS' OR "consentName");
 
 ALTER TABLE "toppers" ADD CONSTRAINT "toppers_published_at_set"
   CHECK (NOT "published" OR "publishedAt" IS NOT NULL);
@@ -234,7 +266,6 @@ ALTER TABLE "toppers" ADD CONSTRAINT "toppers_score_sane"
 ALTER TABLE "toppers" ADD CONSTRAINT "toppers_score_unit_known"
   CHECK ("scoreUnit" IN ('percent', 'marks'));
 
--- A percentage cannot exceed 100.
 ALTER TABLE "toppers" ADD CONSTRAINT "toppers_percent_range"
   CHECK ("scoreUnit" <> 'percent' OR "score" <= 100);
 
@@ -246,21 +277,10 @@ ALTER TABLE "subject_scores" ADD CONSTRAINT "subject_scores_score_sane"
 -- ---- result_records ---------------------------------------------------------
 
 ALTER TABLE "result_records" ADD CONSTRAINT "result_records_published_requires_consent"
-  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentScope" IS NOT NULL));
+  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentResult"));
 
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_full_name_requires_consent"
-  CHECK (
-    NOT "published"
-    OR "displayNameMode" <> 'FULL'
-    OR "consentScope" IN ('RESULT_FULL_NAME', 'RESULT_NAME_PHOTO')
-  );
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_partial_name_requires_consent"
-  CHECK (
-    NOT "published"
-    OR "displayNameMode" = 'INITIALS'
-    OR "consentScope" <> 'RESULT_ONLY'
-  );
+ALTER TABLE "result_records" ADD CONSTRAINT "result_records_name_requires_name_consent"
+  CHECK (NOT "published" OR "displayNameMode" = 'INITIALS' OR "consentName");
 
 ALTER TABLE "result_records" ADD CONSTRAINT "result_records_published_at_set"
   CHECK (NOT "published" OR "publishedAt" IS NOT NULL);
@@ -279,9 +299,15 @@ ALTER TABLE "result_records" ADD CONSTRAINT "result_records_percent_range"
 
 -- ---- student_stories --------------------------------------------------------
 
--- A story is a separate, explicit grant. Nothing else authorises publishing one.
-ALTER TABLE "student_stories" ADD CONSTRAINT "student_stories_published_requires_story_consent"
-  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentScope" = 'STORY'));
+-- A story is its own grant. Publishing one never implies a photograph.
+ALTER TABLE "student_stories" ADD CONSTRAINT "student_stories_published_requires_consent"
+  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentStory"));
+
+ALTER TABLE "student_stories" ADD CONSTRAINT "student_stories_photo_requires_photo_consent"
+  CHECK (NOT "published" OR "photoUrl" IS NULL OR "consentPhoto");
+
+ALTER TABLE "student_stories" ADD CONSTRAINT "student_stories_name_requires_name_consent"
+  CHECK (NOT "published" OR "displayNameMode" = 'INITIALS' OR "consentName");
 
 ALTER TABLE "student_stories" ADD CONSTRAINT "student_stories_published_at_set"
   CHECK (NOT "published" OR "publishedAt" IS NOT NULL);
@@ -307,3 +333,15 @@ ALTER TABLE "enquiries" ADD CONSTRAINT "enquiries_name_not_blank"
 
 ALTER TABLE "enquiries" ADD CONSTRAINT "enquiries_phone_digits"
   CHECK ("phone" ~ '^[0-9]{10,15}$');
+
+-- ---- admin ------------------------------------------------------------------
+
+-- Guards against a plaintext password ever being written into the hash column.
+ALTER TABLE "admin_users" ADD CONSTRAINT "admin_users_password_is_hashed"
+  CHECK ("passwordHash" LIKE 'scrypt$%');
+
+ALTER TABLE "admin_users" ADD CONSTRAINT "admin_users_email_lowercase"
+  CHECK ("email" = lower("email"));
+
+ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_action_known"
+  CHECK ("action" IN ('created', 'updated', 'published', 'unpublished', 'deleted', 'signed_in'));
