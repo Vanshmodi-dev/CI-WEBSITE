@@ -60,3 +60,6 @@ venv/
 # prisma - generated client. Recreated by the postinstall script, so it is
 # never stale and never pollutes a diff.
 /src/generated/
+
+# local verification database (scripts/test-db.mjs) - never production data
+.tmp-pgdata/

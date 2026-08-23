@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
-import { listEnquiries } from '@/lib/admin-data';
+import { listEnquiries, PAGE_SIZE } from '@/lib/admin-data';
+import { Pagination } from '@/components/admin/pagination';
 import {
   PageHeader,
   TableShell,
@@ -27,7 +28,7 @@ type Status = 'NEW' | 'CONTACTED' | 'ENROLLED' | 'CLOSED' | 'SPAM';
 export default async function EnquiriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
   await requireAdmin();
   const params = await searchParams;
@@ -37,13 +38,16 @@ export default async function EnquiriesPage({
     : undefined;
   const q = params.q?.slice(0, 80) ?? '';
 
-  let enquiries: Awaited<ReturnType<typeof listEnquiries>> = [];
+  const page = Math.max(1, Number(params.page ?? '1') || 1);
+
+  let result: Awaited<ReturnType<typeof listEnquiries>> | null = null;
   let failed = false;
   try {
-    enquiries = await listEnquiries({ ...(status ? { status } : {}), q });
+    result = await listEnquiries({ ...(status ? { status } : {}), q, page });
   } catch {
     failed = true;
   }
+  const enquiries = result?.rows ?? [];
 
   return (
     <>
@@ -179,6 +183,18 @@ export default async function EnquiriesPage({
               </ul>
             </>
           )}
+
+          {result ? (
+            <Pagination
+              page={result.page}
+              pageCount={result.pageCount}
+              total={result.total}
+              pageSize={PAGE_SIZE}
+              basePath="/admin/enquiries"
+              params={{ status: params.status, q: q || undefined }}
+              label="enquiries"
+            />
+          ) : null}
         </>
       )}
     </>

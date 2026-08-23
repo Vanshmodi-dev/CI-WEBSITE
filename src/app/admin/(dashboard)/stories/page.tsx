@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
-import { listStories } from '@/lib/admin-data';
+import { listStories, PAGE_SIZE } from '@/lib/admin-data';
+import { Pagination } from '@/components/admin/pagination';
 import {
   PageHeader,
   TableShell,
@@ -25,18 +26,21 @@ export const dynamic = 'force-dynamic';
 export default async function StoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string; deleted?: string; error?: string }>;
+  searchParams: Promise<{ saved?: string; deleted?: string; error?: string; page?: string }>;
 }) {
   await requireAdmin();
   const flags = await searchParams;
 
-  let stories: Awaited<ReturnType<typeof listStories>> = [];
+  const page = Math.max(1, Number(flags.page ?? '1') || 1);
+
+  let result: Awaited<ReturnType<typeof listStories>> | null = null;
   let failed = false;
   try {
-    stories = await listStories();
+    result = await listStories(page);
   } catch {
     failed = true;
   }
+  const stories = result?.rows ?? [];
 
   return (
     <>
@@ -138,6 +142,17 @@ export default async function StoriesPage({
               </li>
             ))}
           </ul>
+
+          {result ? (
+            <Pagination
+              page={result.page}
+              pageCount={result.pageCount}
+              total={result.total}
+              pageSize={PAGE_SIZE}
+              basePath="/admin/stories"
+              label="stories"
+            />
+          ) : null}
         </>
       ) : null}
     </>

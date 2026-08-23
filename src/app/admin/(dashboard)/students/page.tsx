@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
-import { listToppers } from '@/lib/admin-data';
+import { listToppers, PAGE_SIZE } from '@/lib/admin-data';
+import { Pagination } from '@/components/admin/pagination';
 import {
   PageHeader,
   TableShell,
@@ -25,27 +26,31 @@ export default async function StudentsPage({
     error?: string;
     programme?: string;
     status?: string;
+    page?: string;
   }>;
 }) {
   await requireAdmin();
   const flags = await searchParams;
 
-  let all: Awaited<ReturnType<typeof listToppers>> = [];
+  const page = Math.max(1, Number(flags.page ?? '1') || 1);
+  const status =
+    flags.status === 'published' || flags.status === 'draft' ? flags.status : undefined;
+
+  // Filtering happens in the DATABASE. Fetching every student to filter in
+  // memory does not survive 1,000 records.
+  let result: Awaited<ReturnType<typeof listToppers>> | null = null;
   let failed = false;
   try {
-    all = await listToppers();
+    result = await listToppers({
+      ...(flags.programme ? { programme: flags.programme } : {}),
+      ...(status ? { status } : {}),
+      page,
+    });
   } catch {
     failed = true;
   }
-
-  // Filtering in memory: the whole list is capped at 300 rows, so a round trip
-  // per filter click would cost more than it saves.
-  const rows = all.filter((r) => {
-    if (flags.programme && r.programme !== flags.programme) return false;
-    if (flags.status === 'published' && !r.published) return false;
-    if (flags.status === 'draft' && r.published) return false;
-    return true;
-  });
+  const rows = result?.rows ?? [];
+  const anyRecords = (result?.total ?? 0) > 0 || Boolean(flags.programme || status);
 
   return (
     <>
@@ -71,7 +76,7 @@ export default async function StudentsPage({
         ) : null}
       </div>
 
-      {!failed && all.length === 0 ? (
+      {!failed && !anyRecords ? (
         <EmptyPanel
           title="No results yet"
           description="Add a student's result. It stays private until you confirm you have permission to show it."
@@ -79,7 +84,7 @@ export default async function StudentsPage({
         />
       ) : null}
 
-      {all.length > 0 ? (
+      {anyRecords ? (
         <>
           <div className="mb-5 flex flex-wrap gap-1.5">
             <FilterLink label="All" href="/admin/students" active={!flags.programme && !flags.status} />
@@ -190,6 +195,18 @@ export default async function StudentsPage({
               </ul>
             </>
           )}
+
+          {result ? (
+            <Pagination
+              page={result.page}
+              pageCount={result.pageCount}
+              total={result.total}
+              pageSize={PAGE_SIZE}
+              basePath="/admin/students"
+              params={{ programme: flags.programme, status: flags.status }}
+              label="results"
+            />
+          ) : null}
         </>
       ) : null}
     </>
