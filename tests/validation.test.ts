@@ -8,6 +8,7 @@ import {
   clean,
   cleanMultiline,
   sanitiseSourcePage,
+  isSafePhotoPath,
   LIMITS,
 } from '../src/lib/validation.ts';
 
@@ -205,6 +206,74 @@ describe('validateEnquiry — rejections', () => {
           COURSES,
         ),
       );
+    }
+  });
+});
+
+describe('isSafePhotoPath', () => {
+  test('accepts a plain site-relative image path', () => {
+    for (const p of [
+      '/photos/student.jpg',
+      '/photos/2026/result.jpeg',
+      '/uploads/a-b_c.png',
+      '/img/pic.webp',
+      '/img/pic.avif',
+    ]) {
+      assert.equal(isSafePhotoPath(p), true, `should accept ${p}`);
+    }
+  });
+
+  test('rejects directory traversal', () => {
+    for (const p of [
+      '/../../etc/passwd.jpg',
+      '/photos/../../../secret.png',
+      '/..%2f..%2fx.jpg',
+    ]) {
+      assert.equal(isSafePhotoPath(p), false, `should reject ${p}`);
+    }
+  });
+
+  test('rejects anything pointing off this site', () => {
+    for (const p of [
+      '//evil.example.com/x.jpg',
+      'https://evil.example.com/x.jpg',
+      'http://evil.example.com/x.jpg',
+      'javascript:alert(1)',
+      'data:image/png;base64,AAAA',
+      'photos/no-leading-slash.jpg',
+    ]) {
+      assert.equal(isSafePhotoPath(p), false, `should reject ${p}`);
+    }
+  });
+
+  test('rejects non-image and executable extensions', () => {
+    for (const p of [
+      '/uploads/shell.php',
+      '/uploads/script.js',
+      '/uploads/page.html',
+      '/uploads/noextension',
+      '/uploads/archive.zip',
+    ]) {
+      assert.equal(isSafePhotoPath(p), false, `should reject ${p}`);
+    }
+  });
+
+  test('rejects query strings, fragments, whitespace and backslashes', () => {
+    for (const p of [
+      '/photos/x.jpg?a=1',
+      '/photos/x.jpg#frag',
+      '/photos/my photo.jpg',
+      `/photos${String.fromCharCode(92)}windows.jpg`,
+      '',
+    ]) {
+      assert.equal(isSafePhotoPath(p), false, `should reject ${JSON.stringify(p)}`);
+    }
+  });
+
+  test('never throws on non-string input', () => {
+    for (const junk of [null, undefined, 0, [], {}, true]) {
+      assert.doesNotThrow(() => isSafePhotoPath(junk as unknown as string));
+      assert.equal(isSafePhotoPath(junk as unknown as string), false);
     }
   });
 });

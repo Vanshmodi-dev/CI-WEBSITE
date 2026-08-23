@@ -44,6 +44,10 @@ export default async function EditStudentPage({
           consentName: record.consentName,
           consentPhoto: record.consentPhoto,
           published: record.published,
+          subjects: record.subjectScores.map((s) => ({
+            subject: s.subject,
+            score: String(s.score),
+          })),
         }}
       />
 

@@ -194,6 +194,8 @@ export async function getEnquiry(id: string) {
 export type TopperFilter = {
   programme?: string;
   status?: 'published' | 'draft';
+  /** Free-text search on the student's name. */
+  q?: string;
   page?: number;
 };
 
@@ -213,6 +215,14 @@ export async function listToppers(filter: TopperFilter = {}) {
   if (filter.status === 'published') where.published = true;
   if (filter.status === 'draft') where.published = false;
 
+  // Searching by name is how a teacher actually finds one student among a
+  // thousand — scrolling pages of results is not a workflow. Case-insensitive
+  // and database-side; at ~1,000 rows a sequential scan is single-digit
+  // milliseconds (measured in Phase 5.5).
+  if (filter.q && filter.q.trim().length > 0) {
+    where.studentName = { contains: filter.q.trim().slice(0, 80), mode: 'insensitive' };
+  }
+
   const [total, rows] = await Promise.all([
     prisma.topper.count({ where }),
     prisma.topper.findMany({
@@ -220,6 +230,7 @@ export async function listToppers(filter: TopperFilter = {}) {
       orderBy: [{ year: 'desc' }, { sortOrder: 'asc' }],
       skip,
       take,
+      include: { subjectScores: { orderBy: { subject: 'asc' } } },
     }),
   ]);
 
@@ -232,7 +243,10 @@ export async function listToppers(filter: TopperFilter = {}) {
 }
 
 export async function getTopper(id: string) {
-  return getPrisma().topper.findUnique({ where: { id } });
+  return getPrisma().topper.findUnique({
+    where: { id },
+    include: { subjectScores: { orderBy: { subject: 'asc' } } },
+  });
 }
 
 /**

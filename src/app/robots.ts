@@ -1,24 +1,30 @@
 import type { MetadataRoute } from 'next';
 import { SITE_URL } from '@/lib/seo';
+import { isIndexable } from '@/config/launch';
 
 /**
- * Master Plan §17.
+ * robots.txt — Master Plan §17.
  *
- * The site is PRE-LAUNCH, so everything is disallowed. Phase 7 replaces the
- * blanket rule with the commented-out policy below, once the content is real
- * and the client has signed off. Shipping an indexable site with placeholder
- * content is how a domain earns a bad first impression from Google.
+ * Indexing is governed entirely by src/config/launch.ts, which requires BOTH a
+ * reviewed code change and a real production domain. Until both are true this
+ * disallows everything, because shipping an indexable site full of placeholder
+ * content is how a domain earns a bad first impression that takes weeks to undo.
+ *
+ * /admin stays disallowed even after launch. It is also absent from the sitemap
+ * and carries noindex headers of its own — three independent layers, because
+ * one of them being edited by mistake should not expose the admin.
  */
 export default function robots(): MetadataRoute.Robots {
-  return {
-    rules: [{ userAgent: '*', disallow: '/' }],
-    sitemap: `${SITE_URL}/sitemap.xml`,
-  };
+  if (!isIndexable()) {
+    return {
+      rules: [{ userAgent: '*', disallow: '/' }],
+      sitemap: `${SITE_URL}/sitemap.xml`,
+    };
+  }
 
-  // Phase 7:
-  // return {
-  //   rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/api'] }],
-  //   sitemap: `${SITE_URL}/sitemap.xml`,
-  //   host: SITE_URL,
-  // };
+  return {
+    rules: [{ userAgent: '*', allow: '/', disallow: ['/admin', '/api'] }],
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
+  };
 }

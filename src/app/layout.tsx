@@ -3,6 +3,7 @@ import { Source_Serif_4, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { institute } from '@/config/institute';
 import { SITE_URL, instituteJsonLd } from '@/lib/seo';
+import { isIndexable } from '@/config/launch';
 import { SiteHeader } from '@/components/domain/site-header';
 import { SiteFooter } from '@/components/domain/site-footer';
 import { WhatsAppButton } from '@/components/domain/whatsapp-button';
@@ -46,12 +47,12 @@ export const metadata: Metadata = {
   description: `Commerce coaching in ${institute.locality} for Class XI and XII, CA Foundation, CA Intermediate and CMA.`,
   applicationName: institute.name,
   formatDetection: { telephone: true, address: true, email: false },
-  robots: {
-    // The site is not launched. Flip this in Phase 7 once content is real
-    // and the client has signed off — Master Plan §23.
-    index: false,
-    follow: false,
-  },
+  // Governed by src/config/launch.ts — never edited here. That file requires
+  // both a reviewed code change and a real production domain before anything
+  // becomes indexable.
+  robots: isIndexable()
+    ? { index: true, follow: true }
+    : { index: false, follow: false, nocache: true },
 };
 
 export const viewport: Viewport = {

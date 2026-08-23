@@ -93,6 +93,19 @@ export function ResultCard({ result }: { result: PublicResult }) {
         </p>
       ) : null}
 
+      {/* Subject marks, where the institute entered them. A commerce result is
+          more persuasive broken down: "Accounts 99" says more than "96%". */}
+      {result.subjects.length > 0 ? (
+        <dl className="mt-4 flex flex-col gap-1 border-t border-rule pt-3 text-small">
+          {result.subjects.map((s) => (
+            <div key={s.subject} className="flex items-baseline justify-between gap-3">
+              <dt className="truncate text-muted">{s.subject}</dt>
+              <dd className="shrink-0 font-medium tabular-nums text-text">{s.score}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
       <div className="mt-4 flex items-center gap-3 border-t border-rule pt-4">
         <Portrait
           photoUrl={result.photoUrl}

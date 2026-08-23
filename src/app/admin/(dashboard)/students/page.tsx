@@ -26,6 +26,7 @@ export default async function StudentsPage({
     error?: string;
     programme?: string;
     status?: string;
+    q?: string;
     page?: string;
   }>;
 }) {
@@ -33,6 +34,7 @@ export default async function StudentsPage({
   const flags = await searchParams;
 
   const page = Math.max(1, Number(flags.page ?? '1') || 1);
+  const q = flags.q?.slice(0, 80) ?? '';
   const status =
     flags.status === 'published' || flags.status === 'draft' ? flags.status : undefined;
 
@@ -44,13 +46,14 @@ export default async function StudentsPage({
     result = await listToppers({
       ...(flags.programme ? { programme: flags.programme } : {}),
       ...(status ? { status } : {}),
+      q,
       page,
     });
   } catch {
     failed = true;
   }
   const rows = result?.rows ?? [];
-  const anyRecords = (result?.total ?? 0) > 0 || Boolean(flags.programme || status);
+  const anyRecords = (result?.total ?? 0) > 0 || Boolean(flags.programme || status || q);
 
   return (
     <>
@@ -86,6 +89,43 @@ export default async function StudentsPage({
 
       {anyRecords ? (
         <>
+          {/* Searching by name is how a teacher finds one student among a
+              thousand. A plain GET form, so it works without JavaScript and
+              every search is bookmarkable. */}
+          <form className="mb-4 flex gap-2">
+            <label htmlFor="q" className="sr-only">
+              Search students by name
+            </label>
+            <input
+              id="q"
+              name="q"
+              type="search"
+              defaultValue={q}
+              placeholder="Search by student name"
+              className="min-h-10 w-full rounded-sm border border-rule-strong bg-paper px-3 text-small sm:w-72"
+            />
+            {flags.programme ? (
+              <input type="hidden" name="programme" value={flags.programme} />
+            ) : null}
+            {flags.status ? (
+              <input type="hidden" name="status" value={flags.status} />
+            ) : null}
+            <button
+              type="submit"
+              className="min-h-10 shrink-0 rounded-sm border border-rule px-4 text-[13px] text-text hover:bg-surface"
+            >
+              Search
+            </button>
+            {q ? (
+              <Link
+                href="/admin/students"
+                className="inline-flex min-h-10 items-center px-2 text-[13px] text-link"
+              >
+                Clear
+              </Link>
+            ) : null}
+          </form>
+
           <div className="mb-5 flex flex-wrap gap-1.5">
             <FilterLink label="All" href="/admin/students" active={!flags.programme && !flags.status} />
             <FilterLink
@@ -203,7 +243,7 @@ export default async function StudentsPage({
               total={result.total}
               pageSize={PAGE_SIZE}
               basePath="/admin/students"
-              params={{ programme: flags.programme, status: flags.status }}
+              params={{ programme: flags.programme, status: flags.status, q: q || undefined }}
               label="results"
             />
           ) : null}

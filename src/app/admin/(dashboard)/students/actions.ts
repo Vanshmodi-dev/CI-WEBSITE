@@ -7,6 +7,7 @@ import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
 import { revalidateResults } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
+import { isSafePhotoPath } from '@/lib/validation';
 
 export type StudentFormState = {
   status: 'idle' | 'error';
@@ -28,6 +29,25 @@ const PROGRAMMES = [
 const BOARDS = ['CBSE', 'RBSE', 'ICAI', 'OTHER'] as const;
 const NAME_MODES = ['INITIALS', 'FIRST_NAME_ONLY', 'FULL'] as const;
 const UNITS = ['percent', 'marks'] as const;
+
+/** Subject rows arrive as parallel `subject[]` / `subjectScore[]` fields. */
+function readSubjectScores(formData: FormData) {
+  const names = formData.getAll('subjectName').map((v) => String(v).trim().slice(0, 60));
+  const scores = formData.getAll('subjectScore').map((v) => String(v).trim());
+
+  const rows: Array<{ subject: string; score: number }> = [];
+  for (let i = 0; i < names.length; i += 1) {
+    const subject = names[i] ?? '';
+    const raw = scores[i] ?? '';
+    if (subject.length === 0 && raw.length === 0) continue; // blank row
+    const score = Number(raw);
+    if (subject.length === 0 || !Number.isFinite(score) || score < 0 || score > 9999) {
+      continue; // a half-filled row is dropped, never guessed at
+    }
+    rows.push({ subject, score });
+  }
+  return rows.slice(0, 15);
+}
 
 /**
  * Save a student result.
@@ -84,8 +104,11 @@ export async function saveStudentResult(
     errors.year = 'Enter the year, for example 2026.';
   }
 
-  if (photoUrl.length > 0 && !photoUrl.startsWith('/')) {
-    errors.photoUrl = 'Use a photo already uploaded to this website.';
+  // The photo path is admin-supplied but still untrusted. `startsWith('/')`
+  // alone would accept "/../../etc/passwd" and protocol-relative "//evil.com".
+  if (photoUrl.length > 0 && !isSafePhotoPath(photoUrl)) {
+    errors.photoUrl =
+      'Use a photo already on this website, for example /photos/name.jpg';
   }
 
   if (Object.keys(errors).length > 0) {
@@ -139,10 +162,22 @@ export async function saveStudentResult(
     publishedAt: published ? new Date() : null,
   };
 
+  const subjects = readSubjectScores(formData);
+
   try {
     const prisma = getPrisma();
     if (id) {
-      await prisma.topper.update({ where: { id }, data });
+      // Replace-in-transaction: the subject list the teacher sees is the list
+      // that ends up stored, and a partial write cannot leave stale rows.
+      await prisma.$transaction([
+        prisma.topper.update({ where: { id }, data }),
+        prisma.subjectScore.deleteMany({ where: { topperId: id } }),
+        ...(subjects.length > 0
+          ? [prisma.subjectScore.createMany({
+              data: subjects.map((s) => ({ ...s, topperId: id })),
+            })]
+          : []),
+      ]);
       // The audit records the ACTION, never the student's name or marks.
       await recordAudit(
         admin,
@@ -152,7 +187,13 @@ export async function saveStudentResult(
         `${data.programme} ${data.year}`,
       );
     } else {
-      const created = await prisma.topper.create({ data, select: { id: true } });
+      const created = await prisma.topper.create({
+        data: {
+          ...data,
+          ...(subjects.length > 0 ? { subjectScores: { create: subjects } } : {}),
+        },
+        select: { id: true },
+      });
       await recordAudit(
         admin,
         published ? 'published' : 'created',

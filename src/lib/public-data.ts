@@ -62,6 +62,8 @@ export type PublicResult = {
   board: string | null;
   year: number;
   highlight: string | null;
+  /** Subject-wise marks, where the institute has entered them. */
+  subjects: Array<{ subject: string; score: string }>;
 };
 
 export type PublicResultsPage = {
@@ -141,6 +143,10 @@ export async function getPublishedResults({
           board: true,
           year: true,
           highlight: true,
+          subjectScores: {
+            select: { id: true, subject: true, score: true },
+            orderBy: { subject: 'asc' },
+          },
         },
       }),
       prisma.topper.groupBy({
@@ -173,6 +179,10 @@ export async function getPublishedResults({
         board: row.board,
         year: row.year,
         highlight: row.highlight,
+        subjects: row.subjectScores.map((s) => ({
+          subject: s.subject,
+          score: String(s.score),
+        })),
       };
     });
 

@@ -256,3 +256,24 @@ export function validateEnquiry(
     value: { name, phone, email, classLevel, courseSlug, message, sourcePage },
   };
 }
+
+/**
+ * Is this a photo path that points inside our own website?
+ *
+ * Admin-supplied, but still untrusted — a `startsWith('/')` check alone would
+ * accept "/../../etc/passwd" and the protocol-relative "//evil.com". Only a
+ * plain site-relative image path passes.
+ *
+ * Lives here rather than in the server action because a module marked
+ * 'use server' may only export async functions, and because a security check
+ * that cannot be unit-tested is a security check nobody has verified.
+ */
+export function isSafePhotoPath(value: string): boolean {
+  if (typeof value !== 'string') return false;
+  if (!value.startsWith('/')) return false;
+  if (value.startsWith('//')) return false;
+  if (value.includes('..')) return false;
+  if (value.includes(String.fromCharCode(92))) return false; // backslash
+  if (/[:?#\s]/.test(value)) return false;
+  return /^\/[A-Za-z0-9._\-/]+\.(jpe?g|png|webp|avif)$/i.test(value);
+}

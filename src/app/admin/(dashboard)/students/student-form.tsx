@@ -13,6 +13,7 @@ import {
   type DisplayNameModeValue,
 } from '@/lib/student-display';
 import { PROGRAMME_LABELS, BOARD_LABELS, DISPLAY_NAME_LABELS } from '@/lib/admin-format';
+import { SubjectScores, type SubjectRow } from '@/components/admin/subject-scores';
 
 const initial: StudentFormState = { status: 'idle' };
 
@@ -32,6 +33,7 @@ export type StudentValues = {
   consentName?: boolean;
   consentPhoto?: boolean;
   published?: boolean;
+  subjects?: SubjectRow[];
 };
 
 /**
@@ -197,7 +199,11 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
           </Field>
         </div>
 
-        <div className="mt-5">
+        <div className="mt-6 border-t border-rule pt-6">
+          <SubjectScores initial={values.subjects ?? []} />
+        </div>
+
+        <div className="mt-6">
           <Field
             name="highlight"
             label="Achievement note"

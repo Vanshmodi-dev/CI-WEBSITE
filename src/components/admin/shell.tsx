@@ -26,6 +26,7 @@ const NAV: readonly NavItem[] = [
   { href: '/admin/batches', label: 'Batches' },
   { href: '/admin/announcements', label: 'Announcements' },
   { href: '/admin/stories', label: 'Student Stories' },
+  { href: '/admin/preview', label: 'Website preview' },
 ];
 
 export function AdminShell({

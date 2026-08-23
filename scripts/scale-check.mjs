@@ -92,6 +92,21 @@ try {
   await time('filter by programme', () =>
     prisma.topper.findMany({ where: { programme: 'CLASS_12' }, take: 50 }),
   );
+  await time('student name search (added Phase 7)', () =>
+    prisma.topper.findMany({
+      where: { studentName: { contains: '0731', mode: 'insensitive' } },
+      take: 50,
+    }),
+  );
+  await time('search + programme filter combined', () =>
+    prisma.topper.findMany({
+      where: {
+        studentName: { contains: 'Student', mode: 'insensitive' },
+        programme: 'CLASS_12',
+      },
+      take: 50,
+    }),
+  );
   await time('enquiries page 1 (50)', () =>
     prisma.enquiry.findMany({ orderBy: { createdAt: 'desc' }, take: 50 }),
   );
@@ -121,19 +136,28 @@ try {
       where: { phone: '919000000042', createdAt: { gte: new Date(Date.now() - 600_000) } },
     }),
   );
-  await time('dashboard summary (6 parallel counts)', async () => {
-    const now = new Date();
-    const r = await Promise.all([
-      prisma.enquiry.count({ where: { status: 'NEW' } }),
-      prisma.enquiry.count(),
-      prisma.batch.count({ where: { published: true, startsAt: { gte: now } } }),
-      prisma.topper.count({ where: { published: true } }),
-      prisma.resultRecord.count({ where: { published: true } }),
-      prisma.announcement.count({
-        where: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
-      }),
-    ]);
-    return r.reduce((a, b) => a + b, 0);
+  // Measures what the app ACTUALLY does. This was six parallel counts opening
+  // six connections (759 ms cold); consolidating to one query made it 219 ms
+  // cold and 1 ms warm. Benchmarking the old shape would measure code we no
+  // longer ship.
+  await time('dashboard summary (one query, as shipped)', async () => {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        (SELECT count(*) FROM "enquiries" WHERE "status" = 'NEW')          AS a,
+        (SELECT count(*) FROM "enquiries")                                  AS b,
+        (SELECT count(*) FROM "batches"
+           WHERE "published" AND "startsAt" >= now())                       AS c,
+        (SELECT count(*) FROM "toppers" WHERE "published")                  AS d,
+        (SELECT count(*) FROM "result_records" WHERE "published")           AS e,
+        (SELECT count(*) FROM "announcements"
+           WHERE "published" AND "startsAt" <= now() AND "endsAt" >= now()) AS f`;
+    return Object.values(rows[0]).reduce((x, y) => x + Number(y), 0);
+  });
+  await time('dashboard summary (repeat, warm pool)', async () => {
+    const rows = await prisma.$queryRaw`
+      SELECT (SELECT count(*) FROM "enquiries" WHERE "status" = 'NEW') AS a,
+             (SELECT count(*) FROM "toppers" WHERE "published") AS d`;
+    return Number(rows[0].a) + Number(rows[0].d);
   });
 
   console.log('\n=== INDEX USAGE (query planner) ===');
