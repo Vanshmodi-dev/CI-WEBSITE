@@ -1,39 +1,78 @@
 import type { Metadata } from 'next';
-import { institute } from '@/config/institute';
+import Link from 'next/link';
+import { institute, publishedCourses, telHref, whatsappHref, addressFull } from '@/config/institute';
 import { pageMetadata } from '@/lib/seo';
+import {
+  getPublishedResults,
+  getPublishedStories,
+  getUpcomingBatches,
+  getTopAnnouncement,
+} from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
-import { Hidden } from '@/components/primitives/empty-state';
+import {
+  ResultCard,
+  StoryCard,
+  BatchCard,
+  CourseCard,
+} from '@/components/domain/public-cards';
 
 export const metadata: Metadata = pageMetadata({
   title: `Commerce coaching in ${institute.locality}`,
-  description: `${institute.name} — Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA coaching in ${institute.locality}.`,
+  description: `${institute.name} — ${institute.tagline}. Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA in ${institute.locality}.`,
   path: '/',
 });
 
+export const revalidate = 900;
+
 /**
- * HOMEPAGE — Phase 3 shell.
+ * Homepage.
  *
- * The band order is Master Plan §03. Only the hero is built; every evidence
- * band below it is deliberately absent because the facts behind it do not
- * exist yet (Master Plan §22) and the content-integrity rule forbids inventing
- * them. `<Hidden>` marks each one so the gap is visibly intentional in review
- * and in development, and renders nothing at all in production.
+ * Band order follows Master Plan §03, with one rule applied throughout: a band
+ * that has no real data DOES NOT RENDER. There are no sample toppers, no
+ * placeholder statistics and no stock testimonials anywhere on this page.
  *
- * Phase 4 fills bands 5, 13 and 14. Phase 5 fills 6, 9, 10, 11 and 12.
+ * That means the homepage is currently short. It is short and true, which is
+ * the trade this whole rebuild exists to make — the site it replaces was long
+ * and partly invented.
  */
-export default function HomePage() {
+export default async function HomePage() {
+  const [announcement, courseBatches, results, stories] = await Promise.all([
+    getTopAnnouncement(),
+    getUpcomingBatches({ limit: 3 }),
+    getPublishedResults({ limit: 6 }),
+    getPublishedStories(2),
+  ]);
+
+  const batchCountFor = (slug: string) =>
+    courseBatches.filter((b) => b.courseSlug === slug).length;
+
+  const courseName = (slug: string) =>
+    institute.courses.find((c) => c.slug === slug)?.name ?? slug;
+
   return (
     <>
-      {/* 1 · Announcement bar — driven by an Announcement record with a
-          validity window, so a stale notice removes itself. Nothing to show
-          until the DB exists in Phase 4. */}
-      <Hidden reason="Announcement bar — needs the Announcement model (Phase 4)" />
+      {/* 1 · Announcement — only while inside its validity window. */}
+      {announcement ? (
+        <div className="border-b border-navy-700 bg-band text-band-text">
+          <Container>
+            <p className="py-2.5 text-center text-small">
+              {announcement.href ? (
+                <Link href={announcement.href} className="text-band-text underline decoration-white/40 underline-offset-4 hover:decoration-white">
+                  {announcement.message}
+                </Link>
+              ) : (
+                announcement.message
+              )}
+            </p>
+          </Container>
+        </div>
+      ) : null}
 
       {/* 3 · Hero */}
       <section className="border-b border-rule bg-paper">
         <Container>
-          <div className="max-w-3xl py-20 md:py-28 lg:py-36">
+          <div className="max-w-3xl py-20 md:py-28 lg:py-32">
             <p className="eyebrow text-accent-text">{institute.tagline}</p>
 
             <h1 className="mt-5 text-display font-bold leading-[1.06] tracking-[-0.02em] text-heading lg:text-[60px]">
@@ -44,7 +83,7 @@ export default function HomePage() {
 
             <p className="measure mt-6 text-[18px] leading-relaxed text-muted">
               Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA
-              coaching in {institute.locality} — taught for concept clarity, not
+              in {institute.locality} — taught for concept clarity, not
               memorisation.
             </p>
 
@@ -60,46 +99,150 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* 4 · Credibility strip — the Google rating and review count come live
-          from the Review Engine payload. Nothing is shown until the engine is
-          activated, and there is no "success rate" metric by design (§03). */}
-      <Hidden reason="Credibility strip — needs the Review Engine payload (Phase 5)" />
+      {/*
+        4 · Credibility strip — DELIBERATELY ABSENT.
+        Student numbers, years of experience and success rates are exactly the
+        figures the previous site invented. None are confirmed, so none appear.
+      */}
 
-      {/* 5 · Course finder */}
-      <Hidden reason="Course cards — needs course content and batch data (Phase 4)" />
+      {/* 5 · Courses */}
+      <Section tone="surface" labelledBy="home-courses">
+        <div className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
+          <div>
+            <p className="eyebrow text-accent-text">Programmes</p>
+            <h2
+              id="home-courses"
+              className="mt-2 font-display text-h2 font-bold text-heading"
+            >
+              What we teach
+            </h2>
+          </div>
+          <Link href="/courses" className="text-small font-medium text-link">
+            All courses &rarr;
+          </Link>
+        </div>
 
-      {/* 6 · Results and toppers */}
-      <Hidden reason="Results band — needs verified results + consent (Phase 5)" />
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {publishedCourses.slice(0, 3).map((course) => (
+            <CourseCard
+              key={course.slug}
+              slug={course.slug}
+              name={course.name}
+              batchCount={batchCountFor(course.slug)}
+            />
+          ))}
+        </div>
+      </Section>
 
-      {/* 7 · Why Commerce Insight — pillars must be confirmed as things the
-          institute actually offers before any of them are claimed (§10). */}
-      <Hidden reason="Why Commerce Insight — pillars await client confirmation" />
+      {/* 6 · Results — hidden entirely when nothing is published. */}
+      {results.results.length > 0 ? (
+        <Section tone="paper" labelledBy="home-results">
+          <div className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
+            <div>
+              <p className="eyebrow text-accent-text">Results</p>
+              <h2
+                id="home-results"
+                className="mt-2 font-display text-h2 font-bold text-heading"
+              >
+                Our students&rsquo; results
+              </h2>
+            </div>
+            <Link href="/results" className="text-small font-medium text-link">
+              All results &rarr;
+            </Link>
+          </div>
 
-      {/* 8 · Faculty */}
-      <Hidden reason="Faculty band — needs verified credentials and portraits" />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {results.results.map((result) => (
+              <ResultCard key={result.id} result={result} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
 
-      {/* 9 · Google reviews */}
-      <Hidden reason="Reviews band — needs the Review Engine payload (Phase 5)" />
+      {/* Batches — real records only. */}
+      {courseBatches.length > 0 ? (
+        <Section tone="surface" labelledBy="home-batches">
+          <div className="mb-10">
+            <p className="eyebrow text-accent-text">Admissions open</p>
+            <h2
+              id="home-batches"
+              className="mt-2 font-display text-h2 font-bold text-heading"
+            >
+              Upcoming batches
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {courseBatches.map((batch) => (
+              <BatchCard
+                key={batch.id}
+                batch={batch}
+                courseName={courseName(batch.courseSlug)}
+              />
+            ))}
+          </div>
+        </Section>
+      ) : null}
 
-      {/* 10 · Videos */}
-      <Hidden reason="Videos band — needs the YouTube channel ID (Phase 5)" />
+      {/* 11 · Student stories — hidden entirely when none are published. */}
+      {stories.length > 0 ? (
+        <Section tone="paper" labelledBy="home-stories">
+          <div className="mb-10 flex flex-wrap items-baseline justify-between gap-4">
+            <div>
+              <p className="eyebrow text-accent-text">Student stories</p>
+              <h2
+                id="home-stories"
+                className="mt-2 font-display text-h2 font-bold text-heading"
+              >
+                How they got there
+              </h2>
+            </div>
+            <Link href="/stories" className="text-small font-medium text-link">
+              All stories &rarr;
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {stories.map((story) => (
+              <StoryCard key={story.id} story={story} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
 
-      {/* 11 · Student stories */}
-      <Hidden reason="Student stories — needs stories and written consent" />
-
-      {/* 12 · Gallery */}
-      <Hidden reason="Gallery strip — needs photography (Phase 1)" />
+      {/*
+        Faculty, reviews, videos and gallery bands are absent. Each needs
+        content the institute has not supplied — credentials and portraits, an
+        activated Review Engine, a channel ID, photography. Master Plan §22.
+      */}
 
       {/* 13 · Location */}
-      <Hidden reason="Location band — needs Place ID and opening hours (Phase 4)" />
+      <Section tone="surface" labelledBy="home-location">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-16">
+          <div>
+            <p className="eyebrow text-accent-text">Find us</p>
+            <h2
+              id="home-location"
+              className="mt-2 font-display text-h2 font-bold text-heading"
+            >
+              We&rsquo;re in {institute.locality}
+            </h2>
+            <address className="measure mt-5 text-[17px] leading-relaxed text-text not-italic">
+              {addressFull}
+            </address>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button href={telHref}>Call {institute.phonePrimary.display}</Button>
+              <Button href="/contact" variant="secondary">
+                Contact &amp; directions
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Section>
 
-      {/* 14 · Final CTA — safe to build now: it states no facts. */}
-      <Section tone="band" labelledBy="cta-heading">
+      {/* 14 · Final CTA */}
+      <Section tone="band" labelledBy="home-cta">
         <div className="max-w-2xl">
-          <h2
-            id="cta-heading"
-            className="text-h2 font-bold leading-tight text-band-text lg:text-[32px]"
-          >
+          <h2 id="home-cta" className="text-h2 font-bold leading-tight text-band-text lg:text-[32px]">
             Ready to take the next step?
           </h2>
           <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
@@ -108,6 +251,9 @@ export default function HomePage() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button href="/admissions" size="lg" variant="onBand">
               Enquire now
+            </Button>
+            <Button href={whatsappHref()} external size="lg" variant="onBand">
+              WhatsApp us
             </Button>
           </div>
         </div>

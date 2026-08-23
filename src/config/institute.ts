@@ -119,15 +119,20 @@ export const institute = {
   /**
    * Programmes. Carried from the previous site, which listed more than the
    * brief did (it omitted CA Intermediate and CMA). Slugs are the route
-   * segments. `published` gates a course out of nav and sitemap until its
-   * content page is written — no empty course pages.
+   * segments. `published` gates a course out of nav and sitemap.
+   *
+   * These are PROGRAMME NAMES, not institute claims — "CA Foundation" is a
+   * nationally defined qualification, not something invented here. What is
+   * still unconfirmed is everything ABOUT each one: syllabus, fees, timings,
+   * who teaches it. Those fields do not exist in this config and the course
+   * pages render honest empty states for them rather than inventing content.
    */
   courses: [
-    { slug: 'class-11-commerce', name: 'Class XI Commerce', short: 'Class 11', published: false },
-    { slug: 'class-12-commerce', name: 'Class XII Commerce', short: 'Class 12', published: false },
-    { slug: 'ca-foundation', name: 'CA Foundation', short: 'CA Foundation', published: false },
-    { slug: 'ca-intermediate', name: 'CA Intermediate', short: 'CA Inter', published: false },
-    { slug: 'cma', name: 'CMA Foundation & Inter', short: 'CMA', published: false },
+    { slug: 'class-11-commerce', name: 'Class XI Commerce', short: 'Class 11', published: true },
+    { slug: 'class-12-commerce', name: 'Class XII Commerce', short: 'Class 12', published: true },
+    { slug: 'ca-foundation', name: 'CA Foundation', short: 'CA Foundation', published: true },
+    { slug: 'ca-intermediate', name: 'CA Intermediate', short: 'CA Inter', published: true },
+    { slug: 'cma', name: 'CMA Foundation & Inter', short: 'CMA', published: true },
   ],
 };
 

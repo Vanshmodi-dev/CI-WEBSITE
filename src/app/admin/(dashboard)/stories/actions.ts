@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
+import { revalidateStories } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
 
 export type StoryFormState = {
@@ -151,6 +152,7 @@ export async function saveStory(
   }
 
   revalidatePath('/admin/stories');
+  revalidateStories();
   redirect('/admin/stories?saved=1');
 }
 
@@ -170,5 +172,6 @@ export async function deleteStory(formData: FormData): Promise<void> {
   }
 
   revalidatePath('/admin/stories');
+  revalidateStories();
   redirect('/admin/stories?deleted=1');
 }

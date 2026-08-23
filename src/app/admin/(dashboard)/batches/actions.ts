@@ -6,6 +6,7 @@ import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
 import { institute } from '@/config/institute';
+import { revalidateBatches } from '@/lib/revalidate-public';
 
 export type BatchFormState = {
   status: 'idle' | 'error';
@@ -92,6 +93,7 @@ export async function saveBatch(
 
   revalidatePath('/admin/batches');
   revalidatePath('/admin');
+  revalidateBatches(input.courseSlug);
   redirect('/admin/batches?saved=1');
 }
 
@@ -112,5 +114,6 @@ export async function deleteBatch(formData: FormData): Promise<void> {
 
   revalidatePath('/admin/batches');
   revalidatePath('/admin');
+  revalidateBatches();
   redirect('/admin/batches?deleted=1');
 }

@@ -76,6 +76,7 @@ npm run dev
 | `npm run verify:constraints` | 35 consent/integrity assertions |
 | `npm run verify:e2e` | 62 end-to-end assertions over HTTP |
 | `npm run verify:scale` | ~1,000 student benchmark |
+| `npm run verify:public` | 50 public-data isolation checks |
 
 > The site is **pre-launch**: `robots.ts` disallows all crawling and the root
 > metadata sets `noindex`. Both are flipped in Phase 7.
@@ -91,7 +92,8 @@ npm run dev
 | 4 | Core pages + enquiry | ● done — see [docs/PHASE-4-REPORT.md](docs/PHASE-4-REPORT.md) |
 | 5 | Admin panel | ● done — see [docs/PHASE-5-REPORT.md](docs/PHASE-5-REPORT.md) |
 | 5.5 | Database & E2E verification | ● done — see [docs/PHASE-5.5-DATABASE-VERIFICATION.md](docs/PHASE-5.5-DATABASE-VERIFICATION.md) |
-| 6 | Content + evidence pages + integrations | ○ next — blocked on client content |
+| 6 | Public website | ● done — see [docs/PHASE-6-REPORT.md](docs/PHASE-6-REPORT.md) |
+| 7 | Content collection + launch | ○ next — blocked on client content |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |
 

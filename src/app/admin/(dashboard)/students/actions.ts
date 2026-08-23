@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
+import { revalidateResults } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
 
 export type StudentFormState = {
@@ -170,6 +171,7 @@ export async function saveStudentResult(
 
   revalidatePath('/admin/students');
   revalidatePath('/admin');
+  revalidateResults();
   redirect('/admin/students?saved=1');
 }
 
@@ -194,6 +196,7 @@ export async function unpublishStudentResult(formData: FormData): Promise<void> 
 
   revalidatePath('/admin/students');
   revalidatePath('/admin');
+  revalidateResults();
   redirect('/admin/students?hidden=1');
 }
 
@@ -214,5 +217,6 @@ export async function deleteStudentResult(formData: FormData): Promise<void> {
 
   revalidatePath('/admin/students');
   revalidatePath('/admin');
+  revalidateResults();
   redirect('/admin/students?deleted=1');
 }

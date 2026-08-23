@@ -17,6 +17,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-4-REPORT.md`](PHASE-4-REPORT.md) | Phase 4 completion report — data layer, enquiry pipeline, consent constraints. | **Yes** |
 | [`PHASE-4.5-DB-VERIFICATION.md`](PHASE-4.5-DB-VERIFICATION.md) | Offline migration audit, 9 findings, and the database provisioning checklist. **Live migration still pending.** | **Yes** |
 | [`PHASE-5-REPORT.md`](PHASE-5-REPORT.md) | Admin panel — auth, authorisation, the four-permission consent model, and what was deliberately not built. | **Yes** |
+| [`PHASE-6-REPORT.md`](PHASE-6-REPORT.md) | The public website — every page, the consent isolation rules, and 214 automated checks. | **Yes** |
 | [`PHASE-5.5-DATABASE-VERIFICATION.md`](PHASE-5.5-DATABASE-VERIFICATION.md) | **The migration actually ran.** 28 CHECK constraints exercised, 164 automated checks against real PostgreSQL, scale verified at ~1,000 students. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**

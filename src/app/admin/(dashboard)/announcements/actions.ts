@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
+import { revalidateAnnouncements } from '@/lib/revalidate-public';
 
 export type AnnouncementFormState = {
   status: 'idle' | 'error';
@@ -94,6 +95,7 @@ export async function saveAnnouncement(
 
   revalidatePath('/admin/announcements');
   revalidatePath('/admin');
+  revalidateAnnouncements();
   redirect('/admin/announcements?saved=1');
 }
 
@@ -114,5 +116,6 @@ export async function deleteAnnouncement(formData: FormData): Promise<void> {
 
   revalidatePath('/admin/announcements');
   revalidatePath('/admin');
+  revalidateAnnouncements();
   redirect('/admin/announcements?deleted=1');
 }
