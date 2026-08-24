@@ -28,6 +28,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-9-REPORT.md`](PHASE-9-REPORT.md) | SEO and performance — measured baselines, the canonical strategy, and the discovery that the site was not hydrating in production. | **Yes** |
 | [`PHASE-10-SECURITY-HARDENING.md`](PHASE-10-SECURITY-HARDENING.md) | Threat model, the CSP decision, and three real vulnerabilities found by attacking a production build. | **Yes** |
 | [`PHASE-11-REPORT.md`](PHASE-11-REPORT.md) | Full QA in real browsers — the mobile menu was 64px tall, and three other defects nobody had looked for. | **Yes** |
+| [`PHASE-12-REPORT.md`](PHASE-12-REPORT.md) | Spreadsheet import and export — why an import can never publish a record, and the migration that silently dropped every CHECK constraint. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

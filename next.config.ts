@@ -91,6 +91,24 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
 
+  /**
+   * The spreadsheet import posts a file to a Server Action, and Next caps that
+   * body at 1 MB by default.
+   *
+   * This is set ABOVE `UPLOAD_LIMITS.maxBytes` (2 MB, in src/lib/import/run.ts)
+   * on purpose. Whichever limit is lower is the one a teacher meets, and ours
+   * produces a sentence they can act on - "that file is larger than 2 MB, split
+   * it" - where the framework's produces a 500. Phase 12 found that by
+   * uploading a 1.5 MB file and getting a server error.
+   *
+   * A file beyond 3 MB still hits the framework limit. That is far outside the
+   * ~200 KB a thousand-row results file actually weighs, and the alternative is
+   * letting an admin post arbitrarily large bodies.
+   */
+  experimental: {
+    serverActions: { bodySizeLimit: '3mb' },
+  },
+
   // Fail the build on type errors. A client project should never deploy with
   // them suppressed.
   //

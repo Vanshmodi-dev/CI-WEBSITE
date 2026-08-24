@@ -1,6 +1,3 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "EnquiryStatus" AS ENUM ('NEW', 'CONTACTED', 'ENROLLED', 'CLOSED', 'SPAM');
 
@@ -31,7 +28,7 @@ CREATE TABLE "enquiries" (
     "status" "EnquiryStatus" NOT NULL DEFAULT 'NEW',
     "notes" VARCHAR(2000),
     "consentAt" TIMESTAMP(3) NOT NULL,
-    "ipHash" CHAR(64) NOT NULL,
+    "ipHash" CHAR(64),
 
     CONSTRAINT "enquiries_pkey" PRIMARY KEY ("id")
 );
@@ -57,6 +54,7 @@ CREATE TABLE "toppers" (
     "published" BOOLEAN NOT NULL DEFAULT false,
     "publishedAt" TIMESTAMP(3),
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "importRef" VARCHAR(64),
 
     CONSTRAINT "toppers_pkey" PRIMARY KEY ("id")
 );
@@ -69,27 +67,6 @@ CREATE TABLE "subject_scores" (
     "score" DECIMAL(6,2) NOT NULL,
 
     CONSTRAINT "subject_scores_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "result_records" (
-    "id" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "studentName" VARCHAR(120) NOT NULL,
-    "displayNameMode" "DisplayNameMode" NOT NULL DEFAULT 'INITIALS',
-    "score" DECIMAL(6,2) NOT NULL,
-    "scoreUnit" VARCHAR(16) NOT NULL,
-    "programme" "Programme" NOT NULL,
-    "board" "Board",
-    "year" INTEGER NOT NULL,
-    "consentRef" VARCHAR(200),
-    "consentResult" BOOLEAN NOT NULL DEFAULT false,
-    "consentName" BOOLEAN NOT NULL DEFAULT false,
-    "published" BOOLEAN NOT NULL DEFAULT false,
-    "publishedAt" TIMESTAMP(3),
-
-    CONSTRAINT "result_records_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -156,8 +133,29 @@ CREATE TABLE "admin_users" (
     "passwordHash" VARCHAR(255) NOT NULL,
     "lastLoginAt" TIMESTAMP(3),
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "sessionsValidFrom" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "failedLoginCount" INTEGER NOT NULL DEFAULT 0,
+    "firstFailedLoginAt" TIMESTAMP(3),
 
     CONSTRAINT "admin_users_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "import_runs" (
+    "id" TEXT NOT NULL,
+    "at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "actorId" TEXT,
+    "actorLabel" VARCHAR(80) NOT NULL,
+    "filename" VARCHAR(160) NOT NULL,
+    "planDigest" CHAR(64) NOT NULL,
+    "rowsTotal" INTEGER NOT NULL,
+    "rowsCreated" INTEGER NOT NULL,
+    "rowsUpdated" INTEGER NOT NULL,
+    "rowsRejected" INTEGER NOT NULL,
+    "madePublic" INTEGER NOT NULL DEFAULT 0,
+    "durationMs" INTEGER NOT NULL,
+
+    CONSTRAINT "import_runs_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -184,6 +182,9 @@ CREATE INDEX "enquiries_status_createdAt_idx" ON "enquiries"("status", "createdA
 CREATE INDEX "enquiries_phone_createdAt_idx" ON "enquiries"("phone", "createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "toppers_importRef_key" ON "toppers"("importRef");
+
+-- CreateIndex
 CREATE INDEX "toppers_published_year_idx" ON "toppers"("published", "year");
 
 -- CreateIndex
@@ -191,12 +192,6 @@ CREATE INDEX "toppers_programme_year_idx" ON "toppers"("programme", "year");
 
 -- CreateIndex
 CREATE INDEX "subject_scores_topperId_idx" ON "subject_scores"("topperId");
-
--- CreateIndex
-CREATE INDEX "result_records_published_year_idx" ON "result_records"("published", "year");
-
--- CreateIndex
-CREATE INDEX "result_records_programme_year_published_idx" ON "result_records"("programme", "year", "published");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "student_stories_slug_key" ON "student_stories"("slug");
@@ -214,6 +209,9 @@ CREATE INDEX "batches_courseSlug_published_startsAt_idx" ON "batches"("courseSlu
 CREATE UNIQUE INDEX "admin_users_email_key" ON "admin_users"("email");
 
 -- CreateIndex
+CREATE INDEX "import_runs_at_idx" ON "import_runs"("at");
+
+-- CreateIndex
 CREATE INDEX "audit_log_at_idx" ON "audit_log"("at");
 
 -- CreateIndex
@@ -226,6 +224,31 @@ ALTER TABLE "subject_scores" ADD CONSTRAINT "subject_scores_topperId_fkey" FOREI
 ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "admin_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 
+-- =============================================================================
+-- EVERYTHING BELOW THIS LINE IS HAND-WRITTEN. PRISMA WILL NOT REGENERATE IT.
+--
+-- KEEP THIS FILE PURE ASCII. The local PostgreSQL runs a WIN1252 client
+-- encoding, and one warning glyph in a comment aborted the LAST statement in
+-- this file with SQLSTATE 22P05 -- so the audit-action constraint silently did
+-- not exist. Comments in a migration are not decoration; they are executed.
+-- =============================================================================
+--
+-- Phase 12 consolidated the two previous migrations into this one, because the
+-- database has never been deployed and a DROP TABLE for a table that never held
+-- a row is not history worth keeping.
+--
+-- Regenerating cost all 28 CHECK constraints, and the loss was SILENT: the
+-- schema reported "in sync", every model was correct, and the last line of
+-- defence for the consent model had simply evaporated. Prisma cannot express a
+-- CHECK in schema.prisma, so it does not know these exist and cannot put them
+-- back.
+--
+-- IF YOU EVER REGENERATE THIS MIGRATION, RE-APPEND THIS BLOCK.
+-- `npm run verify:constraints` fails loudly if you forget. That is what caught
+-- it here.
+--
+-- The seven `result_records` constraints from the original file are gone with
+-- the table they protected. The remaining 21 are unchanged.
 -- =============================================================================
 -- CONSENT AND INTEGRITY CONSTRAINTS
 -- -----------------------------------------------------------------------------
@@ -274,29 +297,6 @@ ALTER TABLE "toppers" ADD CONSTRAINT "toppers_percent_range"
 ALTER TABLE "subject_scores" ADD CONSTRAINT "subject_scores_score_sane"
   CHECK ("score" >= 0 AND "score" <= 9999);
 
--- ---- result_records ---------------------------------------------------------
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_published_requires_consent"
-  CHECK (NOT "published" OR ("consentRef" IS NOT NULL AND "consentResult"));
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_name_requires_name_consent"
-  CHECK (NOT "published" OR "displayNameMode" = 'INITIALS' OR "consentName");
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_published_at_set"
-  CHECK (NOT "published" OR "publishedAt" IS NOT NULL);
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_year_sane"
-  CHECK ("year" BETWEEN 2000 AND 2100);
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_score_sane"
-  CHECK ("score" >= 0 AND "score" <= 9999);
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_score_unit_known"
-  CHECK ("scoreUnit" IN ('percent', 'marks'));
-
-ALTER TABLE "result_records" ADD CONSTRAINT "result_records_percent_range"
-  CHECK ("scoreUnit" <> 'percent' OR "score" <= 100);
-
 -- ---- student_stories --------------------------------------------------------
 
 -- A story is its own grant. Publishing one never implies a photograph.
@@ -343,5 +343,17 @@ ALTER TABLE "admin_users" ADD CONSTRAINT "admin_users_password_is_hashed"
 ALTER TABLE "admin_users" ADD CONSTRAINT "admin_users_email_lowercase"
   CHECK ("email" = lower("email"));
 
+-- THIS LIST MUST MATCH THE UNION IN `recordAudit` (src/lib/auth.ts).
+--
+-- Phase 10 added a 'signed_out' action and did not add it here. `recordAudit`
+-- catches its own failures so an audit write can never roll back the thing the
+-- admin actually did - which meant every sign-out entry was rejected by this
+-- constraint and silently dropped, for the whole of Phase 10 and 11. The Phase
+-- 10 report claims sign-out is audited. It was not.
+--
+-- tests/import.test.ts now asserts that every action in the TypeScript union
+-- appears in this list, so the next one cannot drift the same way.
 ALTER TABLE "audit_log" ADD CONSTRAINT "audit_log_action_known"
-  CHECK ("action" IN ('created', 'updated', 'published', 'unpublished', 'deleted', 'signed_in'));
+  CHECK ("action" IN ('created', 'updated', 'published', 'unpublished',
+                      'deleted', 'signed_in', 'signed_out', 'imported'));
+

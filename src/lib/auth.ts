@@ -399,7 +399,8 @@ export async function recordAudit(
     | 'unpublished'
     | 'deleted'
     | 'signed_in'
-    | 'signed_out',
+    | 'signed_out'
+    | 'imported',
   entity: string,
   entityId: string,
   summary?: string,

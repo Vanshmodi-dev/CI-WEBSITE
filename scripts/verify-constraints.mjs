@@ -436,7 +436,6 @@ try {
   const remaining = await Promise.all([
     prisma.topper.count(),
     prisma.studentStory.count(),
-    prisma.resultRecord.count(),
     prisma.announcement.count(),
   ]);
   console.log(`  student/content rows remaining: ${remaining.reduce((a, b) => a + b, 0)}`);

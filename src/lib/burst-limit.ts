@@ -100,6 +100,46 @@ export function checkBurst(key: string, now: number = Date.now()): RateLimitVerd
   return { allowed: true };
 }
 
+/* ------------------------------------------------- arbitrary windows ----- */
+
+export type Window = { max: number; windowMs: number };
+
+/**
+ * A sliding window with its own size, for callers whose traffic looks nothing
+ * like an enquiry form.
+ *
+ * WHY THIS EXISTS. The spreadsheet import originally borrowed the enquiry burst
+ * limit — three per minute — because it was there. That number was chosen for
+ * anonymous strangers posting a contact form. An import is an authenticated
+ * teacher iterating on their own file: check, fix a typo, check again. Phase 12
+ * hit the wall on the fourth check, which is roughly where a real teacher would
+ * have hit it too.
+ *
+ * A limit that stops the person it exists to serve is not a security control.
+ * It is a bug with a justification attached.
+ */
+export function peekWindow(key: string, window: Window, now: number = Date.now()): RateLimitVerdict {
+  const cutoff = now - window.windowMs;
+  const recent = (hits.get(key) ?? []).filter((t) => t > cutoff);
+  if (recent.length >= window.max) {
+    const oldest = recent[0] ?? now;
+    return {
+      allowed: false,
+      scope: 'burst',
+      retryAfterMs: Math.max(0, oldest + window.windowMs - now),
+    };
+  }
+  return { allowed: true };
+}
+
+export function recordWindowHit(key: string, window: Window, now: number = Date.now()): void {
+  pruneIfLarge(now);
+  const cutoff = now - window.windowMs;
+  const recent = (hits.get(key) ?? []).filter((t) => t > cutoff);
+  recent.push(now);
+  hits.set(key, recent);
+}
+
 /** Test seam — resets the in-memory window. */
 export function resetBurstState(): void {
   hits.clear();

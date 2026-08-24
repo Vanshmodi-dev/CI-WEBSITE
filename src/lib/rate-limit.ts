@@ -32,9 +32,12 @@ export {
   LIMITS,
   peekBurst,
   recordBurstHit,
+  peekWindow,
+  recordWindowHit,
   checkBurst,
   resetBurstState,
   type RateLimitVerdict,
+  type Window,
 } from '@/lib/burst-limit';
 
 // ---------------------------------------------------------------------------

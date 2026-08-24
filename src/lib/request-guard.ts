@@ -77,6 +77,32 @@ export function isSameOrigin(
 }
 
 /**
+ * Guard a read-only Route Handler, such as a file download.
+ *
+ * DIFFERENT RULE FROM A MUTATION, AND HERE IS WHY. Browsers do not send
+ * `Origin` on a same-origin GET navigation - clicking a download link, opening
+ * a bookmark, typing the URL. Applying the mutation rule to a download refuses
+ * the teacher's own click, which Phase 12 found by trying it.
+ *
+ * So a foreign `Origin` or `Referer` is still refused, and an ABSENT one is
+ * allowed. That is sound for a GET that changes nothing: a cross-origin page
+ * cannot read this response anyway (CORS blocks the read, `frame-ancestors
+ * 'none'` blocks framing, and `Content-Disposition: attachment` means there is
+ * nothing to render). What it can do is cause a download the attacker never
+ * sees, which is a nuisance rather than a disclosure.
+ *
+ * Authentication is still checked separately by the caller, and remains the
+ * thing that actually protects the data.
+ */
+export function rejectForeignOrigin(request: Request): Response | null {
+  if (isSameOrigin(request, { onMissingOrigin: 'allow' })) return null;
+  return new Response('Forbidden', {
+    status: 403,
+    headers: { 'Cache-Control': 'no-store' },
+  });
+}
+
+/**
  * Guard a state-changing Route Handler.
  *
  * Returns a 403 Response to send back, or null when the request may proceed.

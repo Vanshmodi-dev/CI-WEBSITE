@@ -148,7 +148,6 @@ try {
         (SELECT count(*) FROM "batches"
            WHERE "published" AND "startsAt" >= now())                       AS c,
         (SELECT count(*) FROM "toppers" WHERE "published")                  AS d,
-        (SELECT count(*) FROM "result_records" WHERE "published")           AS e,
         (SELECT count(*) FROM "announcements"
            WHERE "published" AND "startsAt" <= now() AND "endsAt" >= now()) AS f`;
     return Object.values(rows[0]).reduce((x, y) => x + Number(y), 0);

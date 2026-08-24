@@ -199,7 +199,6 @@ async function count() {
   const totals = {
     toppers: await prisma.topper.count(),
     subjectScores: await prisma.subjectScore.count(),
-    resultRecords: await prisma.resultRecord.count(),
     stories: await prisma.studentStory.count(),
     batches: await prisma.batch.count(),
     announcements: await prisma.announcement.count(),

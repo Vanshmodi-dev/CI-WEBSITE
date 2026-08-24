@@ -174,6 +174,27 @@ model Topper {
   publishedAt   DateTime?
   sortOrder     Int     @default(0)
 
+  /// THE IMPORT KEY (Phase 12).
+  ///
+  /// The institute's own reference for this record - a roll number, an
+  /// enrolment code, whatever their spreadsheet already uses. Supplied by the
+  /// teacher, never generated here.
+  ///
+  /// WHY IT EXISTS. A spreadsheet import needs to know whether a row is a new
+  /// record or a correction to one it created last week, and there is no safe
+  /// way to answer that from the data alone. Names are not unique - Phase 8
+  /// found two students sharing a name and a year colliding on a story slug -
+  /// and matching on name plus programme plus year would turn a corrected
+  /// spelling into a duplicate student.
+  ///
+  /// So the teacher owns the identity. Reuse a reference and that row is
+  /// updated; use a new one and a record is added. Unique, so the same
+  /// reference can never describe two records.
+  ///
+  /// Nullable because records created by hand in the admin have no spreadsheet
+  /// row to point at, and must not be forced to invent one.
+  importRef String? @unique @db.VarChar(64)
+
   @@index([published, year])
   @@index([programme, year])
   @@map("toppers")
@@ -190,32 +211,6 @@ model SubjectScore {
 
   @@index([topperId])
   @@map("subject_scores")
-}
-
-/// A single result. Bulk-entered each results season.
-model ResultRecord {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  studentName     String          @db.VarChar(120)
-  displayNameMode DisplayNameMode @default(INITIALS)
-
-  score     Decimal   @db.Decimal(6, 2)
-  scoreUnit String    @db.VarChar(16)
-  programme Programme
-  board     Board?
-  year      Int
-
-  consentRef    String? @db.VarChar(200)
-  consentResult Boolean @default(false)
-  consentName   Boolean @default(false)
-  published     Boolean @default(false)
-  publishedAt   DateTime?
-
-  @@index([published, year])
-  @@index([programme, year, published])
-  @@map("result_records")
 }
 
 /// Owned editorial content — deeper than a Google review (Master Plan §18).
@@ -334,6 +329,41 @@ model AdminUser {
   auditEntries AuditLog[]
 
   @@map("admin_users")
+}
+
+/// One spreadsheet import, recorded after the fact.
+///
+/// METADATA ONLY, NEVER THE FILE. The uploaded spreadsheet is parsed in memory
+/// and discarded; what survives is the shape of what happened. Keeping the file
+/// would mean keeping a second copy of every student's marks outside the
+/// consent model and outside the retention policy, to answer a question the
+/// counts below already answer.
+///
+/// `filename` is stored so the teacher can recognise their own upload. It is
+/// sanitised on the way in - it is a label, not a path, and nothing ever opens
+/// it.
+model ImportRun {
+  id   String   @id @default(cuid())
+  at   DateTime @default(now())
+
+  actorId    String?
+  actorLabel String  @db.VarChar(80)
+
+  /// Sanitised for display only. Never used as a path.
+  filename   String  @db.VarChar(160)
+  /// SHA-256 of the normalised plan the administrator approved.
+  planDigest String  @db.Char(64)
+
+  rowsTotal    Int
+  rowsCreated  Int
+  rowsUpdated  Int
+  rowsRejected Int
+  /// How many records this import made publicly visible. Usually zero.
+  madePublic   Int    @default(0)
+  durationMs   Int
+
+  @@index([at])
+  @@map("import_runs")
 }
 
 /// Who published what, and when.

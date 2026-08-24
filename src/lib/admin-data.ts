@@ -41,7 +41,6 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       total_enquiries: bigint;
       active_batches: bigint;
       published_toppers: bigint;
-      published_results: bigint;
       live_announcements: bigint;
     }>
   >`
@@ -51,7 +50,6 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
       (SELECT count(*) FROM "batches"
          WHERE "published" AND "startsAt" >= now())                           AS active_batches,
       (SELECT count(*) FROM "toppers" WHERE "published")                      AS published_toppers,
-      (SELECT count(*) FROM "result_records" WHERE "published")               AS published_results,
       (SELECT count(*) FROM "announcements"
          WHERE "published" AND "startsAt" <= now() AND "endsAt" >= now())     AS live_announcements
   `;
@@ -63,7 +61,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     newEnquiries: n(r?.new_enquiries),
     totalEnquiries: n(r?.total_enquiries),
     activeBatches: n(r?.active_batches),
-    publishedResults: n(r?.published_toppers) + n(r?.published_results),
+    publishedResults: n(r?.published_toppers),
     liveAnnouncements: n(r?.live_announcements),
   };
 }
