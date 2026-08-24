@@ -1,18 +1,38 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata } from '@/lib/seo';
-import { getPublishedStories } from '@/lib/public-data';
+import { pageMetadata, listingIndexing } from '@/lib/seo';
+import { getPublishedStoriesPage } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { StoryCard } from '@/components/domain/public-cards';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Student stories',
-  description: `How students at ${institute.name} got to their results, in their own words.`,
-  path: '/stories',
-});
+type StoriesSearchParams = { page?: string };
 
-export const revalidate = 3600;
+const readPage = (params: StoriesSearchParams) =>
+  Math.max(1, Number(params.page ?? '1') || 1);
+
+/**
+ * ⚠ NO `revalidate` EXPORT — this page now reads `searchParams`, so it renders
+ * per request and a `revalidate` value would be inert. See the trade-off note
+ * on the component below.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<StoriesSearchParams>;
+}): Promise<Metadata> {
+  const page = readPage(await searchParams);
+  const { canonical, robots } = listingIndexing({ path: '/stories', filtered: false, page });
+
+  return pageMetadata({
+    title: page > 1 ? `Student stories — page ${page}` : 'Student stories',
+    description: `How students at ${institute.name} got to their results, in their own words.`,
+    path: '/stories',
+    canonical,
+    robots,
+  });
+}
 
 /**
  * Student stories.
@@ -22,9 +42,30 @@ export const revalidate = 3600;
  * this component, so a story published without photo permission arrives with
  * `photoUrl: null` and renders a monogram — the component cannot get it wrong,
  * because it never receives the photo.
+ *
+ * -----------------------------------------------------------------------------
+ * WHY THIS PAGE IS PAGINATED, AND WHAT IT COST
+ * -----------------------------------------------------------------------------
+ * It used to render every published story in full, up to a hidden cap of 60.
+ * Phase 9 measured it at 80 published stories: twenty were silently missing,
+ * with nothing on the page to say so, and the HTML had reached 224 KB — a
+ * quarter of a megabyte for the browser to parse before anything was readable.
+ *
+ * Paginating fixes both, and costs one thing: reading `searchParams` makes this
+ * route render per request instead of being served from the ISR cache. That
+ * trade was made knowingly. Page one drops from 224 KB of HTML to roughly 45 KB,
+ * the total is now stated on screen so nothing can go missing quietly, and the
+ * render itself measured 9 ms. A cached page that omits a fifth of the content
+ * is not the faster option; it is the wrong one.
  */
-export default async function StoriesPage() {
-  const stories = await getPublishedStories();
+export default async function StoriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<StoriesSearchParams>;
+}) {
+  const page = readPage(await searchParams);
+  const data = await getPublishedStoriesPage({ page });
+  const stories = data.stories;
 
   return (
     <>
@@ -63,11 +104,49 @@ export default async function StoriesPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {stories.map((story) => (
-              <StoryCard key={story.id} story={story} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              {stories.map((story) => (
+                <StoryCard key={story.id} story={story} />
+              ))}
+            </div>
+
+            {data.pageCount > 1 ? (
+              <nav
+                aria-label="Story pages"
+                className="mt-10 flex items-center justify-center gap-3 border-t border-rule pt-6"
+              >
+                {data.page > 1 ? (
+                  <Link
+                    href={data.page === 2 ? '/stories' : `/stories?page=${data.page - 1}`}
+                    rel="prev"
+                    className="inline-flex min-h-11 items-center rounded-sm border border-rule px-4 text-small text-text hover:bg-paper"
+                  >
+                    &larr; Previous
+                  </Link>
+                ) : null}
+                <span className="text-small tabular-nums text-muted">
+                  Page {data.page} of {data.pageCount}
+                </span>
+                {data.page < data.pageCount ? (
+                  <Link
+                    href={`/stories?page=${data.page + 1}`}
+                    rel="next"
+                    className="inline-flex min-h-11 items-center rounded-sm border border-rule px-4 text-small text-text hover:bg-paper"
+                  >
+                    Next &rarr;
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
+
+            {/* Stated, not implied: a story that exists but is not on this
+                screen is still accounted for here. */}
+            <p className="mt-8 text-center text-[13px] tabular-nums text-muted">
+              Showing {stories.length} of {data.total} published{' '}
+              {data.total === 1 ? 'story' : 'stories'}
+            </p>
+          </>
         )}
       </Section>
 

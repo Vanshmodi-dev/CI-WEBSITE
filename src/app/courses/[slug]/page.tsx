@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { institute, publishedCourses, whatsappHref, telHref } from '@/config/institute';
-import { pageMetadata, SITE_URL } from '@/lib/seo';
+import { pageMetadata, breadcrumbJsonLd, SITE_URL } from '@/lib/seo';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -60,19 +60,33 @@ export default async function CoursePage({
 
   const batches = await getUpcomingBatches({ courseSlug: course.slug });
 
-  // Course schema.org carries the name and provider only. No price, no
-  // duration, no rating — asserting any of those would be a fabrication, and a
-  // fabricated `offers` block is exactly what earns a manual action.
+  /**
+   * Course schema.org carries the name and provider only. No price, no
+   * duration, no rating — asserting any of those would be a fabrication, and a
+   * fabricated `offers` block is exactly what earns a manual action.
+   *
+   * The consequence, stated plainly: without `offers` and `hasCourseInstance`
+   * this entity is not eligible for a Course rich result. That is the correct
+   * trade. We do not hold the institute's fees, dates or delivery mode, and a
+   * rich result built on invented ones would be a lie with a star rating on it.
+   * The block still describes the page truthfully to any consumer that reads it.
+   *
+   * `provider` references the sitewide organisation by @id rather than
+   * redeclaring its name and URL, so the two can never drift apart.
+   */
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Course',
     name: course.name,
-    provider: {
-      '@type': 'EducationalOrganization',
-      name: institute.name,
-      url: SITE_URL,
-    },
+    provider: { '@id': `${SITE_URL}/#organisation` },
   };
+
+  // Mirrors the visible breadcrumb below, exactly. Structured data that claims
+  // a hierarchy the page does not show is the definition of a hidden SEO claim.
+  const breadcrumb = breadcrumbJsonLd([
+    { name: 'Courses', path: '/courses' },
+    { name: course.name, path: `/courses/${course.slug}` },
+  ]);
 
   return (
     <>
@@ -166,6 +180,10 @@ export default async function CoursePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
       />
     </>
   );

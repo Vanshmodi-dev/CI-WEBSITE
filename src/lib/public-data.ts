@@ -66,12 +66,18 @@ export type PublicResult = {
   subjects: Array<{ subject: string; score: string }>;
 };
 
+/** A filter the visitor can actually apply, with how many records it holds. */
+export type FilterFacet<T> = { value: T; count: number };
+
 export type PublicResultsPage = {
   results: PublicResult[];
   total: number;
   page: number;
   pageCount: number;
-  years: number[];
+  /** Years that hold results FOR THE ACTIVE PROGRAMME. See the note below. */
+  years: FilterFacet<number>[];
+  /** Programmes that hold results FOR THE ACTIVE YEAR. */
+  programmes: FilterFacet<ProgrammeValue>[];
 };
 
 export const RESULTS_PAGE_SIZE = 24;
@@ -101,13 +107,19 @@ export async function getPublishedResults({
     page: 1,
     pageCount: 1,
     years: [],
+    programmes: [],
   };
   if (!isDatabaseConfigured()) return empty;
 
-  const where = {
+  /** Published + consented. Everything else is a filter on top of this. */
+  const visible = {
     published: true,
     consentResult: true,
     consentRef: { not: null },
+  } as const;
+
+  const where = {
+    ...visible,
     ...(year ? { year } : {}),
     ...(programme ? { programme } : {}),
   } as const;
@@ -118,7 +130,7 @@ export async function getPublishedResults({
   try {
     const prisma = getPrisma();
 
-    const [total, rows, yearRows] = await Promise.all([
+    const [total, rows, yearRows, programmeRows] = await Promise.all([
       prisma.topper.count({ where }),
       prisma.topper.findMany({
         where,
@@ -149,10 +161,34 @@ export async function getPublishedResults({
           },
         },
       }),
+      /**
+       * The facets are each scoped to the OTHER filter, not to themselves.
+       *
+       * Phase 8 left this as a known defect: the year list ignored the
+       * programme filter entirely, so choosing "CA Foundation" still offered
+       * every year in the database — including years with no CA Foundation
+       * result at all. Following one of those chips landed the visitor on
+       * "Nothing published for that filter yet", from a control the page had
+       * just told them was available.
+       *
+       * Scoping each facet to the other filter (and never to itself) is what
+       * makes the chips honest AND keeps them usable: the year chips still list
+       * every year available for the chosen programme, rather than collapsing
+       * to the single year already selected.
+       *
+       * Both are grouped IN THE DATABASE. Counting these in JavaScript would
+       * mean fetching all 1,000 rows to count them.
+       */
       prisma.topper.groupBy({
         by: ['year'],
-        where: { published: true, consentResult: true, consentRef: { not: null } },
+        where: { ...visible, ...(programme ? { programme } : {}) },
         orderBy: { year: 'desc' },
+        _count: { _all: true },
+      }),
+      prisma.topper.groupBy({
+        by: ['programme'],
+        where: { ...visible, ...(year ? { year } : {}) },
+        _count: { _all: true },
       }),
     ]);
 
@@ -191,7 +227,13 @@ export async function getPublishedResults({
       total,
       page: current,
       pageCount: Math.max(1, Math.ceil(total / take)),
-      years: yearRows.map((y) => y.year),
+      years: yearRows.map((y) => ({ value: y.year, count: y._count._all })),
+      programmes: programmeRows
+        .map((p) => ({ value: p.programme as ProgrammeValue, count: p._count._all }))
+        // Ordered by the enum, so the chips keep a stable reading order
+        // (Class XI → Class XII → CA → CMA) instead of whatever the planner
+        // returned.
+        .sort((a, b) => PROGRAMMES.indexOf(a.value) - PROGRAMMES.indexOf(b.value)),
     };
   } catch (error) {
     logUnexpected('public.results.failed', error);
@@ -215,6 +257,28 @@ export type PublicStory = {
   quote: string | null;
 };
 
+export type PublicStoriesPage = {
+  stories: PublicStory[];
+  total: number;
+  page: number;
+  pageCount: number;
+};
+
+/**
+ * A story is a full page of prose — challenge, journey, outcome and a quote.
+ * Twelve of them is already a long scroll and about 45 KB of HTML; sixty was
+ * 224 KB, which is what the unpaginated page was serving.
+ */
+export const STORIES_PAGE_SIZE = 12;
+
+const STORY_VISIBLE = {
+  published: true,
+  consentStory: true,
+  consentRef: { not: null },
+} as const;
+
+const STORY_ORDER = [{ year: 'desc' as const }, { createdAt: 'desc' as const }];
+
 /**
  * Published student stories.
  *
@@ -222,67 +286,136 @@ export type PublicStory = {
  * the photo is resolved by `present()` against `consentPhoto` alone, so a
  * published story whose subject did not agree to a photograph returns
  * `photoUrl: null` and the component renders a monogram.
+ *
+ * ⚠ `limit` IS FOR THE HOMEPAGE BAND, WHICH SHOWS A DELIBERATE FEW.
+ * It is not a way to read "all" stories — see `getPublishedStoriesPage` for
+ * that. This function used to default to `take: 60`, which silently discarded
+ * every story past the sixtieth: a teacher could publish one, see it nowhere,
+ * and have no way to find out why. Phase 9 measured it happening at 80 stories.
+ * `limit` is now required so no caller can inherit that default by accident.
  */
-export async function getPublishedStories(limit?: number): Promise<PublicStory[]> {
+const STORY_SELECT = {
+  id: true,
+  slug: true,
+  studentName: true,
+  displayNameMode: true,
+  photoUrl: true,
+  consentRef: true,
+  consentStory: true,
+  consentName: true,
+  consentPhoto: true,
+  published: true,
+  programme: true,
+  year: true,
+  challenge: true,
+  journey: true,
+  outcome: true,
+  quote: true,
+} as const;
+
+/** Resolve one row through the consent rules. Nothing else may do this. */
+function presentStory(row: {
+  id: string;
+  slug: string;
+  studentName: string;
+  displayNameMode: string;
+  photoUrl: string | null;
+  consentRef: string | null;
+  consentStory: boolean;
+  consentName: boolean;
+  consentPhoto: boolean;
+  published: boolean;
+  programme: string;
+  year: number;
+  challenge: string;
+  journey: string;
+  outcome: string;
+  quote: string | null;
+}): PublicStory {
+  const view = present(
+    {
+      studentName: row.studentName,
+      displayNameMode: row.displayNameMode as DisplayNameModeValue,
+      photoUrl: row.photoUrl,
+      consentRef: row.consentRef,
+      consentStory: row.consentStory,
+      consentName: row.consentName,
+      consentPhoto: row.consentPhoto,
+      published: row.published,
+    },
+    'consentStory',
+  );
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: view.name,
+    monogram: view.monogram,
+    photoUrl: view.photoUrl,
+    programme: row.programme,
+    year: row.year,
+    challenge: row.challenge,
+    journey: row.journey,
+    outcome: row.outcome,
+    quote: row.quote,
+  };
+}
+
+export async function getPublishedStories(limit: number): Promise<PublicStory[]> {
   if (!isDatabaseConfigured()) return [];
 
   try {
     const rows = await getPrisma().studentStory.findMany({
-      where: { published: true, consentStory: true, consentRef: { not: null } },
-      orderBy: [{ year: 'desc' }, { createdAt: 'desc' }],
-      ...(limit ? { take: limit } : { take: 60 }),
-      select: {
-        id: true,
-        slug: true,
-        studentName: true,
-        displayNameMode: true,
-        photoUrl: true,
-        consentRef: true,
-        consentStory: true,
-        consentName: true,
-        consentPhoto: true,
-        published: true,
-        programme: true,
-        year: true,
-        challenge: true,
-        journey: true,
-        outcome: true,
-        quote: true,
-      },
+      where: STORY_VISIBLE,
+      orderBy: STORY_ORDER,
+      take: limit,
+      select: STORY_SELECT,
     });
-
-    return rows.map((row) => {
-      const view = present(
-        {
-          studentName: row.studentName,
-          displayNameMode: row.displayNameMode as DisplayNameModeValue,
-          photoUrl: row.photoUrl,
-          consentRef: row.consentRef,
-          consentStory: row.consentStory,
-          consentName: row.consentName,
-          consentPhoto: row.consentPhoto,
-          published: row.published,
-        },
-        'consentStory',
-      );
-
-      return {
-        id: row.id,
-        slug: row.slug,
-        name: view.name,
-        monogram: view.monogram,
-        photoUrl: view.photoUrl,
-        programme: row.programme,
-        year: row.year,
-        challenge: row.challenge,
-        journey: row.journey,
-        outcome: row.outcome,
-        quote: row.quote,
-      };
-    });
+    return rows.map(presentStory);
   } catch (error) {
     logUnexpected('public.stories.failed', error);
     return [];
+  }
+}
+
+/**
+ * One page of published stories, with the total so the page can say how many
+ * there are.
+ *
+ * The count is what makes the truncation impossible to hide: the page renders
+ * "Page 1 of 7", so a story that exists but is not on screen is still visibly
+ * accounted for.
+ */
+export async function getPublishedStoriesPage({
+  page = 1,
+}: { page?: number } = {}): Promise<PublicStoriesPage> {
+  const empty: PublicStoriesPage = { stories: [], total: 0, page: 1, pageCount: 1 };
+  if (!isDatabaseConfigured()) return empty;
+
+  const current = Math.max(1, Math.floor(page));
+
+  try {
+    const prisma = getPrisma();
+    const [total, rows] = await Promise.all([
+      prisma.studentStory.count({ where: STORY_VISIBLE }),
+      prisma.studentStory.findMany({
+        where: STORY_VISIBLE,
+        orderBy: STORY_ORDER,
+        skip: (current - 1) * STORIES_PAGE_SIZE,
+        take: STORIES_PAGE_SIZE,
+        select: STORY_SELECT,
+      }),
+    ]);
+
+    return {
+      stories: rows.map(presentStory),
+      total,
+      page: current,
+      pageCount: Math.max(1, Math.ceil(total / STORIES_PAGE_SIZE)),
+    };
+  } catch (error) {
+    logUnexpected('public.stories.page.failed', error);
+    return empty;
   }
 }
 
@@ -383,4 +516,65 @@ export async function getActiveAnnouncements(
 export async function getTopAnnouncement(): Promise<PublicAnnouncement | null> {
   const items = await getActiveAnnouncements(1);
   return items[0] ?? null;
+}
+
+/* ------------------------------------------------------ freshness ---- */
+
+export type ContentFreshness = {
+  results: Date | null;
+  stories: Date | null;
+  announcements: Date | null;
+  batches: Date | null;
+};
+
+/**
+ * When each kind of public content last changed.
+ *
+ * Used only by the sitemap, and deliberately built on the SAME visibility
+ * predicates the public pages use. An unpublished record, or one whose consent
+ * was withdrawn, must not be able to move a `lastModified` date — that would
+ * leak the fact that something changed behind the scenes, and it would send a
+ * crawler back to a page that did not actually change.
+ *
+ * Returns null for a kind with nothing published. The sitemap omits the field
+ * rather than substituting today's date.
+ */
+export async function lastPublishedAt(): Promise<ContentFreshness> {
+  const empty: ContentFreshness = {
+    results: null,
+    stories: null,
+    announcements: null,
+    batches: null,
+  };
+  if (!isDatabaseConfigured()) return empty;
+
+  const now = new Date();
+  try {
+    const prisma = getPrisma();
+    const [result, story, announcement, batch] = await Promise.all([
+      prisma.topper.aggregate({
+        where: { published: true, consentResult: true, consentRef: { not: null } },
+        _max: { updatedAt: true },
+      }),
+      prisma.studentStory.aggregate({ where: STORY_VISIBLE, _max: { updatedAt: true } }),
+      prisma.announcement.aggregate({
+        where: { published: true, startsAt: { lte: now }, endsAt: { gte: now } },
+        _max: { updatedAt: true },
+      }),
+      prisma.batch.aggregate({
+        where: { published: true, startsAt: { gte: now } },
+        _max: { updatedAt: true },
+      }),
+    ]);
+
+    return {
+      results: result._max.updatedAt ?? null,
+      stories: story._max.updatedAt ?? null,
+      announcements: announcement._max.updatedAt ?? null,
+      batches: batch._max.updatedAt ?? null,
+    };
+  } catch (error) {
+    logUnexpected('public.freshness.failed', error);
+    return empty;
+  }
 }

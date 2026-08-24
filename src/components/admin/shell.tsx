@@ -93,7 +93,7 @@ export function AdminShell({
             <form action="/admin/logout" method="post">
               <button
                 type="submit"
-                className="inline-flex min-h-11 items-center rounded-sm border border-rule px-3 text-small text-text transition-colors hover:border-navy-600/50 hover:bg-navy-50"
+                className="inline-flex min-h-11 items-center rounded-sm border border-rule px-3 text-small text-text transition-colors hover:border-navy-600/50 hover:bg-selected"
               >
                 Log out
               </button>
@@ -154,7 +154,7 @@ function NavList({ pathname }: { pathname: string }) {
               className={cn(
                 'flex min-h-11 items-center rounded-sm px-3 text-small transition-colors',
                 active
-                  ? 'bg-navy-50 font-medium text-heading'
+                  ? 'bg-selected font-medium text-heading'
                   : 'text-muted hover:bg-surface hover:text-heading',
               )}
             >

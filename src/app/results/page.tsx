@@ -1,20 +1,63 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata } from '@/lib/seo';
+import { pageMetadata, listingIndexing } from '@/lib/seo';
 import { getPublishedResults, asProgramme } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { ResultCard } from '@/components/domain/public-cards';
 import { PROGRAMME_LABELS } from '@/lib/admin-format';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Results',
-  description: `Student results published by ${institute.name}, ${institute.locality}.`,
-  path: '/results',
-});
+type ResultsSearchParams = { year?: string; programme?: string; page?: string };
 
-export const revalidate = 3600;
+/** Narrow the untrusted query string once, and use the result everywhere. */
+function readFilters(params: ResultsSearchParams) {
+  const year = Number(params.year) || undefined;
+  // Narrowed against the enum — an unknown value becomes "no filter".
+  const programme = asProgramme(params.programme);
+  const page = Math.max(1, Number(params.page ?? '1') || 1);
+  return { year, programme, page, filtered: Boolean(year || programme) };
+}
+
+/**
+ * ⚠ NO `export const revalidate` HERE, AND THAT IS DELIBERATE.
+ *
+ * This page reads `searchParams`, which makes it dynamic; a `revalidate` export
+ * on a dynamic route is inert. One sat here for three phases reading
+ * `revalidate = 3600`, which said the page was cached for an hour when in fact
+ * it was rendered fresh every time — a comforting number that described
+ * nothing. Phase 9 measured the render at 19 ms against 1,000 published results
+ * with every query using an index, so dynamic is both correct and cheap.
+ *
+ * `revalidateResults()` still refreshes `/` (which IS cached and shows a
+ * results band). Its `revalidatePath('/results')` call is a no-op for this
+ * route and harmless — kept so the call site stays correct if this page ever
+ * becomes cacheable.
+ */
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<ResultsSearchParams>;
+}): Promise<Metadata> {
+  const { year, programme, page, filtered } = readFilters(await searchParams);
+  const { canonical, robots } = listingIndexing({ path: '/results', filtered, page });
+
+  // The title names the active filter so the tab is legible, but the words come
+  // from the programme label table and the year in the database — never a
+  // description of how good the results are.
+  const scope = [
+    programme ? PROGRAMME_LABELS[programme] : null,
+    year ? String(year) : null,
+  ].filter(Boolean);
+
+  return pageMetadata({
+    title: scope.length > 0 ? `Results — ${scope.join(' ')}` : 'Results',
+    description: `Student results published by ${institute.name}, ${institute.locality}.`,
+    path: '/results',
+    canonical,
+    robots,
+  });
+}
 
 /**
  * Public results.
@@ -33,17 +76,10 @@ export const revalidate = 3600;
 export default async function ResultsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; programme?: string; page?: string }>;
+  searchParams: Promise<ResultsSearchParams>;
 }) {
-  const params = await searchParams;
-
-  const year = Number(params.year) || undefined;
-  // Narrowed against the enum — an unknown value becomes "no filter".
-  const programme = asProgramme(params.programme);
-  const page = Math.max(1, Number(params.page ?? '1') || 1);
-
+  const { year, programme, page, filtered } = readFilters(await searchParams);
   const data = await getPublishedResults({ year, programme, page });
-  const filtered = Boolean(year || programme);
 
   function hrefWith(next: Record<string, string | undefined>) {
     const search = new URLSearchParams();
@@ -99,20 +135,26 @@ export default async function ResultsPage({
             {data.years.length > 1 || data.total > 0 ? (
               <div className="mb-8 flex flex-wrap gap-1.5">
                 <FilterChip href="/results" label="All" active={!filtered} />
+                {/* Both facet lists are scoped to the OTHER active filter in
+                    the query, so every chip on screen leads somewhere that has
+                    results. Before Phase 9 the year chips ignored the
+                    programme entirely and could offer a dead end. */}
                 {data.years.map((y) => (
                   <FilterChip
-                    key={y}
-                    href={hrefWith({ year: String(y), page: undefined })}
-                    label={String(y)}
-                    active={year === y}
+                    key={y.value}
+                    href={hrefWith({ year: String(y.value), page: undefined })}
+                    label={String(y.value)}
+                    count={y.count}
+                    active={year === y.value}
                   />
                 ))}
-                {Object.entries(PROGRAMME_LABELS).map(([value, label]) => (
+                {data.programmes.map((p) => (
                   <FilterChip
-                    key={value}
-                    href={hrefWith({ programme: value, page: undefined })}
-                    label={label}
-                    active={programme === value}
+                    key={p.value}
+                    href={hrefWith({ programme: p.value, page: undefined })}
+                    label={PROGRAMME_LABELS[p.value] ?? p.value}
+                    count={p.count}
+                    active={programme === p.value}
                   />
                 ))}
               </div>
@@ -199,18 +241,27 @@ function FilterChip({
   href,
   label,
   active,
+  count,
 }: {
   href: string;
   label: string;
   active: boolean;
+  /** Shown only to assistive technology — the visible chip stays a plain
+      label, but a screen-reader user hears how much is behind it. */
+  count?: number;
 }) {
   return (
     <Link
       href={href}
       aria-current={active ? 'page' : undefined}
+      aria-label={
+        count === undefined
+          ? undefined
+          : `${label} — ${count} ${count === 1 ? 'result' : 'results'}`
+      }
       className={
         active
-          ? 'inline-flex min-h-9 items-center rounded-sm border border-navy-600/40 bg-navy-50 px-3 text-[13px] font-medium text-heading'
+          ? 'inline-flex min-h-9 items-center rounded-sm border border-navy-600/40 bg-selected px-3 text-[13px] font-medium text-heading'
           : 'inline-flex min-h-9 items-center rounded-sm border border-rule bg-paper px-3 text-[13px] text-muted hover:text-heading'
       }
     >

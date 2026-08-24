@@ -25,6 +25,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-6-REPORT.md`](PHASE-6-REPORT.md) | The public website — every page, the consent isolation rules, and 214 automated checks. | **Yes** |
 | [`PHASE-5.5-DATABASE-VERIFICATION.md`](PHASE-5.5-DATABASE-VERIFICATION.md) | **The migration actually ran.** 28 CHECK constraints exercised, 164 automated checks against real PostgreSQL, scale verified at ~1,000 students. | **Yes** |
 | [`PHASE-8-REPORT.md`](PHASE-8-REPORT.md) | Admin ↔ public integration — the entity mapping, the revalidation matrix, and two real bugs found and fixed. | **Yes** |
+| [`PHASE-9-REPORT.md`](PHASE-9-REPORT.md) | SEO and performance — measured baselines, the canonical strategy, and the discovery that the site was not hydrating in production. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

@@ -53,6 +53,20 @@ const PHOTO = '/zzdemo-fixture-photo.jpg';
 const FORBIDDEN_PHOTO = '/zzdemo-must-never-render.jpg';
 
 const MODE = env.MODE ?? 'all';
+
+/**
+ * An unrecognised MODE used to do nothing at all and exit 0 — a run that looked
+ * like a pass. Phase 9 lost time to `MODE=clean` (the mode is `cleanup`), which
+ * left fixtures behind and then failed three assertions in a DIFFERENT suite.
+ * Silent success is the one outcome this project does not tolerate anywhere
+ * else, so it is not tolerated here either.
+ */
+const MODES = ['all', 'seed', 'assert', 'cleanup'];
+if (!MODES.includes(MODE)) {
+  console.error(`Unknown MODE "${MODE}". Expected one of: ${MODES.join(', ')}`);
+  exit(1);
+}
+
 const doSeed = MODE === 'seed' || MODE === 'all';
 const doAssert = MODE === 'assert' || MODE === 'all';
 const doCleanup = MODE === 'cleanup' || MODE === 'all';

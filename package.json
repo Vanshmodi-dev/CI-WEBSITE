@@ -27,7 +27,14 @@
     "verify:scale": "node scripts/scale-check.mjs",
     "verify:public": "node scripts/verify-public-isolation.mjs",
     "verify:revalidation": "node scripts/verify-revalidation.mjs",
-    "verify:integration": "node scripts/verify-integration.mjs"
+    "verify:integration": "node scripts/verify-integration.mjs",
+    "verify:seo": "node scripts/verify-seo.mjs",
+    "verify:budget": "node scripts/verify-budget.mjs",
+    "perf:baseline": "node scripts/perf-baseline.mjs",
+    "scale:seed": "node scripts/synthetic-scale.mjs seed",
+    "scale:clean": "node scripts/synthetic-scale.mjs clean",
+    "lighthouse": "lhci autorun",
+    "lighthouse:desktop": "lhci autorun --config=lighthouserc.desktop.json"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

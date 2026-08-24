@@ -208,7 +208,7 @@ export function CourseCard({
   return (
     <Link
       href={`/courses/${slug}`}
-      className="group flex flex-col rounded-md border border-rule bg-paper p-6 transition-colors hover:border-navy-600/50 hover:bg-navy-50"
+      className="group flex flex-col rounded-md border border-rule bg-paper p-6 transition-colors hover:border-navy-600/50 hover:bg-selected"
     >
       <h3 className="font-display text-[20px] font-semibold text-heading">{name}</h3>
       <p className="mt-2 flex-1 text-small text-muted">
@@ -250,7 +250,7 @@ export function AnnouncementCard({
   return (
     <Link
       href={href}
-      className="block rounded-md border border-rule bg-paper p-5 transition-colors hover:border-navy-600/50 hover:bg-navy-50"
+      className="block rounded-md border border-rule bg-paper p-5 transition-colors hover:border-navy-600/50 hover:bg-selected"
     >
       {body}
     </Link>

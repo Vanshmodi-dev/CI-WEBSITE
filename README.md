@@ -79,9 +79,16 @@ npm run dev
 | `npm run verify:public` | 50 public-data isolation checks |
 | `npm run verify:revalidation` | Proves publishing updates the public site |
 | `npm run verify:integration` | 47 admin → database → public integration checks |
+| `npm run verify:seo` | 335 metadata, canonical, sitemap, robots and JSON-LD checks |
+| `npm run verify:budget` | 72 performance-budget checks against a production build |
+| `npm run perf:baseline` | Measures wire bytes and TTFB for every public route |
+| `npm run scale:seed` / `scale:clean` | ~1,000 synthetic ZZTEST records, then removes them |
+| `npm run lighthouse` | Lighthouse CI, mobile preset (needs `@lhci/cli`) |
 
 > The site is **pre-launch**: `robots.ts` disallows all crawling and the root
-> metadata sets `noindex`. Both are flipped in Phase 7.
+> metadata sets `noindex`. Both are governed by `src/config/launch.ts`, which
+> requires a reviewed code change *and* a real https:// domain. The switch is
+> flipped during deployment, not before.
 
 ## Phases
 
@@ -97,6 +104,7 @@ npm run dev
 | 6 | Public website | ● done — see [docs/PHASE-6-REPORT.md](docs/PHASE-6-REPORT.md) |
 | 7 | Admin completion + launch readiness | ● done — see [docs/PHASE-7-REPORT.md](docs/PHASE-7-REPORT.md) |
 | 8 | Admin ↔ public integration | ● done — see [docs/PHASE-8-REPORT.md](docs/PHASE-8-REPORT.md) |
+| 9 | SEO + performance | ● done — see [docs/PHASE-9-REPORT.md](docs/PHASE-9-REPORT.md) |
 | — | **Launch** | ○ blocked on institute content + manual setup — see [PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md) |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |

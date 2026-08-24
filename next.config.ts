@@ -3,17 +3,56 @@ import type { NextConfig } from 'next';
 /**
  * Security headers — Master Plan §19.
  *
- * The CSP is deliberately strict and carries no 'unsafe-inline' for scripts.
- * The TP Reviews Engine's integration kit is built to work under exactly this
- * policy, so we must not weaken it to accommodate anything else later.
+ * =============================================================================
+ * ⚠ script-src CARRIES 'unsafe-inline'. READ THIS BEFORE CHANGING IT.
+ * =============================================================================
+ *
+ * It used to read `script-src 'self'`, with a comment saying the policy was
+ * deliberately strict and must not be weakened. That comment was written
+ * without measuring, and the policy did not do what it claimed. It broke the
+ * site.
+ *
+ * WHAT PHASE 9 MEASURED. Lighthouse against a production build reported four
+ * blocked inline scripts and `Minified React error #412`. Next.js streams the
+ * React Server Component payload as five inline `<script>self.__next_f.push(…)`
+ * blocks; `script-src 'self'` blocks every one of them, so React never
+ * hydrated. In practice that meant the mobile navigation drawer — the ONLY
+ * navigation below the `lg` breakpoint, on a site built mobile-first for
+ * parents on Android — could not open. The site had been shipping that way
+ * since Phase 3.
+ *
+ * WHAT WAS TRIED FIRST. `experimental.sri` was built and measured: it adds
+ * `integrity` attributes to the seven EXTERNAL script tags and leaves all five
+ * inline blocks unhashed, so the violation remains. It does not solve this.
+ *
+ * WHY NOT A NONCE. The nonce approach in Next's own CSP guide requires every
+ * page to be dynamically rendered — the documentation is explicit that "static
+ * optimization and Incremental Static Regeneration (ISR) are disabled". This
+ * site's entire publish-and-revalidate architecture is built on ISR, and Phase
+ * 8 verified it end to end. Trading that away inside a performance phase, to
+ * fix a bug, would be the wrong order of operations.
+ *
+ * SO: the documented no-nonce configuration from that same guide, which
+ * restores a working site today.
+ *
+ * WHAT IT COSTS, PLAINLY. An injected inline `<script>` would now execute. The
+ * mitigating facts are that every string rendered on this site passes through
+ * React's escaping, there is no `dangerouslySetInnerHTML` outside our own
+ * JSON-LD, and no user-supplied HTML is rendered anywhere. That is a smaller
+ * risk than a site whose menu does not open — but it IS a real reduction.
+ *
+ * ⚠ PHASE 10 OWNS THE PERMANENT ANSWER. The choice is between per-request
+ * nonces (costing ISR), stable SRI once it leaves experimental, and keeping
+ * this. That is a security decision made with security in view, not a
+ * side-effect of an SEO phase.
  *
  * NOTE ON 'unsafe-inline' FOR STYLES: Next.js injects inline <style> during
- * streaming SSR, so style-src needs it until we adopt a nonce strategy. That
- * is a known, documented compromise — not an oversight. Scripts remain strict.
+ * streaming SSR, so style-src needs it for the same reason. Pre-existing and
+ * documented since Phase 3.
  */
 const csp = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://i.ytimg.com",
   "font-src 'self'",
@@ -53,9 +92,31 @@ const nextConfig: NextConfig = {
   // workflows/ci.yml) and by `npm run verify`.
   typescript: { ignoreBuildErrors: false },
 
-  // Master Plan §18 — AVIF first, then WebP.
+  /**
+   * Master Plan §18 — AVIF first, then WebP.
+   *
+   * PHASE 9 NARROWED THE SIZE LISTS. Next's defaults offer sixteen candidate
+   * widths up to 3840px, so the 40px header logo was emitting a fifteen-entry
+   * srcset and the optimiser would render a 3840px version of it on request.
+   * The browser never picks those — `sizes="40px"` decides that — but the URLs
+   * are public, and each one is a real image-optimisation job someone else can
+   * ask a server to do.
+   *
+   * The lists below cover what this site actually renders: avatars and the
+   * logo at `imageSizes`, and full-width imagery at `deviceSizes` for when the
+   * institute eventually supplies photographs. Anything larger than 1920 is
+   * removed because nothing on the site is ever displayed that wide.
+   */
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Fixed-size images: monograms/portraits (48, 64), the header logo (40 →
+    // served at 48/96 for 1x/2x), and headroom for a larger portrait.
+    imageSizes: [48, 64, 96, 128, 256],
+    // Responsive images, for future photography. Four breakpoints, not eight.
+    deviceSizes: [640, 828, 1080, 1920],
+    // Optimised renders are immutable for a given source+width+quality, so a
+    // short TTL only buys repeated work. One week.
+    minimumCacheTTL: 604800,
     remotePatterns: [
       // YouTube thumbnails (Phase 5). Nothing else is permitted.
       { protocol: 'https', hostname: 'i.ytimg.com', pathname: '/**' },

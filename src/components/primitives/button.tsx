@@ -20,7 +20,7 @@ const variants: Record<Variant, string> = {
   primary:
     'bg-navy-800 text-white hover:bg-navy-700 active:bg-navy-900 shadow-e1 hover:shadow-e2',
   secondary:
-    'bg-transparent text-heading border border-navy-800/25 hover:border-navy-800/60 hover:bg-navy-50',
+    'bg-transparent text-heading border border-navy-800/25 hover:border-navy-800/60 hover:bg-selected',
   tertiary:
     'bg-transparent text-link underline underline-offset-4 decoration-1 hover:decoration-2 px-0 min-h-0',
   onBand:

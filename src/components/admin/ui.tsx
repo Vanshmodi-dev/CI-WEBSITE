@@ -177,7 +177,7 @@ export function Notice({
   children: ReactNode;
 }) {
   const styles = {
-    info: 'border-navy-600/30 bg-navy-50 text-text',
+    info: 'border-navy-600/30 bg-selected text-text',
     warn: 'border-warn/40 bg-warn-bg text-text',
     danger: 'border-danger/40 bg-danger-bg text-text',
     ok: 'border-ok/40 bg-ok-bg text-text',
@@ -204,7 +204,7 @@ export function QuickAction({
   return (
     <Link
       href={href}
-      className="flex min-h-16 flex-col justify-center rounded-md border border-rule bg-paper px-4 py-3 transition-colors hover:border-navy-600/50 hover:bg-navy-50"
+      className="flex min-h-16 flex-col justify-center rounded-md border border-rule bg-paper px-4 py-3 transition-colors hover:border-navy-600/50 hover:bg-selected"
     >
       <span className="font-medium text-heading">{label}</span>
       {hint ? <span className="mt-0.5 text-[13px] text-muted">{hint}</span> : null}

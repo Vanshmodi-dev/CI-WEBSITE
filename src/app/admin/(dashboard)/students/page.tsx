@@ -268,7 +268,7 @@ function FilterLink({
       aria-current={active ? 'page' : undefined}
       className={
         active
-          ? 'inline-flex min-h-9 items-center rounded-sm border border-navy-600/40 bg-navy-50 px-3 text-[13px] font-medium text-heading'
+          ? 'inline-flex min-h-9 items-center rounded-sm border border-navy-600/40 bg-selected px-3 text-[13px] font-medium text-heading'
           : 'inline-flex min-h-9 items-center rounded-sm border border-rule px-3 text-[13px] text-muted hover:bg-surface'
       }
     >

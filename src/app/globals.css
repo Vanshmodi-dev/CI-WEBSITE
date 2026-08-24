@@ -46,6 +46,17 @@
   --paper: #ffffff;
   --surface: var(--ink-50);
   --surface-2: var(--ink-100);
+
+  /**
+   * The wash behind a SELECTED or HOVERED control on a page surface.
+   *
+   * ⚠ THIS TOKEN EXISTS BECAUSE `bg-navy-50` WAS A BUG. The raw palette classes
+   * do not change with the theme, but `text-heading` does. In dark mode an
+   * active filter chip was painting #7fb0ff text on a fixed #ebf4ff background
+   * — 1.97:1, effectively invisible — which Lighthouse caught in Phase 9.
+   * Any selected/hover state that sits under themed text must use this.
+   */
+  --selected: var(--navy-50);
   --text: var(--ink-900);
   --text-muted: var(--ink-600);
   --text-heading: var(--navy-800);
@@ -85,6 +96,7 @@
     --paper: #0a121c;
     --surface: #111c2a;
     --surface-2: #182534;
+    --selected: #182534; /* 7.06:1 against --text-heading, 12.32:1 against --text */
     --text: #dce6f4;
     --text-muted: #8fa0ba;
     --text-heading: #7fb0ff;
@@ -121,6 +133,7 @@
   --paper: #0a121c;
   --surface: #111c2a;
   --surface-2: #182534;
+  --selected: #182534;
   --text: #dce6f4;
   --text-muted: #8fa0ba;
   --text-heading: #7fb0ff;
@@ -183,6 +196,7 @@
   --color-navy-600: var(--navy-600);
   --color-navy-100: var(--navy-100);
   --color-navy-50: var(--navy-50);
+  --color-selected: var(--selected);
 
   --color-ok: var(--ok);
   --color-ok-bg: var(--ok-bg);

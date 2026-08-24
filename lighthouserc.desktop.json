@@ -1,0 +1,58 @@
+{
+  "//": [
+    "DESKTOP GATE — the original Master Plan §18 budgets, unchanged.",
+    "",
+    "LCP <= 2000ms, CLS <= 0.05, TBT <= 200ms and accessibility = 100 are held",
+    "here exactly as §18 wrote them, because under the desktop preset the site",
+    "meets them with room to spare: Phase 9 measured LCP 0.7-0.8s, CLS 0 and TBT",
+    "20-60ms across six routes, with Performance, Accessibility and Best",
+    "Practices all at 100.",
+    "",
+    "Keeping this file separate from the mobile config means the strict budgets",
+    "stay enforced somewhere rather than being quietly relaxed to accommodate",
+    "the throttled mobile run. If a change makes the desktop numbers worse, this",
+    "fails — regardless of what the mobile config tolerates.",
+    "",
+    "  npx @lhci/cli autorun --config=lighthouserc.desktop.json"
+  ],
+  "ci": {
+    "collect": {
+      "startServerCommand": "npm run start",
+      "url": [
+        "http://localhost:3000/",
+        "http://localhost:3000/results",
+        "http://localhost:3000/stories",
+        "http://localhost:3000/courses/ca-foundation",
+        "http://localhost:3000/contact",
+        "http://localhost:3000/admissions"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "desktop"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.95 }],
+        "categories:accessibility": ["error", { "minScore": 1 }],
+        "categories:best-practices": ["error", { "minScore": 1 }],
+        "categories:seo": ["warn", { "minScore": 0.9 }],
+
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2000 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.05 }],
+        "total-blocking-time": ["error", { "maxNumericValue": 200 }],
+
+        "errors-in-console": "error",
+        "uses-responsive-images": "error",
+        "modern-image-formats": "error",
+        "font-display": "error",
+
+        "unused-javascript": ["warn", { "maxLength": 0 }],
+        "is-crawlable": "off"
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

@@ -1,5 +1,16 @@
+import type { Metadata } from 'next';
 import { Container } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
+
+/**
+ * A 404 is served with a 404 status, which is the signal that matters; the
+ * explicit noindex is belt and braces for the case where something upstream
+ * rewrites the status. No canonical: this page represents no document.
+ */
+export const metadata: Metadata = {
+  title: 'Page not found',
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
