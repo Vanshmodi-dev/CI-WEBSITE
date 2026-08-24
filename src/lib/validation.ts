@@ -277,3 +277,24 @@ export function isSafePhotoPath(value: string): boolean {
   if (/[:?#\s]/.test(value)) return false;
   return /^\/[A-Za-z0-9._\-/]+\.(jpe?g|png|webp|avif)$/i.test(value);
 }
+
+/**
+ * Is this the shape of an identifier this application issues?
+ *
+ * Every record id in this schema is a cuid: `@default(cuid())`. Nothing else is
+ * ever a legitimate id, so anything else is either a mistake or a probe.
+ *
+ * Prisma parameterises its queries, so an unvalidated id was never an injection
+ * risk. What it WAS is unbounded attacker-controlled input handed straight to
+ * the database — Phase 10 sent a five-thousand-character id and a JSON object
+ * literal, and both reached Postgres before being rejected there. Checking the
+ * shape first means the work stops at the edge, and it fails closed: an id we
+ * did not issue never selects a row.
+ *
+ * Deliberately permissive about length within a sane band rather than pinned to
+ * cuid v1's exact 25 characters, so a future switch to cuid2 or uuid does not
+ * silently start refusing every request.
+ */
+export function isValidRecordId(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(value);
+}

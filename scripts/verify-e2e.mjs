@@ -361,7 +361,13 @@ try {
 
   // ========================================================= LOGOUT ====
   console.log('\n=== 11. SIGN OUT ===');
-  const out = await req('/admin/logout', { method: 'POST' });
+  // Origin is sent because a browser sends it on every POST, and /admin/logout
+  // is same-origin-only since Phase 10 — a cross-origin form post used to be
+  // able to sign the admin out.
+  const out = await req('/admin/logout', {
+    method: 'POST',
+    headers: { Origin: BASE },
+  });
   check(out.res.status === 303, 'logout redirects');
   const cleared = out.setCookie.find((c) => c.startsWith('ci_admin_session='));
   check(Boolean(cleared) && cleared.split(';')[0] === 'ci_admin_session=',

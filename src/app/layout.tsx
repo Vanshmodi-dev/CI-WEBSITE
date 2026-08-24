@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Source_Serif_4, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { institute } from '@/config/institute';
-import { SITE_URL, siteJsonLd } from '@/lib/seo';
+import { SITE_URL, siteJsonLd, jsonLdScript } from '@/lib/seo';
 import { isIndexable } from '@/config/launch';
 import { SiteHeader } from '@/components/domain/site-header';
 import { SiteFooter } from '@/components/domain/site-footer';
@@ -114,7 +114,7 @@ export default function RootLayout({
             SearchAction — see src/lib/seo.ts for why each is absent. */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd()) }}
         />
       </body>
     </html>

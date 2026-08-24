@@ -80,6 +80,8 @@ npm run dev
 | `npm run verify:revalidation` | Proves publishing updates the public site |
 | `npm run verify:integration` | 47 admin → database → public integration checks |
 | `npm run verify:seo` | 335 metadata, canonical, sitemap, robots and JSON-LD checks |
+| `npm run verify:security` | 243 adversarial checks against a production build |
+| `npm run retention:dry` | Reports what the data-retention policy would remove |
 | `npm run verify:budget` | 72 performance-budget checks against a production build |
 | `npm run perf:baseline` | Measures wire bytes and TTFB for every public route |
 | `npm run scale:seed` / `scale:clean` | ~1,000 synthetic ZZTEST records, then removes them |
@@ -105,6 +107,7 @@ npm run dev
 | 7 | Admin completion + launch readiness | ● done — see [docs/PHASE-7-REPORT.md](docs/PHASE-7-REPORT.md) |
 | 8 | Admin ↔ public integration | ● done — see [docs/PHASE-8-REPORT.md](docs/PHASE-8-REPORT.md) |
 | 9 | SEO + performance | ● done — see [docs/PHASE-9-REPORT.md](docs/PHASE-9-REPORT.md) |
+| 10 | Security hardening | ● done — see [docs/PHASE-10-SECURITY-HARDENING.md](docs/PHASE-10-SECURITY-HARDENING.md) |
 | — | **Launch** | ○ blocked on institute content + manual setup — see [PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md) |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |

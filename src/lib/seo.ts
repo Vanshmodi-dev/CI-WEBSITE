@@ -223,5 +223,25 @@ export function breadcrumbJsonLd(trail: ReadonlyArray<{ name: string; path: stri
   };
 }
 
+/**
+ * Serialise structured data for injection into a <script> block.
+ *
+ * `JSON.stringify` escapes what JSON needs and nothing more, so a string
+ * containing `</script>` survives intact and closes the block early — the rest
+ * of the value is then parsed as HTML. Every field we emit today comes from
+ * static configuration, so this is not currently reachable; it is one edit to
+ * `src/config/institute.ts` away from being reachable, and the fix costs three
+ * replacements.
+ *
+ * `<`, `>` and `&` become their unicode escapes. That is still valid JSON and
+ * still parses to the identical value, so nothing downstream changes.
+ */
+export function jsonLdScript(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+}
+
 /** Used in the address block and the contact page. */
 export const displayAddress = addressFull;

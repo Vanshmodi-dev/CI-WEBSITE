@@ -31,6 +31,19 @@ const MAXMEM = 256 * 1024 * 1024;
 
 export const MIN_PASSWORD_LENGTH = 12;
 
+/**
+ * Upper bounds on what an unauthenticated endpoint will even look at.
+ *
+ * scrypt's cost is dominated by N rather than by input length, so a long
+ * password is not itself expensive to hash - but normalize('NFKC') on a
+ * megabyte of text is, the string has to be parsed out of the request first,
+ * and none of that work is anything a real person needs. 200 characters is far
+ * beyond any passphrase a human types; 254 is the practical maximum length of
+ * an email address.
+ */
+export const MAX_PASSWORD_LENGTH = 200;
+export const MAX_EMAIL_LENGTH = 254;
+
 export function hashFormat(
   N: number,
   r: number,
@@ -80,6 +93,11 @@ export async function hashPassword(password: string): Promise<string> {
       `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
     );
   }
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    throw new Error(
+      `Password must be at most ${MAX_PASSWORD_LENGTH} characters.`,
+    );
+  }
   const salt = randomBytes(SALT_BYTES);
   const { N, r, p } = SCRYPT_PARAMS;
   const hash = await scryptAsync(password.normalize('NFKC'), salt, KEY_LENGTH, {
@@ -101,6 +119,11 @@ export async function verifyPassword(
   password: string,
   encoded: string,
 ): Promise<boolean> {
+  // Bounded before any work. A caller that skipped its own length check must
+  // not be able to hand an unbounded string to NFKC and scrypt.
+  if (typeof password !== 'string' || password.length > MAX_PASSWORD_LENGTH) {
+    return false;
+  }
   const parsed = parseHash(encoded);
   if (!parsed) return false;
 

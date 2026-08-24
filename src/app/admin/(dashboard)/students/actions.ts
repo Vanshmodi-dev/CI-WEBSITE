@@ -7,7 +7,18 @@ import { getPrisma } from '@/lib/db';
 import { logUnexpected } from '@/lib/log';
 import { revalidateResults } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
-import { isSafePhotoPath } from '@/lib/validation';
+import { isSafePhotoPath, isValidRecordId } from '@/lib/validation';
+
+/**
+ * Every id below is validated for SHAPE before it reaches Prisma.
+ *
+ * Prisma parameterises, so an unvalidated id was never an injection risk. What
+ * it was is unbounded attacker-controlled input handed to the database: Phase
+ * 10 posted a five-thousand-character id and a JSON object literal through
+ * these forms and both reached Postgres before being rejected there. Checking
+ * first stops the work at the edge and fails closed — an id we never issued
+ * cannot select a row.
+ */
 
 export type StudentFormState = {
   status: 'idle' | 'error';
@@ -81,6 +92,12 @@ export async function saveStudentResult(
   const consentName = formData.get('consentName') === 'on';
   const consentPhoto = formData.get('consentPhoto') === 'on';
   const published = formData.get('published') === 'on';
+
+  // Present but not an id we could have issued: refuse rather than fall
+  // through to the create branch, which would silently duplicate the record.
+  if (id.length > 0 && !isValidRecordId(id)) {
+    return { status: 'error', message: 'Something went wrong. Please reload the page.' };
+  }
 
   const errors: NonNullable<StudentFormState['errors']> = {};
 
@@ -222,7 +239,7 @@ export async function unpublishStudentResult(formData: FormData): Promise<void> 
   if (!admin) redirect('/admin/login');
 
   const id = String(formData.get('id') ?? '').trim();
-  if (!id) redirect('/admin/students');
+  if (!isValidRecordId(id)) redirect('/admin/students');
 
   try {
     await getPrisma().topper.update({
@@ -246,7 +263,7 @@ export async function deleteStudentResult(formData: FormData): Promise<void> {
   if (!admin) redirect('/admin/login');
 
   const id = String(formData.get('id') ?? '').trim();
-  if (!id) redirect('/admin/students');
+  if (!isValidRecordId(id)) redirect('/admin/students');
 
   try {
     await getPrisma().topper.delete({ where: { id } });

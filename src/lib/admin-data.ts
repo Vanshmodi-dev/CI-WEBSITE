@@ -122,8 +122,18 @@ export type Paged<T> = {
   pageCount: number;
 };
 
+/**
+ * Bounded on both ends.
+ *
+ * `?page=` reaches here from the admin URL. It is behind authentication, so
+ * this is not an unauthenticated attack surface — but an accidental
+ * `?page=1e12` should not turn into a scan either, and the ceiling costs one
+ * comparison.
+ */
+const MAX_PAGE = 10_000;
+
 function pageArgs(page: number | undefined) {
-  const current = Math.max(1, Math.floor(page ?? 1));
+  const current = Math.min(MAX_PAGE, Math.max(1, Math.floor(page ?? 1) || 1));
   return { current, skip: (current - 1) * PAGE_SIZE, take: PAGE_SIZE };
 }
 

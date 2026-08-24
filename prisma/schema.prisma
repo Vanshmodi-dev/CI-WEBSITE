@@ -74,7 +74,13 @@ model Enquiry {
   /// When the visitor submitted the form with the consent line displayed.
   consentAt DateTime
   /// HMAC-SHA256 of the client IP. NEVER the raw address.
-  ipHash    String   @db.Char(64)
+  ///
+  /// NULLABLE SINCE PHASE 10, and that is the point: the hash exists only to
+  /// support the 24-hour rate-limit window. Once a lead is older than the
+  /// retention window it serves no purpose, so `scripts/retention.mjs` clears
+  /// it. Keeping a per-person identifier forever, for a check that only looks
+  /// back a day, is data we cannot justify holding.
+  ipHash    String?  @db.Char(64)
 
   // Rate limiting reads (ipHash, createdAt); the admin list reads
   // (status, createdAt); duplicate detection reads (phone, createdAt).
@@ -308,6 +314,22 @@ model AdminUser {
   lastLoginAt DateTime?
   /// Deactivating is preferred to deleting, so audit entries keep their actor.
   active      Boolean   @default(true)
+
+  // ---- session revocation (Phase 10) -----------------------------------
+  /// Sessions issued BEFORE this instant are refused.
+  ///
+  /// The session cookie is a signed bearer token with no server-side record, so
+  /// without this there is nothing to revoke: clearing the cookie only affects
+  /// the browser that asked. Phase 10 proved the consequence by capturing a
+  /// token, signing out, and replaying it successfully. Logout now moves this
+  /// forward, which invalidates every outstanding token for the account.
+  sessionsValidFrom DateTime @default(now())
+
+  // ---- sign-in throttling (Phase 10) -----------------------------------
+  /// Consecutive failed sign-ins since the last success or window expiry.
+  failedLoginCount Int       @default(0)
+  /// When the current run of failures began. The window is measured from here.
+  firstFailedLoginAt DateTime?
 
   auditEntries AuditLog[]
 

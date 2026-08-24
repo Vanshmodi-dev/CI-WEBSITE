@@ -83,6 +83,20 @@ export type PublicResultsPage = {
 export const RESULTS_PAGE_SIZE = 24;
 
 /**
+ * Hard ceiling on how deep a page number may go before the total is known.
+ *
+ * `?page=` is attacker-controlled, and it used to be passed through with only a
+ * lower bound. `?page=999999999` became `OFFSET 23999999976`, and Postgres
+ * answers that by walking the index to a row that does not exist — one cheap
+ * request buying an expensive scan, repeatable for free.
+ *
+ * Both list pages now clamp twice: to this ceiling before querying, and to the
+ * real page count once it is known. The first bound is what makes the query
+ * safe; the second is what makes it correct.
+ */
+const MAX_PAGE = 10_000;
+
+/**
  * Published results.
  *
  * The `where` clause is the security boundary. `published` alone is not
@@ -125,7 +139,7 @@ export async function getPublishedResults({
   } as const;
 
   const take = limit ?? RESULTS_PAGE_SIZE;
-  const current = Math.max(1, Math.floor(page));
+  const requested = Math.min(MAX_PAGE, Math.max(1, Math.floor(page) || 1));
 
   try {
     const prisma = getPrisma();
@@ -135,7 +149,7 @@ export async function getPublishedResults({
       prisma.topper.findMany({
         where,
         orderBy: [{ year: 'desc' }, { sortOrder: 'asc' }, { score: 'desc' }],
-        skip: limit ? 0 : (current - 1) * take,
+        skip: limit ? 0 : (requested - 1) * take,
         take,
         // Consent columns are selected only so present() can apply them. They
         // are consumed here and never returned.
@@ -222,11 +236,15 @@ export async function getPublishedResults({
       };
     });
 
+    const pageCount = Math.max(1, Math.ceil(total / take));
+
     return {
       results,
       total,
-      page: current,
-      pageCount: Math.max(1, Math.ceil(total / take)),
+      // Reported clamped, so a request for page nine million renders "Page 1 of
+      // 1" rather than an empty page pretending to be page nine million.
+      page: Math.min(requested, pageCount),
+      pageCount,
       years: yearRows.map((y) => ({ value: y.year, count: y._count._all })),
       programmes: programmeRows
         .map((p) => ({ value: p.programme as ProgrammeValue, count: p._count._all }))
@@ -392,7 +410,7 @@ export async function getPublishedStoriesPage({
   const empty: PublicStoriesPage = { stories: [], total: 0, page: 1, pageCount: 1 };
   if (!isDatabaseConfigured()) return empty;
 
-  const current = Math.max(1, Math.floor(page));
+  const requested = Math.min(MAX_PAGE, Math.max(1, Math.floor(page) || 1));
 
   try {
     const prisma = getPrisma();
@@ -401,17 +419,19 @@ export async function getPublishedStoriesPage({
       prisma.studentStory.findMany({
         where: STORY_VISIBLE,
         orderBy: STORY_ORDER,
-        skip: (current - 1) * STORIES_PAGE_SIZE,
+        skip: (requested - 1) * STORIES_PAGE_SIZE,
         take: STORIES_PAGE_SIZE,
         select: STORY_SELECT,
       }),
     ]);
 
+    const pageCount = Math.max(1, Math.ceil(total / STORIES_PAGE_SIZE));
+
     return {
       stories: rows.map(presentStory),
       total,
-      page: current,
-      pageCount: Math.max(1, Math.ceil(total / STORIES_PAGE_SIZE)),
+      page: Math.min(requested, pageCount),
+      pageCount,
     };
   } catch (error) {
     logUnexpected('public.stories.page.failed', error);

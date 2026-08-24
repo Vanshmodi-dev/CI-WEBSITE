@@ -41,10 +41,17 @@ import type { NextConfig } from 'next';
  * JSON-LD, and no user-supplied HTML is rendered anywhere. That is a smaller
  * risk than a site whose menu does not open — but it IS a real reduction.
  *
- * ⚠ PHASE 10 OWNS THE PERMANENT ANSWER. The choice is between per-request
- * nonces (costing ISR), stable SRI once it leaves experimental, and keeping
- * this. That is a security decision made with security in view, not a
- * side-effect of an SEO phase.
+ * PHASE 10 SETTLED IT, AND THE ANSWER WAS NOT SITEWIDE. Every /admin route is
+ * already force-dynamic, so nonces cost it nothing — and the admin is where the
+ * session cookie and every student record live. src/proxy.ts therefore
+ * OVERRIDES this policy for /admin with a nonce + 'strict-dynamic' CSP, and the
+ * policy below remains the baseline for the public site and the fallback for
+ * admin routes if the proxy ever fails to run. Fail-safe, not fail-open.
+ *
+ * The residual risk this baseline accepts is bounded by what the public pages
+ * actually render: no user-supplied HTML anywhere, no dangerouslySetInnerHTML
+ * outside our own JSON-LD (which is now unicode-escaped), and every string
+ * passed through React's escaping.
  *
  * NOTE ON 'unsafe-inline' FOR STYLES: Next.js injects inline <style> during
  * streaming SSR, so style-src needs it for the same reason. Pre-existing and

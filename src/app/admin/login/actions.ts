@@ -50,6 +50,17 @@ export async function signInAction(
         message: 'Sign-in is unavailable right now. Please try again shortly.',
       };
     }
+    // Throttled must NOT be reported as a credential failure. Telling the owner
+    // their password is wrong when it is merely rate-limited sends them off to
+    // reset a password that works — and it hides from them that something is
+    // hammering their account.
+    if (result.reason === 'throttled') {
+      return {
+        status: 'error',
+        message:
+          'Too many attempts. For safety this account is paused for a few minutes — please try again shortly.',
+      };
+    }
     return { status: 'error', message: 'That email or password is not correct.' };
   }
 

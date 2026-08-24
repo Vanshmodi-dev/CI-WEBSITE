@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { institute, publishedCourses, whatsappHref, telHref } from '@/config/institute';
-import { pageMetadata, breadcrumbJsonLd, SITE_URL } from '@/lib/seo';
+import { pageMetadata, breadcrumbJsonLd, jsonLdScript, SITE_URL } from '@/lib/seo';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -179,11 +179,11 @@ export default async function CoursePage({
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
       />
     </>
   );

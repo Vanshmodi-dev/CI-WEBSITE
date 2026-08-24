@@ -4,8 +4,20 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
+import { isValidRecordId } from '@/lib/validation';
 import { logUnexpected } from '@/lib/log';
 import { revalidateAnnouncements } from '@/lib/revalidate-public';
+
+/**
+ * Every id below is validated for SHAPE before it reaches Prisma.
+ *
+ * Prisma parameterises, so an unvalidated id was never an injection risk. What
+ * it was is unbounded attacker-controlled input handed to the database: Phase
+ * 10 posted a five-thousand-character id and a JSON object literal through
+ * these forms and both reached Postgres before being rejected there. Checking
+ * first stops the work at the edge and fails closed — an id we never issued
+ * cannot select a row.
+ */
 
 export type AnnouncementFormState = {
   status: 'idle' | 'error';
@@ -29,6 +41,12 @@ export async function saveAnnouncement(
   if (!admin) return { status: 'error', message: 'Please sign in again.' };
 
   const id = String(formData.get('id') ?? '').trim();
+
+  // Present but not an id we could have issued: refuse rather than fall through
+  // to the create branch, which would silently duplicate the record.
+  if (id.length > 0 && !isValidRecordId(id)) {
+    return { status: 'error', message: 'Something went wrong. Please reload the page.' };
+  }
   const message = String(formData.get('message') ?? '').trim().slice(0, 300);
   const href = String(formData.get('href') ?? '').trim().slice(0, 300);
   const startsRaw = String(formData.get('startsAt') ?? '').trim();
@@ -104,7 +122,7 @@ export async function deleteAnnouncement(formData: FormData): Promise<void> {
   if (!admin) redirect('/admin/login');
 
   const id = String(formData.get('id') ?? '').trim();
-  if (!id) redirect('/admin/announcements');
+  if (!isValidRecordId(id)) redirect('/admin/announcements');
 
   try {
     await getPrisma().announcement.delete({ where: { id } });
