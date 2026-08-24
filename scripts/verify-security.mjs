@@ -923,6 +923,47 @@ try {
   check(limited, 'repeated failed sign-ins are throttled', `${attemptsBeforeLimit} attempts allowed`);
   check(attemptsBeforeLimit <= 5, 'the sign-in throttle trips quickly', `${attemptsBeforeLimit} attempts`);
 
+  /**
+   * A CORRECT password must never be throttled.
+   *
+   * Phase 11 regression. The limiter used to charge a slot for every attempt,
+   * so the fourth correct sign-in inside a minute was refused — and the
+   * institute's devices share one public IP, so "four sign-ins" is a phone, a
+   * laptop and a browser restart.
+   */
+  const teacherIp = '203.0.113.180';
+  let successes = 0;
+  for (let i = 0; i < 6; i += 1) {
+    const probe = await post('/admin/login', {
+      ...anonFields,
+      email: EMAIL,
+      password: PASSWORD,
+    }, { noCookie: true, headers: { 'x-forwarded-for': teacherIp } });
+    if (probe.setCookie.some((c) => c.startsWith('ci_admin_session='))) successes += 1;
+  }
+  check(
+    successes === 6,
+    'six consecutive CORRECT sign-ins from one address are all accepted',
+    `${successes}/6 accepted`,
+  );
+
+  // And the same address is still throttled once passwords start being wrong.
+  let wrongAllowed = 0;
+  for (let i = 0; i < 8; i += 1) {
+    const probe = await post('/admin/login', {
+      ...anonFields,
+      email: EMAIL,
+      password: `still-wrong-${i}`,
+    }, { noCookie: true, headers: { 'x-forwarded-for': '203.0.113.181' } });
+    const text = readable(await probe.text());
+    if (!/Too many attempts/i.test(text)) wrongAllowed += 1;
+  }
+  check(
+    wrongAllowed < 8,
+    'wrong passwords from one address are still throttled',
+    `${wrongAllowed}/8 got through`,
+  );
+
   // Rotating the forwarded address must not hand back unlimited attempts.
   let bypassed = 0;
   for (let i = 0; i < 12; i += 1) {

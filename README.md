@@ -80,7 +80,9 @@ npm run dev
 | `npm run verify:revalidation` | Proves publishing updates the public site |
 | `npm run verify:integration` | 47 admin → database → public integration checks |
 | `npm run verify:seo` | 335 metadata, canonical, sitemap, robots and JSON-LD checks |
-| `npm run verify:security` | 243 adversarial checks against a production build |
+| `npm run verify:security` | 245 adversarial checks against a production build |
+| `npm run verify:ux` | 249 real-browser checks — responsive, drawer, keyboard, a11y |
+| `npm run verify:teacher` | 105 checks driving the admin as a teacher would |
 | `npm run retention:dry` | Reports what the data-retention policy would remove |
 | `npm run verify:budget` | 72 performance-budget checks against a production build |
 | `npm run perf:baseline` | Measures wire bytes and TTFB for every public route |
@@ -108,6 +110,7 @@ npm run dev
 | 8 | Admin ↔ public integration | ● done — see [docs/PHASE-8-REPORT.md](docs/PHASE-8-REPORT.md) |
 | 9 | SEO + performance | ● done — see [docs/PHASE-9-REPORT.md](docs/PHASE-9-REPORT.md) |
 | 10 | Security hardening | ● done — see [docs/PHASE-10-SECURITY-HARDENING.md](docs/PHASE-10-SECURITY-HARDENING.md) |
+| 11 | Full QA | ● done — see [docs/PHASE-11-REPORT.md](docs/PHASE-11-REPORT.md) |
 | — | **Launch** | ○ blocked on institute content + manual setup — see [PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md) |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |

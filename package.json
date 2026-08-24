@@ -37,7 +37,9 @@
     "lighthouse:desktop": "lhci autorun --config=lighthouserc.desktop.json",
     "verify:security": "node scripts/verify-security.mjs",
     "retention": "node scripts/retention.mjs",
-    "retention:dry": "node scripts/retention.mjs --dry-run"
+    "retention:dry": "node scripts/retention.mjs --dry-run",
+    "verify:ux": "node scripts/verify-ux.mjs",
+    "verify:teacher": "node scripts/verify-teacher.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

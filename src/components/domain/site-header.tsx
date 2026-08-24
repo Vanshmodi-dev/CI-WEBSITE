@@ -35,17 +35,69 @@ export function SiteHeader() {
 
   const setOpen = (next: boolean) => setOpenPath(next ? pathname : null);
 
-  // Escape closes; focus returns to the trigger. Master Plan §20.
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Escape closes and returns focus; Tab stays inside. Master Plan §20.
+   *
+   * ⚠ THE TAB HANDLING IS NOT OPTIONAL FOR aria-modal="true".
+   *
+   * `aria-modal` tells assistive technology that everything behind the dialog
+   * is inert. It does NOT stop the browser moving keyboard focus there, and
+   * Phase 11 measured exactly that: tabbing through the open drawer walked
+   * straight out into the page underneath, which is still rendered, still
+   * focusable, and completely hidden behind the panel. A keyboard or
+   * switch-control user ended up operating controls they could not see.
+   *
+   * The wrap below is the ARIA authoring-practices modal pattern: from the last
+   * control, Tab goes to the first; from the first, Shift+Tab goes to the last.
+   */
   useEffect(() => {
     if (!open) return;
+
+    function focusable(): HTMLElement[] {
+      const root = dialogRef.current;
+      if (!root) return [];
+      return [
+        ...root.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => el.offsetParent !== null || el === document.activeElement);
+    }
+
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         // setOpenPath, not setOpen: the state setter is referentially stable,
         // so the effect does not need to re-subscribe on every render.
         setOpenPath(null);
         triggerRef.current?.focus();
+        return;
+      }
+
+      if (e.key !== 'Tab') return;
+
+      const items = focusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      // Focus outside the dialog at all (it can drift there on open) is pulled
+      // back to the first control rather than left where it is.
+      if (!active || !dialogRef.current?.contains(active)) {
+        e.preventDefault();
+        first?.focus();
+        return;
+      }
+      if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first?.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last?.focus();
       }
     }
+
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     closeButtonRef.current?.focus();
@@ -56,77 +108,98 @@ export function SiteHeader() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur-sm">
-      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 md:px-8 lg:h-20 lg:px-12">
-        <LogoLockup priority />
+    <>
+      <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur-sm">
+        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 md:px-8 lg:h-20 lg:px-12">
+          <LogoLockup priority />
 
-        {/* Desktop navigation — appears at lg, per §21 */}
-        <nav aria-label="Primary" className="hidden lg:block">
-          <ul className="flex items-center gap-1">
-            {primaryNav.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'relative inline-flex min-h-11 items-center rounded-sm px-3 text-[15px] transition-colors',
-                      active
-                        ? 'text-heading font-medium'
-                        : 'text-muted hover:text-heading',
-                    )}
-                  >
-                    {item.label}
-                    {/* The active indicator is the one orange element in the
+          {/* Desktop navigation — appears at lg, per §21 */}
+          <nav aria-label="Primary" className="hidden lg:block">
+            <ul className="flex items-center gap-1">
+              {primaryNav.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'relative inline-flex min-h-11 items-center rounded-sm px-3 text-[15px] transition-colors',
+                        active
+                          ? 'text-heading font-medium'
+                          : 'text-muted hover:text-heading',
+                      )}
+                    >
+                      {item.label}
+                      {/* The active indicator is the one orange element in the
                         header. It is a rule, not text — the logo orange is
                         safe as a fill and fails AA as text on white. */}
-                    {active ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
-                      />
-                    ) : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+                      {active ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
+                        />
+                      ) : null}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
 
-        <div className="flex items-center gap-2">
-          {/* Parents call; they do not fill forms (Master Plan §06). The
+          <div className="flex items-center gap-2">
+            {/* Parents call; they do not fill forms (Master Plan §06). The
               number is reachable from every page at every breakpoint. */}
-          <a
-            href={telHref}
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted transition-colors hover:bg-surface hover:text-heading lg:px-4"
-            aria-label={`Call ${institute.name} on ${institute.phonePrimary.display}`}
-          >
-            <PhoneIcon />
-            <span className="ml-2 hidden text-[15px] xl:inline">
-              {institute.phonePrimary.display}
-            </span>
-          </a>
+            <a
+              href={telHref}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted transition-colors hover:bg-surface hover:text-heading lg:px-4"
+              aria-label={`Call ${institute.name} on ${institute.phonePrimary.display}`}
+            >
+              <PhoneIcon />
+              <span className="ml-2 hidden text-[15px] xl:inline">
+                {institute.phonePrimary.display}
+              </span>
+            </a>
 
-          <Button href="/admissions" className="hidden lg:inline-flex">
-            Enquire
-          </Button>
+            <Button href="/admissions" className="hidden lg:inline-flex">
+              Enquire
+            </Button>
 
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => setOpen(true)}
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-heading transition-colors hover:bg-surface lg:hidden"
-          >
-            <span className="sr-only">Open menu</span>
-            <MenuIcon />
-          </button>
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-expanded={open}
+              aria-controls="mobile-nav"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-heading transition-colors hover:bg-surface lg:hidden"
+            >
+              <span className="sr-only">Open menu</span>
+              <MenuIcon />
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
+      {/*
+        ⚠ THE DRAWER MUST NOT BE RENDERED INSIDE <header>.
+
+        It used to be, and Phase 11 measured the result: the overlay is
+        `position: fixed; inset: 0`, but a `backdrop-filter` on an ancestor
+        makes that ancestor the containing block for fixed descendants. The
+        header carries `backdrop-blur-sm`, so the "full-screen" overlay was
+        clamped to the header box — 64px tall on a 844px phone.
+
+        The visible consequence: the drawer opened 64px high, its nav list
+        was crushed to 32px and clipped, four of the six links were
+        unreachable, and the pinned Enquire block painted on top of the
+        ones that were left. On a site whose only navigation below `lg` is
+        this drawer, that made the phone experience unusable.
+
+        Nothing about the markup looked wrong, which is why it survived to
+        Phase 11: every assertion about the drawer had checked that things
+        EXISTED. Presence is not usability.
+      */}
       {/* Mobile drawer */}
       {open ? (
         <div className="fixed inset-0 z-50 lg:hidden">
@@ -138,6 +211,7 @@ export function SiteHeader() {
             className="absolute inset-0 bg-navy-950/50"
           />
           <div
+            ref={dialogRef}
             id="mobile-nav"
             role="dialog"
             aria-modal="true"
@@ -195,7 +269,7 @@ export function SiteHeader() {
           </div>
         </div>
       ) : null}
-    </header>
+    </>
   );
 }
 

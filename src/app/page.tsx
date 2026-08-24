@@ -117,7 +117,7 @@ export default async function HomePage() {
               What we teach
             </h2>
           </div>
-          <Link href="/courses" className="text-small font-medium text-link">
+          <Link href="/courses" className="inline-flex min-h-11 items-center text-small font-medium text-link">
             All courses &rarr;
           </Link>
         </div>
@@ -147,7 +147,7 @@ export default async function HomePage() {
                 Our students&rsquo; results
               </h2>
             </div>
-            <Link href="/results" className="text-small font-medium text-link">
+            <Link href="/results" className="inline-flex min-h-11 items-center text-small font-medium text-link">
               All results &rarr;
             </Link>
           </div>
@@ -197,7 +197,7 @@ export default async function HomePage() {
                 How they got there
               </h2>
             </div>
-            <Link href="/stories" className="text-small font-medium text-link">
+            <Link href="/stories" className="inline-flex min-h-11 items-center text-small font-medium text-link">
               All stories &rarr;
             </Link>
           </div>

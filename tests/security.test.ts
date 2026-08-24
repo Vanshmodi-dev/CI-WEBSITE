@@ -5,6 +5,13 @@ import { isSameOrigin, rejectCrossOrigin } from '../src/lib/request-guard.ts';
 import { isValidRecordId, isSafePhotoPath } from '../src/lib/validation.ts';
 import { RETENTION, cutoff, DAY_MS } from '../src/lib/retention-policy.ts';
 import { MAX_PASSWORD_LENGTH, MAX_EMAIL_LENGTH } from '../src/lib/password.ts';
+import {
+  peekBurst,
+  recordBurstHit,
+  checkBurst,
+  resetBurstState,
+  LIMITS,
+} from '../src/lib/burst-limit.ts';
 
 /**
  * Phase 10 regression tests.
@@ -256,5 +263,98 @@ describe('retention policy', () => {
     const now = 1_800_000_000_000;
     assert.equal(cutoff(1, now).getTime(), now - DAY_MS);
     assert.equal(cutoff(30, now).getTime(), now - 30 * DAY_MS);
+  });
+});
+
+describe('burst limiter — checking is not the same as charging', () => {
+  // Phase 11 found the sign-in form charging a slot for every attempt,
+  // successful ones included. A teacher entering the CORRECT password four
+  // times inside a minute was told "Too many attempts" and locked out of their
+  // own admin panel for sixty seconds.
+
+  test('peeking does not consume the budget', () => {
+    resetBurstState();
+    const key = 'zztest-peek';
+    for (let i = 0; i < 50; i += 1) {
+      assert.equal(peekBurst(key).allowed, true, `peek ${i} should still be allowed`);
+    }
+  });
+
+  test('recording does consume the budget', () => {
+    resetBurstState();
+    const key = 'zztest-record';
+    for (let i = 0; i < LIMITS.burst.max; i += 1) recordBurstHit(key);
+    assert.equal(peekBurst(key).allowed, false, 'the budget should be spent');
+  });
+
+  test('an unlimited run of successes is never throttled', () => {
+    // This is the sign-in shape: peek before, and charge nothing when the
+    // password was right.
+    resetBurstState();
+    const key = 'zztest-successes';
+    for (let i = 0; i < 25; i += 1) {
+      assert.equal(peekBurst(key).allowed, true, `correct sign-in ${i + 1} must be allowed`);
+      // nothing recorded — the attempt succeeded
+    }
+  });
+
+  test('a run of failures is throttled at the limit', () => {
+    resetBurstState();
+    const key = 'zztest-failures';
+    let allowedCount = 0;
+    for (let i = 0; i < 10; i += 1) {
+      if (peekBurst(key).allowed) {
+        allowedCount += 1;
+        recordBurstHit(key); // the attempt failed
+      }
+    }
+    assert.equal(
+      allowedCount,
+      LIMITS.burst.max,
+      'exactly the configured number of guesses should get through',
+    );
+  });
+
+  test('successes interleaved with failures still only charge the failures', () => {
+    resetBurstState();
+    const key = 'zztest-mixed';
+    // two failures, then any number of successes
+    for (const failed of [true, true, false, false, false, false, false, false]) {
+      assert.equal(peekBurst(key).allowed, true, 'should not be throttled yet');
+      if (failed) recordBurstHit(key);
+    }
+    // one more failure reaches the limit
+    recordBurstHit(key);
+    assert.equal(peekBurst(key).allowed, false);
+  });
+
+  test('the window expires, so a throttle is never permanent', () => {
+    resetBurstState();
+    const key = 'zztest-window';
+    const t0 = 1_800_000_000_000;
+    for (let i = 0; i < LIMITS.burst.max; i += 1) recordBurstHit(key, t0);
+    assert.equal(peekBurst(key, t0).allowed, false);
+    assert.equal(
+      peekBurst(key, t0 + LIMITS.burst.windowMs + 1).allowed,
+      true,
+      'the limit must lift once the window passes',
+    );
+  });
+
+  test('checkBurst still charges every call, for the enquiry form', () => {
+    // The enquiry pipeline is the case where every call IS the event, so the
+    // combined check-and-charge helper must keep that behaviour.
+    resetBurstState();
+    const key = 'zztest-enquiry';
+    let allowed = 0;
+    for (let i = 0; i < 10; i += 1) if (checkBurst(key).allowed) allowed += 1;
+    assert.equal(allowed, LIMITS.burst.max);
+  });
+
+  test('one key being throttled does not throttle another', () => {
+    resetBurstState();
+    for (let i = 0; i < LIMITS.burst.max; i += 1) recordBurstHit('zztest-a');
+    assert.equal(peekBurst('zztest-a').allowed, false);
+    assert.equal(peekBurst('zztest-b').allowed, true);
   });
 });
