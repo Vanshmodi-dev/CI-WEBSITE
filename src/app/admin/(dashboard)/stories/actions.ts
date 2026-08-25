@@ -5,6 +5,12 @@ import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { isValidRecordId } from '@/lib/validation';
+import {
+  EDIT_TOKEN_FIELD,
+  STALE_EDIT_MESSAGE,
+  isStaleEditError,
+  parseEditToken,
+} from '@/lib/stale-edit';
 import { logUnexpected } from '@/lib/log';
 import { revalidateStories } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
@@ -176,7 +182,25 @@ export async function saveStory(
   try {
     const prisma = getPrisma();
     if (id) {
-      await prisma.studentStory.update({ where: { id }, data });
+      /**
+       * Lost-update guard. A story carries story consent, photo consent and a
+       * publication state, so a form opened before a withdrawal must not be
+       * able to write the old permissions back. Same defect and same fix as
+       * the student form - see src/lib/stale-edit.ts.
+       *
+       * updateMany rather than update: it reports a count instead of throwing
+       * a record-not-found, which is how a refused save is told apart from a
+       * deleted record.
+       */
+      const expectedEditedAt = parseEditToken(formData.get(EDIT_TOKEN_FIELD));
+      const applied = await prisma.studentStory.updateMany({
+        // A missing token cannot prove the form saw the current row: fail closed.
+        where: expectedEditedAt ? { id, updatedAt: expectedEditedAt } : { id, updatedAt: new Date(0) },
+        data,
+      });
+      if (applied.count === 0) {
+        return { status: 'error', message: STALE_EDIT_MESSAGE };
+      }
       await recordAudit(
         admin,
         published ? 'published' : 'updated',
@@ -198,6 +222,9 @@ export async function saveStory(
       );
     }
   } catch (error) {
+    if (isStaleEditError(error)) {
+      return { status: 'error', message: STALE_EDIT_MESSAGE };
+    }
     logUnexpected('admin.story.save_failed', error);
     return {
       status: 'error',

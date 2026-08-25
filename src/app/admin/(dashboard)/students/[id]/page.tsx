@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { editToken } from '@/lib/stale-edit';
 import { requireAdmin } from '@/lib/auth';
 import { getTopper } from '@/lib/admin-data';
 import { PageHeader, Card } from '@/components/admin/ui';
@@ -30,6 +31,7 @@ export default async function EditStudentPage({
       <StudentForm
         values={{
           id: record.id,
+          editedAt: editToken(record.updatedAt),
           studentName: record.studentName,
           displayNameMode: record.displayNameMode as DisplayNameModeValue,
           photoUrl: record.photoUrl ?? '',

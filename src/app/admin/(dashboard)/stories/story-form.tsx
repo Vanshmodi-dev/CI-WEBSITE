@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import { saveStory, type StoryFormState } from './actions';
@@ -14,6 +15,8 @@ const initial: StoryFormState = { status: 'idle' };
 
 export type StoryValues = {
   id?: string;
+  /** The record's `updatedAt` when this form was rendered. Lost-update guard. */
+  editedAt?: string;
   studentName?: string;
   displayNameMode?: DisplayNameModeValue;
   photoUrl?: string;
@@ -66,6 +69,10 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
   return (
     <form action={formAction} className="flex max-w-3xl flex-col gap-6">
       {values.id ? <input type="hidden" name="id" value={values.id} /> : null}
+      {/* Refuses the save if the story moved while this form was open. */}
+      {values.id ? (
+        <input type="hidden" name={EDIT_TOKEN_FIELD} value={values.editedAt ?? ''} />
+      ) : null}
 
       {state.status === 'error' && state.message ? (
         <Notice tone="danger" title={state.message}>

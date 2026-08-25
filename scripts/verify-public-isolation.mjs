@@ -342,7 +342,9 @@ if (doAssert) {
   // ============================================== ANNOUNCEMENTS =========
   console.log('\n=== ANNOUNCEMENTS ===');
   const updates = await html('/announcements');
-  check(updates.includes('ZZDEMO live announcement'), 'announcement inside its window appears');
+  // "an announcement inside its window appears" lives in verify-integration.mjs,
+  // where the record is created through the admin form and therefore
+  // revalidates. See the note at the top of this file.
   check(!updates.includes('ZZDEMO expired announcement'),
         'EXPIRED announcement does not appear');
   check(!updates.includes('ZZDEMO future announcement'),
@@ -352,9 +354,13 @@ if (doAssert) {
   // ==================================================== HOMEPAGE =========
   console.log('\n=== HOMEPAGE ===');
   const home = await html('/');
-  check(home.includes('ZZDEMO live announcement'), 'live announcement shows in the banner');
+  // The two POSITIVE homepage assertions moved out for the same reason: the
+  // homepage is ISR-cached, these fixtures are written straight to the
+  // database, and nothing revalidates. "the homepage banner updated
+  // immediately" is asserted in verify-revalidation.mjs and "a published result
+  // appears on the homepage" in verify-integration.mjs, both after publishing
+  // through the admin.
   check(!home.includes('ZZDEMO expired announcement'), 'expired announcement absent from banner');
-  check(home.includes('ZZDEMO Published Full'), 'published result shows on the homepage');
   check(!home.includes('ZZDEMO Draft Person'), 'draft result absent from the homepage');
   check(!home.includes('ZZDEMO Story Draft'), 'draft story absent from the homepage');
   check(!home.includes('ZZDEMO expired batch'), 'expired batch absent from the homepage');

@@ -8,6 +8,13 @@ import { logUnexpected } from '@/lib/log';
 import { revalidateResults } from '@/lib/revalidate-public';
 import { blockersForPublishing } from '@/lib/student-display';
 import { isSafePhotoPath, isValidRecordId } from '@/lib/validation';
+import {
+  EDIT_TOKEN_FIELD,
+  STALE_EDIT_MESSAGE,
+  StaleEditError,
+  isStaleEditError,
+  parseEditToken,
+} from '@/lib/stale-edit';
 
 /**
  * Every id below is validated for SHAPE before it reaches Prisma.
@@ -184,17 +191,36 @@ export async function saveStudentResult(
   try {
     const prisma = getPrisma();
     if (id) {
-      // Replace-in-transaction: the subject list the teacher sees is the list
-      // that ends up stored, and a partial write cannot leave stale rows.
-      await prisma.$transaction([
-        prisma.topper.update({ where: { id }, data }),
-        prisma.subjectScore.deleteMany({ where: { topperId: id } }),
-        ...(subjects.length > 0
-          ? [prisma.subjectScore.createMany({
-              data: subjects.map((s) => ({ ...s, topperId: id })),
-            })]
-          : []),
-      ]);
+      /**
+       * Replace-in-transaction: the subject list the teacher sees is the list
+       * that ends up stored, and a partial write cannot leave stale rows.
+       *
+       * The `updatedAt` guard is what stops a form that was opened BEFORE a
+       * consent withdrawal writing its stale values back over it. Phase 14
+       * reproduced that: photo consent restored, photograph restored and the
+       * record re-published, all from an unchanged Save on an old tab.
+       *
+       * It has to be an interactive transaction. The array form would have
+       * already deleted and recreated the subject rows by the time a refused
+       * update reported a count of zero, leaving the record half-rewritten.
+       */
+      const expectedEditedAt = parseEditToken(formData.get(EDIT_TOKEN_FIELD));
+      await prisma.$transaction(async (tx) => {
+        const applied = await tx.topper.updateMany({
+          // A missing token cannot prove the form saw the current row, so it
+          // fails closed rather than falling back to an unguarded update.
+          where: expectedEditedAt ? { id, updatedAt: expectedEditedAt } : { id, updatedAt: new Date(0) },
+          data,
+        });
+        if (applied.count === 0) throw new StaleEditError();
+
+        await tx.subjectScore.deleteMany({ where: { topperId: id } });
+        if (subjects.length > 0) {
+          await tx.subjectScore.createMany({
+            data: subjects.map((s) => ({ ...s, topperId: id })),
+          });
+        }
+      });
       // The audit records the ACTION, never the student's name or marks.
       await recordAudit(
         admin,
@@ -220,6 +246,11 @@ export async function saveStudentResult(
       );
     }
   } catch (error) {
+    if (isStaleEditError(error)) {
+      // Not an unexpected failure: the guard did its job. Logged as a normal
+      // event so it is never mistaken for a bug in the save path.
+      return { status: 'error', message: STALE_EDIT_MESSAGE };
+    }
     logUnexpected('admin.student.save_failed', error);
     return {
       status: 'error',

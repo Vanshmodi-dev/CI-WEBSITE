@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { editToken } from '@/lib/stale-edit';
 import { requireAdmin } from '@/lib/auth';
 import { getStory } from '@/lib/admin-data';
 import { PageHeader, Card } from '@/components/admin/ui';
@@ -30,6 +31,7 @@ export default async function EditStoryPage({
       <StoryForm
         values={{
           id: story.id,
+          editedAt: editToken(story.updatedAt),
           studentName: story.studentName,
           displayNameMode: story.displayNameMode as DisplayNameModeValue,
           photoUrl: story.photoUrl ?? '',

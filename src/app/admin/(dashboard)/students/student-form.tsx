@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { saveStudentResult, type StudentFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { Field, inputClass, selectClass } from '@/components/primitives/field';
+import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import { Button } from '@/components/primitives/button';
 import {
   blockersForPublishing,
@@ -19,6 +20,8 @@ const initial: StudentFormState = { status: 'idle' };
 
 export type StudentValues = {
   id?: string;
+  /** The record's `updatedAt` when this form was rendered. Lost-update guard. */
+  editedAt?: string;
   studentName?: string;
   displayNameMode?: DisplayNameModeValue;
   photoUrl?: string;
@@ -83,6 +86,12 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
   return (
     <form action={formAction} className="flex max-w-3xl flex-col gap-6">
       {values.id ? <input type="hidden" name="id" value={values.id} /> : null}
+      {/* Carries the row's updatedAt back to the action, which refuses the save
+          if the record moved while this form was open. Without it a tab opened
+          before a consent withdrawal would write the old permissions back. */}
+      {values.id ? (
+        <input type="hidden" name={EDIT_TOKEN_FIELD} value={values.editedAt ?? ''} />
+      ) : null}
 
       {state.status === 'error' && state.message ? (
         <Notice tone="danger" title={state.message}>

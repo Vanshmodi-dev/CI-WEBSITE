@@ -196,6 +196,24 @@ try {
 
   publicResults = await publicHtml('/results');
   check(publicResults.includes('88%'), 'the result appears publicly, immediately');
+
+  /**
+   * The HOMEPAGE too, asserted here rather than in verify-public-isolation.mjs.
+   *
+   * That suite writes fixtures straight to the database, so nothing
+   * revalidates - and the homepage is ISR-cached, so "a published result shows
+   * on the homepage" passed or failed there on timing alone. Here the record
+   * was just published through the admin form, which revalidates, so the
+   * assertion is deterministic and the revalidation is part of what it proves.
+   *
+   * Asserted on the highlight, never the name: this fixture is published
+   * WITHOUT name consent, so its name must not appear on any public surface.
+   */
+  const homeAfterPublish = await publicHtml('/');
+  check(homeAfterPublish.includes('ZZTEST highlight'),
+        'a result published through the admin appears on the homepage');
+  check(!homeAfterPublish.includes(NAME),
+        'and its name is withheld there too, because name consent was not given');
   check(publicResults.includes('ZZTEST Accounts'), 'subject marks render publicly');
   check(!publicResults.includes(NAME),
         'without name consent the NAME is withheld even though the result shows');
@@ -381,6 +399,65 @@ try {
   const updates = await publicHtml('/announcements');
   check(!updates.includes('ZZTEST future announcement'),
         'a published announcement before its start date does NOT appear');
+
+  // ================================================ LOST-UPDATE GUARD ==
+  /**
+   * The scenario, end to end (Phase 14).
+   *
+   * A teacher opens a student's edit page. While it is open a parent rings and
+   * asks for their child's photograph to be taken down, and it is - photo
+   * consent withdrawn, record unpublished. The teacher returns to the first tab
+   * and presses Save without changing anything.
+   *
+   * Before the guard, that form wrote its old values straight back: photo
+   * consent restored, photograph restored, record RE-PUBLISHED, success
+   * redirect, no warning. Measured, not theorised.
+   */
+  section('A STALE TAB CANNOT UNDO A CONSENT WITHDRAWAL');
+
+  const staleRec = await prisma.topper.create({
+    data: {
+      studentName: 'ZZTEST Stale Tab', displayNameMode: 'FULL',
+      programme: 'CLASS_12', year: 2026, score: 90, scoreUnit: 'percent',
+      consentRef: REF, consentResult: true, consentName: true, consentPhoto: true,
+      photoUrl: '/zztest-stale.jpg', published: true, publishedAt: new Date(),
+    },
+  });
+
+  // The teacher's open tab.
+  const staleForm = {
+    ...fieldsOf(await html(`/admin/students/${staleRec.id}`), 'studentName'),
+    programme: 'CLASS_12', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
+  };
+  check(Boolean(staleForm.editedAt), 'the edit form carries a lost-update token');
+
+  // The withdrawal happens elsewhere.
+  await prisma.topper.update({
+    where: { id: staleRec.id },
+    data: { consentPhoto: false, photoUrl: null, published: false, publishedAt: null },
+  });
+
+  // The stale tab saves, unchanged.
+  const staleSave = await post(`/admin/students/${staleRec.id}`, staleForm);
+  const afterStale = await prisma.topper.findUnique({ where: { id: staleRec.id } });
+
+  check(afterStale?.consentPhoto === false, 'photo consent stays withdrawn after a stale save');
+  check(afterStale?.photoUrl === null, 'the photograph stays removed after a stale save');
+  check(afterStale?.published === false, 'the record stays unpublished after a stale save');
+  check(
+    (await staleSave.text()).includes('while you had it open'),
+    'the teacher is told the save was refused and why',
+  );
+
+  // And the guard must not block ordinary work: a fresh form still saves.
+  const freshForm = {
+    ...fieldsOf(await html(`/admin/students/${staleRec.id}`), 'studentName'),
+    programme: 'CLASS_12', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
+    highlight: 'ZZTEST fresh edit',
+  };
+  await post(`/admin/students/${staleRec.id}`, freshForm);
+  const afterFresh = await prisma.topper.findUnique({ where: { id: staleRec.id } });
+  check(afterFresh?.highlight === 'ZZTEST fresh edit', 'a form reloaded after the change still saves');
 
   // ============================================================ ENQUIRIES ==
   section('ENQUIRY PRIVACY');
