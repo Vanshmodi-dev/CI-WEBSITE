@@ -132,7 +132,14 @@ export function AdminShell({
           </div>
         ) : null}
 
-        <main className="min-w-0 flex-1 px-4 py-8 md:px-8 lg:px-10 lg:py-10">
+        {/* id="main" is the skip link's target. The root layout no longer
+            wraps routes in a <main>, so this is the page's only one - which
+            also removed the two nested <main> landmarks that every signed-in
+            admin page used to carry. */}
+        <main
+          id="main"
+          className="min-w-0 flex-1 px-4 py-8 md:px-8 lg:px-10 lg:py-10"
+        >
           {children}
         </main>
       </div>

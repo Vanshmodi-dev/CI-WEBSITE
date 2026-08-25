@@ -74,7 +74,10 @@ export default async function StoriesPage({
       {stories.length > 0 ? (
         <>
           <div className="hidden md:block">
-            <TableShell headings={['Shown as', 'Course', 'Year', 'Status', '']}>
+            <TableShell
+              label="Student stories"
+              headings={['Shown as', 'Course', 'Year', 'Status', '']}
+            >
               {stories.map((s) => {
                 const view = present(
                   {

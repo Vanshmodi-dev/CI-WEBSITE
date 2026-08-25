@@ -2,11 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Source_Serif_4, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
 import './globals.css';
 import { institute } from '@/config/institute';
-import { SITE_URL, siteJsonLd, jsonLdScript } from '@/lib/seo';
+import { SITE_URL } from '@/lib/seo';
 import { isIndexable } from '@/config/launch';
-import { SiteHeader } from '@/components/domain/site-header';
-import { SiteFooter } from '@/components/domain/site-footer';
-import { WhatsAppButton } from '@/components/domain/whatsapp-button';
 
 /**
  * Fonts are SELF-HOSTED and subset by next/font at build time — no runtime
@@ -104,18 +101,19 @@ export default function RootLayout({
           Skip to content
         </a>
 
-        <SiteHeader />
-        <main id="main">{children}</main>
-        <SiteFooter />
-        <WhatsAppButton />
+        {/* The public chrome — header, <main>, footer, WhatsApp, JSON-LD —
+            lives in src/app/(site)/layout.tsx, NOT here.
 
-        {/* EducationalOrganization + WebSite, as one @graph so the WebSite's
-            publisher reference resolves. No AggregateRating, no Review, no
-            SearchAction — see src/lib/seo.ts for why each is absent. */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd()) }}
-        />
+            It used to be here, which meant it rendered on every /admin page
+            too: a marketing footer that measured 1208px of a 2508px admin
+            dashboard at 360px, a floating WhatsApp button over the admin, a
+            duplicate set of navigation links, and a second <main> wrapping the
+            admin's own — two nested <main> landmarks on every signed-in page.
+            Phase 14 measured all of it in a browser.
+
+            Every route supplies its own <main id="main"> so the skip link
+            above always has a target. */}
+        {children}
       </body>
     </html>
   );

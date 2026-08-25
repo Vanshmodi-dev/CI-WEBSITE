@@ -122,19 +122,49 @@ export function EmptyPanel({
 /* --------------------------------------------------------------- table ---- */
 
 /**
- * On mobile a wide table becomes unreadable, so the caller renders a stacked
- * card list instead. This wrapper is desktop-only by design — see the `hidden
- * md:block` on its usages.
+ * A table in a horizontally scrollable container.
+ *
+ * MOST callers pair this with `hidden md:block` and render a stacked card list
+ * at `md:hidden`, because a wide table is unreadable on a phone. The four
+ * tables on `/admin/data` do not — they scroll instead, which is why the
+ * container below has to be genuinely reachable.
+ *
+ * =============================================================================
+ * WHY tabindex / role / aria-label (Phase 14)
+ * =============================================================================
+ * A `overflow-x-auto` div scrolls with a mouse or a finger. It does NOT scroll
+ * with a keyboard unless it can take focus. Chrome has shipped focusable
+ * scrollers, so this looked fine when tested there; Firefox and Safari have
+ * not, and on those a keyboard-only user simply cannot reach the far columns.
+ *
+ * Phase 14 measured `/admin/data` at 360px: the container was 284px wide around
+ * 452px of table, and the last heading — "What to write", the column that tells
+ * a teacher how to fix their spreadsheet — sat off-screen with no keyboard path
+ * to it.
+ *
+ * `tabindex={0}` makes it reachable, `role="region"` plus a name makes it
+ * announceable, and together they are the standard pattern for a scrollable
+ * table container. The cost is one extra tab stop on wide screens where the
+ * table already fits, which is a fair price for the content being reachable at
+ * all on the screens where it does not.
  */
 export function TableShell({
   headings,
+  label,
   children,
 }: {
   headings: string[];
+  /** Accessible name for the scrollable region. Say what the table lists. */
+  label: string;
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-rule bg-paper">
+    <div
+      className="overflow-x-auto rounded-md border border-rule bg-paper"
+      tabIndex={0}
+      role="region"
+      aria-label={label}
+    >
       <table className="w-full text-left text-small">
         <thead>
           <tr className="border-b border-rule bg-surface">

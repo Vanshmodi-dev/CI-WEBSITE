@@ -81,7 +81,10 @@ export default async function AnnouncementsPage({
       {items.length > 0 ? (
         <>
           <div className="hidden md:block">
-            <TableShell headings={['Message', 'Shows from', 'Until', 'Status', '']}>
+            <TableShell
+              label="Announcements"
+              headings={['Message', 'Shows from', 'Until', 'Status', '']}
+            >
               {items.map((a) => {
                 const state = liveState(a);
                 return (

@@ -79,7 +79,10 @@ export default async function BatchesPage({
         <>
           {/* Desktop */}
           <div className="hidden md:block">
-            <TableShell headings={['Course', 'Starts', 'How it runs', 'Status', '']}>
+            <TableShell
+              label="Batches"
+              headings={['Course', 'Starts', 'How it runs', 'Status', '']}
+            >
               {batches.map((b) => {
                 const started = hasStarted(b.startsAt);
                 return (

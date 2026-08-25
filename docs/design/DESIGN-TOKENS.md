@@ -2,7 +2,16 @@
 
 **Status:** Derived and verified · awaiting sign-off
 **Source of truth:** [`assets/brand/commerce-insight-logo-master.jpg`](../../assets/brand/commerce-insight-logo-master.jpg)
-**Machine-readable output:** [`tokens.css`](tokens.css) — 80 tokens, drops straight into the app
+**Machine-readable output:** [`tokens.css`](tokens.css) — 80 tokens, the approved reference
+
+> **`tokens.css` is the approved reference, NOT the shipped file.** The
+> application ships `src/app/globals.css`, which carries the same colour values
+> under Tailwind v4 `@theme` names: `--r-sm/md/lg` ship as `--radius-sm/md/lg`,
+> `--t-*` as `--text-*`, `--ease` as `--ease-brand`, `--font-body` as
+> `--font-sans`, and the `--s-*` spacing steps come from Tailwind's own scale.
+> **Every colour token matches exactly** — Phase 14 recomputed all 15 contrast
+> pairings below against the shipped values and all 15 agreed to two decimal
+> places. Edit `globals.css`; this file records the decisions and the reasoning.
 **Governs:** Master Plan §08 (brand direction), §09 (design system), §20 (accessibility)
 
 ---
@@ -127,8 +136,22 @@ Full ramp: `--ink-950` → `--ink-50` (11 steps), in [`tokens.css`](tokens.css).
 | **Separators** | 1px `--rule` preferred over shadow | The system should read as a document, not a stack of floating cards |
 | **Spacing** | 4px base, restricted set (4/8/12/16/24/32/48/64/96/128) | Unrestricted spacing is how a site drifts into looking assembled |
 | **Body floor** | never below 16px on mobile | Below 16px iOS Safari zooms on input focus and the layout jumps — functional, not aesthetic |
-| **Motion** | 3 effects total: band entry, card hover, stat count-up | Master directive §36 — motion communicates hierarchy, nothing else |
+| **Motion** | Specified: band entry, card hover, stat count-up. **Shipped: card hover only** — see below | Master directive §36 — motion communicates hierarchy, nothing else |
 | **Status colours** | green/amber/red, separate from the accent hue | Semantic colour must never compete with brand orange for meaning |
+
+### Motion, as actually shipped
+
+Phase 14 audited this row against the source and found the specification ahead
+of the implementation:
+
+| Effect | Specified | Shipped | Why |
+| --- | :-: | :-: | --- |
+| Card hover | Yes | **Yes** | `transition-colors` (17 uses), `transition-shadow` (1) |
+| Band entry | Yes | **No** | The `.animate-rise` utility existed and was used by zero components, while still shipping in the CSS bundle. Removed in Phase 14; eight lines to restore if a real use appears. |
+| Stat count-up | Yes | **No** | It would animate towards institute statistics that do not exist. Cannot be built without inventing them, so it is not built. |
+
+`@media (prefers-reduced-motion: reduce)` in the base layer governs every
+transition that does ship.
 
 ---
 

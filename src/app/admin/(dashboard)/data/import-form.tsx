@@ -126,7 +126,10 @@ export function ImportForm() {
           {plan.problems.length > 0 ? (
             <Card>
         <SectionHeading title={"Rows that need attention"} description={"Fix these in your spreadsheet, save it as CSV again, and check it once more. Nothing has been saved."} />
-              <TableShell headings={['Row', 'Column', 'What is wrong', 'What to do']}>
+              <TableShell
+                label="Rows that need attention"
+                headings={['Row', 'Column', 'What is wrong', 'What to do']}
+              >
                 {plan.problems.map((p, i) => (
                   <tr key={`${p.line}-${p.column}-${i}`} className="border-t border-rule">
                     <Td className="tabular-nums">{p.line}</Td>
@@ -147,7 +150,10 @@ export function ImportForm() {
           {plan.preview.length > 0 ? (
             <Card>
         <SectionHeading title={"What the website would show"} description={"For each record, what a visitor would see and why."} />
-              <TableShell headings={['Reference', 'Student', 'Result', 'Name shown', 'Photograph', 'Why']}>
+              <TableShell
+                label="What a visitor would see"
+                headings={['Reference', 'Student', 'Result', 'Name shown', 'Photograph', 'Why']}
+              >
                 {plan.preview.map((v) => (
                   <tr key={v.importRef} className="border-t border-rule align-top">
                     <Td className="font-mono text-[12px]">{v.importRef}</Td>

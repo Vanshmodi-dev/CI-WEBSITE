@@ -418,8 +418,115 @@ try {
     'a deleted student is gone from the admin list',
   );
 
-  /* ==================================================== 8. SIGN OUT ==== */
-  section('8. SIGNING OUT, AND WHAT HAPPENS NEXT');
+  /* ============================================ 8. THE ADMIN ON A PHONE ==== */
+  /**
+   * WHY THIS SECTION EXISTS (Phase 14).
+   *
+   * This suite used to pin the browser to 1280x900 for its whole run, on the
+   * stated assumption that "a teacher is on a laptop for admin work".
+   * verify-ux.mjs covers nine viewports but only PUBLIC routes. So no suite had
+   * ever loaded an admin page below 1280px, and three defects were living
+   * there:
+   *
+   *   - the public marketing header, footer, WhatsApp button and JSON-LD
+   *     rendered on every admin page. At 360px the footer alone was 1208px of
+   *     a 2508px dashboard - 48% of the teacher's scroll.
+   *   - that public wrapper put a second <main> around the admin's own, so
+   *     every signed-in page carried two NESTED <main> landmarks.
+   *   - the scrollable table container took no keyboard focus, so the
+   *     "What to do" column of the import problems table was unreachable
+   *     without a mouse on any browser that does not focus scrollers.
+   *
+   * The assumption was never unreasonable - it was just never checked. This
+   * section checks it.
+   */
+  section('8. THE ADMIN ON A PHONE');
+
+  const ADMIN_MOBILE_ROUTES = [
+    '/admin',
+    '/admin/students',
+    '/admin/students/new',
+    '/admin/enquiries',
+    '/admin/batches',
+    '/admin/announcements',
+    '/admin/stories',
+    '/admin/data',
+    '/admin/preview',
+  ];
+
+  await page.viewport(360, 800, { mobile: true });
+
+  let mobileOverflow = [];
+  for (const route of ADMIN_MOBILE_ROUTES) {
+    await page.goto(`${BASE}${route}`);
+    const wide = await page.eval(`(() => {
+      const doc = document.documentElement.clientWidth;
+      return { doc, scrollW: document.documentElement.scrollWidth };
+    })()`);
+    if (wide.scrollW > wide.doc + 1) {
+      mobileOverflow.push(`${route} (${wide.scrollW} > ${wide.doc})`);
+    }
+  }
+  check(
+    mobileOverflow.length === 0,
+    'no admin page scrolls sideways at 360px',
+    mobileOverflow.join(', ') || `${ADMIN_MOBILE_ROUTES.length} routes`,
+  );
+
+  await page.goto(`${BASE}/admin`);
+  const chrome = await page.eval(`(() => {
+    const topLevel = sel => [...document.querySelectorAll(sel)]
+      .filter(el => !el.closest('main, section, article, aside'));
+    const mains = [...document.querySelectorAll('main')];
+    return {
+      mainCount: mains.length,
+      nestedMain: mains.some(m => m.parentElement && m.parentElement.closest('main')),
+      skipTarget: Boolean(document.getElementById('main')),
+      publicFooters: document.querySelectorAll('footer').length,
+      banners: topLevel('header').length,
+      whatsapp: document.querySelectorAll('a[href*="wa.me"]').length,
+      orgJsonLd: [...document.querySelectorAll('script[type="application/ld+json"]')]
+        .filter(s => (s.textContent || '').includes('EducationalOrganization')).length,
+      height: document.documentElement.scrollHeight,
+    };
+  })()`);
+
+  check(chrome.mainCount === 1, 'the admin has exactly one <main> landmark', `found ${chrome.mainCount}`);
+  check(!chrome.nestedMain, 'no <main> is nested inside another');
+  check(chrome.skipTarget, 'the skip link still has a #main target in the admin');
+  check(chrome.banners === 1, 'exactly one top-level <header> (banner) in the admin', `found ${chrome.banners}`);
+  check(chrome.publicFooters === 0, 'the public marketing footer does NOT render in the admin');
+  check(chrome.whatsapp === 0, 'the public WhatsApp button does NOT render in the admin');
+  check(chrome.orgJsonLd === 0, 'public organisation JSON-LD does NOT render in the admin');
+  note(`/admin at 360px is ${chrome.height}px tall`);
+
+  // A scrollable table must be reachable without a mouse. Chrome focuses
+  // scrollers on its own; Firefox and Safari do not, so the attributes have to
+  // be explicit rather than inherited from one engine's behaviour.
+  await page.goto(`${BASE}/admin/data`);
+  const scrollers = await page.eval(`(() => {
+    return [...document.querySelectorAll('div.overflow-x-auto')].map(w => ({
+      scrollable: w.scrollWidth > w.clientWidth + 1,
+      tabindex: w.getAttribute('tabindex'),
+      role: w.getAttribute('role'),
+      named: Boolean(w.getAttribute('aria-label')),
+    }));
+  })()`);
+  check(scrollers.length > 0, 'the import page has a scrollable table region to check', `${scrollers.length} found`);
+  check(
+    scrollers.every((w) => w.tabindex === '0'),
+    'every scrollable table region is keyboard focusable',
+  );
+  check(
+    scrollers.every((w) => w.role === 'region' && w.named),
+    'every scrollable table region is a named region for a screen reader',
+  );
+
+  // Back to the laptop for the sign-out checks.
+  await page.viewport(1280, 900, { mobile: false });
+
+  /* ==================================================== 9. SIGN OUT ==== */
+  section('9. SIGNING OUT, AND WHAT HAPPENS NEXT');
 
   const sessionBefore = await page.eval(`document.cookie`);
   check(!/ci_admin_session/.test(sessionBefore), 'the session cookie is not readable from JavaScript (HttpOnly)');

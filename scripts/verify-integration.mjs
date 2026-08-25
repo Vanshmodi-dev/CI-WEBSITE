@@ -348,6 +348,30 @@ try {
   check(!caf.includes('ZZTEST draft batch'), 'an unpublished batch is NOT shown');
 
   // ======================================================== ANNOUNCEMENTS ==
+  section('ANNOUNCEMENT WINDOW');
+
+  /**
+   * The POSITIVE case lives here rather than in verify-public-isolation.mjs.
+   *
+   * That suite writes fixtures straight into the database, which is the right
+   * thing for proving the public site FILTERS correctly - but it means nothing
+   * calls `revalidatePath`, and `/announcements` is prerendered at build time
+   * and then served from ISR for fifteen minutes. So "an announcement inside
+   * its window appears" passed or failed there depending on what had run
+   * before it, which is not evidence of anything.
+   *
+   * Creating it through the admin form is the real path a teacher takes, and it
+   * revalidates - so this assertion is deterministic. Phase 14 moved it.
+   */
+  await post('/admin/announcements/new', {
+    ...fieldsOf(await html('/admin/announcements/new'), 'startsAt'),
+    message: 'ZZTEST live announcement', href: '',
+    startsAt: day(-1), endsAt: day(30), published: 'on',
+  });
+  const liveUpdates = await publicHtml('/announcements');
+  check(liveUpdates.includes('ZZTEST live announcement'),
+        'an announcement inside its window DOES appear');
+
   section('ANNOUNCEMENT: future-dated must not appear early');
   await post('/admin/announcements/new', {
     ...fieldsOf(await html('/admin/announcements/new'), 'startsAt'),

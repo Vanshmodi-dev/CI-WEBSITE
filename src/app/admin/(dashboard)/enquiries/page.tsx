@@ -124,6 +124,7 @@ export default async function EnquiriesPage({
               {/* Desktop */}
               <div className="hidden md:block">
                 <TableShell
+                  label="Enquiries"
                   headings={['Name', 'Phone', 'Interested in', 'Received', 'Status', '']}
                 >
                   {enquiries.map((e) => (

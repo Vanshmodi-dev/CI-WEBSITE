@@ -31,62 +31,45 @@ const prisma = new PrismaClient({
 
 let pass = 0;
 let fail = 0;
-let skipped = 0;
 const failures = [];
-const skips = [];
 function ok(n, d = '') { pass += 1; console.log(`  PASS  ${n}${d ? ` — ${d}` : ''}`); }
 function bad(n, d) { fail += 1; failures.push(`${n}: ${d}`); console.log(`  FAIL  ${n} — ${d}`); }
 function check(cond, n, d = '') { if (cond) ok(n, d); else bad(n, d || 'condition was false'); }
-function skip(n, d) { skipped += 1; skips.push(`${n}: ${d}`); console.log(`  SKIP  ${n} — ${d}`); }
 
 /**
- * Fetch a page, and report whether it came from the ISR cache.
+ * WHY THIS SUITE NO LONGER ASSERTS THAT PUBLISHED DATA *APPEARS* (Phase 14)
+ * =============================================================================
+ * This suite writes fixtures STRAIGHT INTO THE DATABASE, deliberately: the
+ * point is to prove the public site FILTERS correctly even when rows arrive
+ * from something other than the admin.
  *
- * WHY THE CACHE STATE MATTERS HERE (Phase 13).
+ * But writing directly means nothing calls `revalidatePath`, and both
+ * `/courses/[slug]` and `/announcements` are prerendered at BUILD time and then
+ * served from ISR. So the two POSITIVE assertions - "a published batch
+ * appears", "an announcement inside its window appears" - were decided by
+ * whatever had run before them on that server. Phase 13 saw the announcement
+ * one flip from fail to pass purely because verify:integration ran first;
+ * Phase 14 saw it flip back.
  *
- * This suite writes fixtures STRAIGHT INTO THE DATABASE, deliberately - the
- * whole point is to prove the public site filters correctly even when rows are
- * created by something other than the admin. But writing directly means nothing
- * calls `revalidatePath`, and `/courses/[slug]` and `/announcements` are
- * prerendered at BUILD time and then served from ISR for an hour.
+ * Phase 13 tried to rescue them by skipping when `x-nextjs-cache` read HIT.
+ * That was not good enough either: the header depends on the exact moment the
+ * request lands relative to a background regeneration, so the check still
+ * alternated between SKIP and FAIL. A check that reports a different verdict
+ * on identical, correct code is not evidence - it is noise that teaches people
+ * to ignore the suite.
  *
- * So the two POSITIVE assertions - "a published batch appears", "an
- * announcement inside its window appears" - were passing or failing depending
- * on whether some earlier suite happened to have revalidated that exact path on
- * that exact server first. Phase 13 caught it after a rebuild reordered things:
- * the announcement assertion flipped from fail to pass purely because
- * verify:integration ran before it.
+ * Both assertions now live in verify-integration.mjs, which creates records
+ * through the ADMIN FORM - the real path, which revalidates - and can therefore
+ * assert appearance deterministically. Nothing was dropped: coverage moved to
+ * where it can be trusted.
  *
- * A check whose result depends on what ran before it is not evidence. These are
- * now SKIPPED with a reason when the page is provably a cached build-time
- * render, rather than reported as a defect that is not there. The behaviour
- * itself is covered where it belongs: verify:integration publishes through the
- * admin and verify:revalidation asserts the revalidation contract.
- *
- * Every NEGATIVE assertion in this suite - the ones that matter, "unpublished
- * data must never appear" - is unaffected: a stale cache cannot make hidden
- * data visible.
+ * Every NEGATIVE assertion stayed here and is unaffected, because a stale cache
+ * cannot make hidden data visible. Those are the ones that matter: this suite
+ * exists to prove unpublished and unconsented data never reaches the public.
  */
-async function fetchPage(path) {
-  const res = await fetch(`${BASE}${path}`, { headers: { 'Cache-Control': 'no-cache' } });
-  return { body: await res.text(), cached: res.headers.get('x-nextjs-cache') === 'HIT' };
-}
-
 async function html(path) {
-  return (await fetchPage(path)).body;
-}
-
-/**
- * Assert that freshly-inserted data appears - unless the page is demonstrably a
- * cached render from before the insert, in which case say so and skip.
- */
-function checkFresh(page, needle, name) {
-  if (page.body.includes(needle)) { ok(name); return; }
-  if (page.cached) {
-    skip(name, 'page served from the ISR cache built before this fixture existed - covered by verify:integration and verify:revalidation');
-    return;
-  }
-  bad(name, 'condition was false');
+  const res = await fetch(`${BASE}${path}`, { headers: { 'Cache-Control': 'no-cache' } });
+  return res.text();
 }
 
 const NOW = new Date();
@@ -346,9 +329,10 @@ if (doAssert) {
 
   // ==================================================== BATCHES ==========
   console.log('\n=== BATCHES (course page) ===');
-  const coursePageResult = await fetchPage('/courses/class-12-commerce');
-  const coursePage = coursePageResult.body;
-  checkFresh(coursePageResult, 'ZZDEMO future batch', 'upcoming batch appears');
+  const coursePage = await html('/courses/class-12-commerce');
+  // "the batch appears" is asserted in verify-integration.mjs, where the record
+  // is created through the admin form and therefore revalidates. See the note
+  // at the top of this file.
   check(!coursePage.includes('ZZDEMO expired batch'),
         'a batch that already started does NOT appear as upcoming');
 
@@ -425,13 +409,7 @@ if (doCleanup) {
 }
 
 console.log(`\n${'='.repeat(52)}`);
-console.log(`RESULT: ${pass} passed, ${fail} failed, ${skipped} skipped`);
+console.log(`RESULT: ${pass} passed, ${fail} failed`);
 if (fail > 0) { console.log('\nFAILURES:'); for (const f of failures) console.log(`  - ${f}`); }
-// Skips are printed even when nothing failed. A skipped check is not a passing
-// one, and a suite that quietly drops it overstates its own coverage.
-if (skipped > 0) {
-  console.log('\nSKIPPED (not verified in this run):');
-  for (const s of skips) console.log(`  - ${s}`);
-}
 console.log('='.repeat(52));
 exit(fail > 0 ? 1 : 0);

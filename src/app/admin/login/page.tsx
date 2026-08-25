@@ -17,7 +17,10 @@ export default async function AdminLoginPage() {
   if (await getCurrentAdmin()) redirect('/admin');
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface px-5 py-12">
+    <main
+      id="main"
+      className="flex min-h-screen items-center justify-center bg-surface px-5 py-12"
+    >
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <p className="font-display text-[20px] font-bold uppercase tracking-[0.01em] text-heading">
@@ -45,6 +48,6 @@ export default async function AdminLoginPage() {
           Trouble signing in? Contact TradyPerch.
         </p>
       </div>
-    </div>
+    </main>
   );
 }

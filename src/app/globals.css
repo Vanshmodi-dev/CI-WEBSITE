@@ -322,18 +322,27 @@
     text-transform: uppercase;
   }
 
-  /* Band entry — one of the three motion effects the system permits. */
-  @keyframes rise {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-  .animate-rise {
-    animation: rise var(--dur-base, 320ms) var(--ease-brand) both;
-  }
+  /* -----------------------------------------------------------------------
+     MOTION — what actually ships (Phase 14).
+     -----------------------------------------------------------------------
+     The design system specified three effects: band entry, card hover, and a
+     stat count-up. Only card hover was ever wired, via `transition-colors`
+     (17 uses) and `transition-shadow` (1).
+
+     The `.animate-rise` band-entry utility and its `@keyframes` used to live
+     here. Phase 14 removed them because they were used by ZERO components and
+     were still being shipped inside `@layer utilities`, which Tailwind emits
+     verbatim rather than tree-shaking the way it does a generated utility. The
+     rule also read `var(--dur-base, 320ms)` against a token that this file
+     never declares, so it silently ran on the fallback.
+
+     The stat count-up was never built and cannot be: it would animate towards
+     institute statistics that do not exist and must not be invented.
+
+     Both are recorded in docs/design/DESIGN-TOKENS.md. Re-adding band entry is
+     eight lines if a real use appears; shipping it unused was costing every
+     visitor bytes for nothing.
+
+     `@media (prefers-reduced-motion: reduce)` in the base layer still governs
+     every transition above. */
 }

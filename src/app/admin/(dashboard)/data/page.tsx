@@ -147,7 +147,10 @@ export default async function DataPage() {
           .
         </p>
         <div className="mt-5">
-          <TableShell headings={['Column', 'Needed?', 'What it means', 'What to write']}>
+          <TableShell
+            label="Import template columns"
+            headings={['Column', 'Needed?', 'What it means', 'What to write']}
+          >
             {COLUMNS.map((c) => (
               <tr key={c.key} className="border-t border-rule align-top">
                 <Td>
@@ -214,6 +217,7 @@ export default async function DataPage() {
             />
           ) : (
             <TableShell
+              label="Import history"
               headings={['When', 'Who', 'File', 'Rows', 'Added', 'Corrected', 'Rejected', 'Made public', 'Took']}
             >
               {overview.history.map((run) => (

@@ -157,6 +157,7 @@ export default async function StudentsPage({
             <>
               <div className="hidden md:block">
                 <TableShell
+                  label="Student results"
                   headings={['Shown as', 'Course', 'Year', 'Result', 'Status', '']}
                 >
                   {rows.map((r) => {

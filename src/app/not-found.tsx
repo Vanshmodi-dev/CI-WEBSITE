@@ -1,11 +1,22 @@
 import type { Metadata } from 'next';
 import { Container } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
+import { SiteHeader } from '@/components/domain/site-header';
+import { SiteFooter } from '@/components/domain/site-footer';
 
 /**
  * A 404 is served with a 404 status, which is the signal that matters; the
  * explicit noindex is belt and braces for the case where something upstream
  * rewrites the status. No canonical: this page represents no document.
+ *
+ * WHY THE CHROME IS IMPORTED HERE RATHER THAN INHERITED (Phase 14).
+ * This is the GLOBAL not-found: a URL matching no route at all renders it
+ * against the ROOT layout, not against `(site)/layout.tsx`. When the public
+ * chrome moved into that route group, this page would otherwise have become a
+ * bare paragraph with no header, no footer and no way back — the one page where
+ * a lost visitor most needs navigation. So it renders the chrome explicitly.
+ * A browser check asserts the header, the footer and the `#main` skip target
+ * are all present on a 404.
  */
 export const metadata: Metadata = {
   title: 'Page not found',
@@ -14,24 +25,30 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <Container>
-      <div className="flex min-h-[60vh] max-w-xl flex-col justify-center py-20">
-        <p className="eyebrow text-accent-text">Page not found</p>
-        <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-          We could not find that page.
-        </h1>
-        <p className="measure mt-4 text-[17px] leading-relaxed text-muted">
-          The link may be out of date, or the page may have moved. You can start
-          again from the homepage, or get in touch and we will point you to the
-          right place.
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button href="/">Back to home</Button>
-          <Button href="/contact" variant="secondary">
-            Contact us
-          </Button>
-        </div>
-      </div>
-    </Container>
+    <>
+      <SiteHeader />
+      <main id="main">
+        <Container>
+          <div className="flex min-h-[60vh] max-w-xl flex-col justify-center py-20">
+            <p className="eyebrow text-accent-text">Page not found</p>
+            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
+              We could not find that page.
+            </h1>
+            <p className="measure mt-4 text-[17px] leading-relaxed text-muted">
+              The link may be out of date, or the page may have moved. You can
+              start again from the homepage, or get in touch and we will point
+              you to the right place.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Button href="/">Back to home</Button>
+              <Button href="/contact" variant="secondary">
+                Contact us
+              </Button>
+            </div>
+          </div>
+        </Container>
+      </main>
+      <SiteFooter />
+    </>
   );
 }
