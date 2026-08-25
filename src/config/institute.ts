@@ -17,13 +17,22 @@
  * nothing from it is trusted until Commerce Insight re-confirms it in writing.
  *
  * `unverified` does NOT mean "probably wrong" — it means "not yet confirmed by
- * the client". These must all read `verified` before the site goes public.
- * `npm run verify` does not check this; the Phase 6 content audit does.
+ * the client". These must all read `verified` before the site goes public, and
+ * since Phase 14 that is ENFORCED: `isIndexable()` returns false while any fact
+ * is outstanding, a unit test fails if the launch switch is flipped anyway, and
+ * `npm run verify:preflight` names the outstanding facts.
  */
 
 export type VerificationState = 'verified' | 'unverified' | 'awaiting-client';
 
-/** Fields the client has not yet confirmed. Phase 6 audit gate. */
+/**
+ * Fields the client has not yet confirmed. Phase 6 audit gate.
+ *
+ * ⚠ THIS ARRAY IS DOCUMENTATION. `unverifiedFacts()` below is the check.
+ * A hand-maintained list of what is unverified drifts from the `status` fields
+ * it describes — `hours` sits in here but carries no status field at all — so
+ * nothing is allowed to depend on it. A test asserts the two agree.
+ */
 export const UNVERIFIED_FACTS = [
   'address',
   'phonePrimary',
@@ -135,6 +144,44 @@ export const institute = {
     { slug: 'cma', name: 'CMA Foundation & Inter', short: 'CMA', published: true },
   ],
 };
+
+/**
+ * Which institute facts are still unconfirmed, DERIVED from the status fields.
+ * =============================================================================
+ * WHY THIS EXISTS (Phase 14).
+ *
+ * `institute.ts` said, in a comment: "These must all read `verified` before the
+ * site goes public." Nothing read it. Not the launch switch, not a test, not
+ * the deployment preflight — `UNVERIFIED_FACTS` was a data structure with a
+ * sentence next to it and no enforcement anywhere in the repository.
+ *
+ * So the site could have been launched, indexed and ranked on an address and
+ * two phone numbers that were carried over from the OLD website — the same
+ * website an audit found publishing fabricated toppers and testimonials. If a
+ * number is wrong, enquiries reach a stranger and Google anchors the local
+ * listing to bad data.
+ *
+ * The facts themselves are NOT invented and never were; they are the client's
+ * own prior values, correctly marked unverified. What was missing was the gate.
+ *
+ * This function is the gate, and it reads the `status` fields rather than the
+ * hand-written list, so it cannot fall behind them.
+ */
+export function unverifiedFacts(): string[] {
+  const out: string[] = [];
+  if (institute.address.status !== 'verified') out.push('address');
+  if (institute.phonePrimary.status !== 'verified') out.push('phonePrimary');
+  if (institute.phoneSecondary.status !== 'verified') out.push('phoneSecondary');
+  // `hours` carries no status field: it is either supplied or null, and a null
+  // renders nothing rather than a guess. Absent is honest; wrong is not.
+  if (institute.hours === null) out.push('hours');
+  return out;
+}
+
+/** True when every publishable institute fact has been confirmed in writing. */
+export function instituteFactsVerified(): boolean {
+  return unverifiedFacts().length === 0;
+}
 
 /** The address as one line, for the footer, contact page and schema.org. */
 export const addressFull = [

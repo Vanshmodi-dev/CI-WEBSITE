@@ -104,7 +104,7 @@ thing to fix.
 | --- | --- |
 | **the app can start** | `DATABASE_URL` set; both secrets set and ≥32 chars |
 | **traffic can be accepted** | migration applied; all 21 constraints present; admin account exists; HTTPS live |
-| **launch** | institute has approved every published record; `SITE_IS_LAUNCHED = true`; `NEXT_PUBLIC_SITE_URL` a real `https://` origin **at build time** |
+| **launch** | institute has approved every published record; `SITE_IS_LAUNCHED = true`; `NEXT_PUBLIC_SITE_URL` a real `https://` origin **at build time**; **every institute fact marked `verified`** |
 
 ### Deliberately manual, forever
 
@@ -300,9 +300,19 @@ correct and consented.
 **Everything above must be done. This is the irreversible-ish step: getting a
 half-finished site back out of Google's index takes weeks.**
 
-1. Set `SITE_IS_LAUNCHED = true` in `src/config/launch.ts`.
-2. Confirm `NEXT_PUBLIC_SITE_URL` is the live `https://` domain.
-3. Commit, **rebuild**, deploy.
+1. **Confirm every institute fact with the institute, in writing**, then set
+   each `status` to `'verified'` in `src/config/institute.ts`. The address and
+   both phone numbers were carried over from the old website and are
+   `unverified` until this happens.
+2. Set `SITE_IS_LAUNCHED = true` in `src/config/launch.ts`.
+3. Confirm `NEXT_PUBLIC_SITE_URL` is the live `https://` domain.
+4. Commit, **rebuild**, deploy.
+
+> **Three conditions, all required.** `isIndexable()` returns false unless the
+> code flag, a real production domain and verified institute facts all agree.
+> Skip the first and the site deploys permanently `noindex` with no obvious
+> cause - so run `npm run verify:preflight` first and read `P-LAUNCH-07`, which
+> names any fact still outstanding.
 
 **Gate:**
 

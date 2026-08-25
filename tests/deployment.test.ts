@@ -46,6 +46,13 @@ import {
   ROUTES,
   SCORECARD_CATEGORIES,
 } from '../src/lib/deployment-contract.ts';
+import {
+  UNVERIFIED_FACTS,
+  unverifiedFacts,
+  instituteFactsVerified,
+  institute,
+} from '../src/config/institute.ts';
+import { isIndexable, indexingBlockedBecause } from '../src/config/launch.ts';
 
 /* ------------------------------------------------------------ helpers ---- */
 
@@ -749,6 +756,71 @@ describe('scorecard', () => {
 });
 
 /* ====================================================== launch remains === */
+
+describe('institute facts must be verified before launch', () => {
+  /**
+   * WHY (Phase 14). institute.ts declared UNVERIFIED_FACTS and stated in a
+   * comment that they "must all read verified before the site goes public".
+   * Nothing read it - not the launch switch, not a test, not the preflight. The
+   * site could have been launched, indexed and ranked on an address and two
+   * phone numbers carried over from the OLD website, the one an audit found
+   * publishing fabricated toppers.
+   */
+
+  test('the launch switch cannot be on while a fact is unverified', () => {
+    const launch = read('src/config/launch.ts');
+    const flagOn = /const\s+SITE_IS_LAUNCHED\s*=\s*true\s*;/.test(launch);
+    assert.ok(
+      !flagOn || instituteFactsVerified(),
+      `SITE_IS_LAUNCHED is true but these facts are still unverified: ${unverifiedFacts().join(', ')}`,
+    );
+  });
+
+  test('isIndexable() consults the fact gate, not just the flag and the domain', () => {
+    const launch = stripComments(read('src/config/launch.ts'));
+    const body = /export function isIndexable\(\)[^}]*}/.exec(launch)?.[0] ?? '';
+    assert.match(body, /instituteFactsVerified\(\)/, 'the third launch condition is not wired in');
+    assert.match(body, /SITE_IS_LAUNCHED/);
+    assert.match(body, /hasRealDomain\(\)/);
+  });
+
+  test('the site is not indexable right now, and says why', () => {
+    assert.equal(isIndexable(), false);
+    assert.equal(typeof indexingBlockedBecause(), 'string');
+  });
+
+  test('unverifiedFacts() is derived from the status fields, not the array', () => {
+    // The array is documentation; a hand-maintained list drifts. They must agree
+    // today, and the derived function is what anything else is allowed to use.
+    assert.deepEqual([...unverifiedFacts()].sort(), [...UNVERIFIED_FACTS].sort());
+  });
+
+  test('every outstanding fact names a real field on the config', () => {
+    for (const key of unverifiedFacts()) {
+      assert.ok(key in institute, `${key} is reported unverified but is not a field on institute`);
+    }
+  });
+
+  test('the blocked reason names the outstanding facts once the flag and domain pass', () => {
+    // Cannot flip the module constant from here, so assert the message the
+    // function would produce is built from the derived list rather than a
+    // hardcoded sentence.
+    const launch = stripComments(read('src/config/launch.ts'));
+    assert.match(launch, /unverifiedFacts\(\)/);
+    assert.match(launch, /not confirmed yet/);
+  });
+
+  test('no institute fact is silently blank where the UI would show a guess', () => {
+    // Absent is honest; a placeholder is not. These must be null, never a
+    // plausible-looking invention.
+    assert.equal(institute.email, null);
+    assert.equal(institute.hours, null);
+    assert.equal(institute.googleBusinessProfileUrl, null);
+    assert.equal(institute.legalEntityName, null);
+    assert.equal(institute.social.youtube, null);
+    assert.equal(institute.social.instagram, null);
+  });
+});
 
 describe('the launch switch is still off', () => {
   test('SITE_IS_LAUNCHED is false', () => {

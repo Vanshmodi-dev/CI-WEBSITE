@@ -62,6 +62,7 @@ import {
   ROUTES,
   EXPECTED_PRE_LAUNCH,
 } from '../src/lib/deployment-contract.ts';
+import { unverifiedFacts, AWAITING_CLIENT } from '../src/config/institute.ts';
 
 /* ============================================================ options ===== */
 
@@ -744,18 +745,26 @@ function checkLaunchState() {
   );
 
   // -- P-LAUNCH-03 -----------------------------------------------------------
-  const indexable = flag === true && realDomain;
+  // THREE conditions since Phase 14: the code flag, a real production domain,
+  // and every institute fact confirmed in writing.
+  const factsOk = unverifiedFacts().length === 0;
+  const indexable = flag === true && realDomain && factsOk;
   if (indexable === false) {
+    const why = [
+      flag === true ? null : 'SITE_IS_LAUNCHED is false',
+      realDomain ? null : 'no real production domain',
+      factsOk ? null : `unconfirmed facts: ${unverifiedFacts().join(', ')}`,
+    ].filter(Boolean);
     pass(
       'P-LAUNCH-03',
       'the site is NOT indexable (expected before launch)',
-      'both conditions must be true; at least one is false',
+      `all three conditions must hold; blocked by ${why.length} of them - ${why.join('; ')}`,
     );
   } else {
     warn(
       'P-LAUNCH-03',
       'the site IS indexable',
-      'code flag and production domain both satisfied',
+      'code flag, production domain and verified institute facts all satisfied',
       'Search engines may index this deployment. Intended only after launch approval.',
     );
   }
@@ -796,6 +805,45 @@ function checkLaunchState() {
   } else {
     pass('P-LAUNCH-05', '/admin is absent from the sitemap', 'no reference in sitemap.ts');
   }
+
+  // -- P-LAUNCH-07 -----------------------------------------------------------
+  /**
+   * Institute facts must be confirmed before anything is indexed.
+   *
+   * The address and both phone numbers were carried over from the OLD website -
+   * the one an audit found publishing fabricated toppers - and are marked
+   * `unverified` until Commerce Insight confirms them in writing. institute.ts
+   * always SAID they must read verified before launch. Until Phase 14 nothing
+   * enforced it, so the site could have been indexed and ranked on an address
+   * and a phone number nobody had checked.
+   */
+  const outstanding = unverifiedFacts();
+  if (outstanding.length === 0) {
+    pass('P-LAUNCH-07', 'every institute fact is confirmed', 'address, phones and hours all verified');
+  } else if (flag === true) {
+    fail(
+      'P-LAUNCH-07',
+      'every institute fact is confirmed',
+      `LAUNCH SWITCH IS ON but these are unconfirmed: ${outstanding.join(', ')}`,
+      'Do not deploy. Confirm each with the institute in writing, then set status to "verified" in src/config/institute.ts. isIndexable() refuses to return true until then, so the site would deploy permanently noindex.',
+    );
+  } else {
+    warn(
+      'P-LAUNCH-07',
+      'every institute fact is confirmed',
+      `not yet: ${outstanding.join(', ')}`,
+      'Expected before launch, not before deployment. These block the launch switch, not the deploy - see docs/DEPLOYMENT-HUMAN-CHECKLIST.md section C.',
+    );
+  }
+
+  // -- P-LAUNCH-08 -----------------------------------------------------------
+  // Facts the institute has not supplied at all render nothing rather than a
+  // guess. Reported so an operator can see the list, never invented.
+  notApplicable(
+    'P-LAUNCH-08',
+    'facts awaiting the institute render nothing rather than a placeholder',
+    `${AWAITING_CLIENT.length} awaiting: ${AWAITING_CLIENT.join(', ')}`,
+  );
 
   // -- P-LAUNCH-06 -----------------------------------------------------------
   // Search Console verification tokens must not be present yet.

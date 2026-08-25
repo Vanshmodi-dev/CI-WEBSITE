@@ -163,8 +163,11 @@ When ready:
 4. Check `https://yourdomain.com/robots.txt` — it must now read `Allow: /`.
 5. Submit `https://yourdomain.com/sitemap.xml` in Google Search Console.
 
-Until both conditions are true, every page carries `noindex` and robots.txt
-disallows everything. **Two conditions, deliberately** — one environment
+Until all three conditions are true, every page carries `noindex` and robots.txt
+disallows everything. The third, added in Phase 14, is that every institute fact
+in `src/config/institute.ts` must be marked `verified` — the address and phone
+numbers came from the old website and nobody has confirmed them yet.
+**Three conditions, deliberately** — one environment
 variable is far too easy to flip by accident, and a half-finished site entering
 Google's index under the institute's name takes weeks to undo.
 

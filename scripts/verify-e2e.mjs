@@ -206,13 +206,37 @@ try {
   // must run in their own window. Testing them after three successful
   // submissions returns "rate limited" instead of the field error, which is
   // correct behaviour but tests the wrong thing.
+  //
+  // THAT ALSO APPLIES ACROSS RUNS (Phase 14). The limiter is per SERVER PROCESS
+  // and keyed on the ipHash, so running this suite twice inside a minute makes
+  // these two checks fail with "condition was false" - which reads exactly like
+  // a broken enquiry form and is nothing of the sort. Phase 14 lost time to it
+  // twice before spotting that "neither invalid submission stored anything" was
+  // still passing, which is only possible if the request was refused earlier.
+  //
+  // The suite cannot dodge the limiter: the key comes from the request IP, and
+  // the app deliberately does NOT trust X-Forwarded-For, so there is no honest
+  // way to present a different client. What it CAN do is recognise the refusal
+  // and say so, instead of reporting a defect that is not there.
+  const RATE_LIMITED = /too many|try again in|rate.?limit/i;
+
+  function checkValidation(html, needle, name) {
+    if (html.includes(needle)) return ok(name);
+    if (RATE_LIMITED.test(html)) {
+      return bad(
+        name,
+        'the rate limiter refused this submission before validation ran - the form is fine, ' +
+          'the suite was run again within the 60s burst window. Wait a minute and re-run.',
+      );
+    }
+    return bad(name, 'condition was false');
+  }
+
   const noConsent = await submitEnquiry({ consent: '', phone: '9900000004' });
-  check((await noConsent.text()).includes('agree to be contacted'),
-        'missing consent is rejected');
+  checkValidation(await noConsent.text(), 'agree to be contacted', 'missing consent is rejected');
 
   const badPhone = await submitEnquiry({ phone: '12345' });
-  check((await badPhone.text()).includes('valid 10-digit'),
-        'invalid phone is rejected with a field error');
+  checkValidation(await badPhone.text(), 'valid 10-digit', 'invalid phone is rejected with a field error');
 
   check(await prisma.enquiry.count() === before,
         'neither invalid submission stored anything');

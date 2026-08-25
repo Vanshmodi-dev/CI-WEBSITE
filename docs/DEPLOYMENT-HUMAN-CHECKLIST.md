@@ -209,6 +209,7 @@ Only after **every** 🔴 and 🟠 item above.
 
 | # | Item | Done |
 | --- | --- | :-: |
+| H0 | Every institute fact set to `verified` in `src/config/institute.ts`, after written confirmation | ☐ |
 | H1 | `SITE_IS_LAUNCHED = true`, in a reviewed commit | ☐ |
 | H2 | `NEXT_PUBLIC_SITE_URL` is the live `https://` domain **at build time** | ☐ |
 | H3 | Rebuilt and redeployed after H1 and H2 | ☐ |
@@ -217,10 +218,17 @@ Only after **every** 🔴 and 🟠 item above.
 | H6 | Sitemap submitted to Search Console | ☐ |
 | H7 | Uptime monitoring configured | ☐ |
 
-> **Two conditions, deliberately.** Indexing requires the code flag *and* a real
-> `https://` domain. One environment variable is far too easy to flip by
-> accident, and a half-finished site entering Google's index under the
-> institute's name takes weeks to undo.
+> **Three conditions, deliberately.** Indexing requires the code flag, a real
+> `https://` domain, **and** every institute fact marked verified. One
+> environment variable is far too easy to flip by accident, and a half-finished
+> site entering Google's index under the institute's name takes weeks to undo.
+>
+> The third condition was added in Phase 14. `institute.ts` had always said the
+> address and phone numbers "must all read verified before the site goes
+> public" - but nothing enforced it, so the site could have been launched and
+> ranked on contact details carried over from the old website that nobody had
+> checked. `npm run verify:preflight` now names any fact still outstanding
+> (`P-LAUNCH-07`).
 
 ---
 
