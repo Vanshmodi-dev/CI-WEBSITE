@@ -535,7 +535,12 @@ describe('migration files', () => {
 describe('secret detection', () => {
   test('detects real credential shapes', () => {
     const samples: [string, string][] = [
-      ['private-key', '-----BEGIN RSA PRIVATE KEY-----'],
+      // A key BLOCK, not a bare header: the pattern deliberately requires the
+      // body, so that prose naming the format is not reported as a leak.
+      [
+        'private-key',
+        '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEAy8Dbv8prpJ0kKhlGeJYozo2t60EG8L0561g13R29LvMR5hy\n',
+      ],
       ['aws-access-key', 'AKIAIOSFODNN7EXAMPLE'],
       ['github-token', 'ghp_abcdefghijklmnopqrstuvwxyz012345'],
       ['slack-token', 'xoxb-123456789012-abcdefghijkl'],
@@ -555,6 +560,8 @@ describe('secret detection', () => {
       'postgresql://USER:PASSWORD@HOST/DB?sslmode=require',
       'postgresql://<user>:<password>@<host>/<db>',
       'DATABASE_URL=""',
+      // Prose describing a credential format is documentation, not a leak.
+      'the scanner looks for a -----BEGIN PRIVATE KEY----- header',
     ]) {
       const hits = SECRET_CONTENT_PATTERNS.filter((p) => p.pattern.test(sample));
       assert.deepEqual(hits.map((h) => h.id), [], `${sample} was flagged by ${hits.map((h) => h.id).join(', ')}`);

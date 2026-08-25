@@ -496,7 +496,19 @@ export const SECRET_CONTENT_PATTERNS: readonly {
 }[] = [
   {
     id: 'private-key',
-    pattern: /-----BEGIN (RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----/,
+    /**
+     * A private key BLOCK - header plus body - not a bare header.
+     *
+     * The first version matched the header alone, and then flagged the Phase 13
+     * report for describing what the pattern looks for. A sentence naming a
+     * credential format is documentation; a key is a header followed by base64.
+     *
+     * Requiring the body loses nothing: a real key always has one. Documentation
+     * is deliberately still in scope - `docs/` is exactly where a connection
+     * string gets pasted "just as an example" - so the fix is to detect keys
+     * more precisely rather than to stop reading prose.
+     */
+    pattern: /-----BEGIN (RSA |EC |OPENSSH |PGP |DSA )?PRIVATE KEY-----[\r\n]+[A-Za-z0-9+/=]{32}/,
     severity: 'critical',
     label: 'private key block',
   },

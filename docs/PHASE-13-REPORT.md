@@ -333,13 +333,20 @@ Recorded because they are the same class of bug the phase exists to prevent.
    before committing; replaced with `\u001B` escapes.
 7. **The scanner flagged its own test file.** `tests/deployment.test.ts` exists
    to prove the credential patterns work, so it necessarily contains an AWS key
-   id, a GitHub token shape and a `-----BEGIN PRIVATE KEY-----` header. The
-   moment it was committed, both the working-tree scan and the history scan
-   reported seven leaks in it. Caught by running the preflight against the
-   committed tree rather than assuming the pre-commit run still applied. Fixed
-   with a narrow named exclusion for the two files that define and test the
-   patterns - and the history scan, which had never honoured the skip list at
-   all, now does.
+   id, a GitHub token shape and a PEM private-key header. The moment it was
+   committed, both the working-tree scan and the history scan reported seven
+   leaks in it. Caught by running the preflight against the committed tree
+   rather than assuming the pre-commit run still applied. Fixed with a narrow
+   named exclusion for the two files that define and test the patterns - and
+   the history scan, which had never honoured the skip list at all, now does.
+
+   Then this report tripped the same wire, because the sentence above
+   originally quoted the key header verbatim. **Documentation is not exempt and
+   should not be** - a pasted connection string in a doc is a real leak, and
+   `docs/` is deliberately in scope. So the detector was made more precise
+   instead: a private key is a header **followed by a base64 body**, and the
+   pattern now requires both. A real key always has a body, so nothing is lost;
+   prose naming the format is no longer a finding. A test asserts both halves.
 8. **The admin CSP smoke checks measured a redirect.** `/admin` answers 307 to a
    signed-out client and a bodyless redirect carries only the baseline headers,
    so the check reported a CSP failure against an admin panel whose CSP was
