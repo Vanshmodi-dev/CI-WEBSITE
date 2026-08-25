@@ -197,6 +197,33 @@ export function Td({
 
 /* -------------------------------------------------------------- notice ---- */
 
+/**
+ * A banner above a form or list.
+ *
+ * =============================================================================
+ * THE ROLE IS DERIVED FROM THE TONE, AND THAT MATTERS (Phase 14)
+ * =============================================================================
+ * This used to render a bare `<div>`. Every admin form reports its errors
+ * through it: a teacher submits, the server rejects, React re-renders, and the
+ * red banner appears — silently. Focus stays on the submit button, nothing is
+ * announced, and a screen-reader user is left believing the click did nothing.
+ * That is WCAG 4.1.3 Status Messages, on the primary admin workflow.
+ *
+ * The mapping is deliberate, not decorative:
+ *
+ *   danger -> role="alert"   assertive. An error interrupts, because the
+ *                            teacher's next action depends on hearing it.
+ *   ok     -> role="status"  polite. "Saved successfully" should be heard, but
+ *                            not on top of whatever is being read.
+ *   warn   -> role="status"  polite. "We could not load enquiries just now" is
+ *                            a degraded state, not a failed action.
+ *   info   -> NO ROLE        these are static explanatory panels that are
+ *                            present on load ("This shows published content
+ *                            only"). Giving them a live role would make a
+ *                            screen reader announce page furniture every time,
+ *                            which trains people to tune the region out — the
+ *                            exact opposite of the point.
+ */
 export function Notice({
   tone = 'info',
   title,
@@ -212,8 +239,15 @@ export function Notice({
     danger: 'border-danger/40 bg-danger-bg text-text',
     ok: 'border-ok/40 bg-ok-bg text-text',
   } as const;
+
+  const role =
+    tone === 'danger' ? 'alert' : tone === 'ok' || tone === 'warn' ? 'status' : undefined;
+
   return (
-    <div className={cn('rounded-md border px-4 py-3 text-small', styles[tone])}>
+    <div
+      role={role}
+      className={cn('rounded-md border px-4 py-3 text-small', styles[tone])}
+    >
       {title ? <p className="font-semibold">{title}</p> : null}
       <div className={title ? 'mt-1' : undefined}>{children}</div>
     </div>

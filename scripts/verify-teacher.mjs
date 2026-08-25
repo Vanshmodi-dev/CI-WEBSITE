@@ -418,7 +418,50 @@ try {
     'a deleted student is gone from the admin list',
   );
 
-  /* ============================================ 8. THE ADMIN ON A PHONE ==== */
+  /* ================================ 8. ERRORS A SCREEN READER CAN HEAR ==== */
+  /**
+   * WCAG 4.1.3. Every admin form reports failure through the `Notice` banner.
+   * Until Phase 14 that banner was a bare <div>: the teacher submitted, the
+   * server rejected, React re-rendered, and nothing was announced - focus stayed
+   * on the submit button and a screen-reader user was left believing the click
+   * had done nothing.
+   *
+   * The public enquiry form already got this right (role="alert" for errors,
+   * focus move for success). The admin did not, because no suite looked.
+   */
+  section('8. ERRORS A SCREEN READER CAN HEAR');
+
+  await page.goto(`${BASE}/admin/students/new`);
+  // Use the harness helper rather than hunting for a button by its label: the
+  // admin shell also renders a sign-out form, and the first `form button` on
+  // the page belongs to that. An earlier draft of this check clicked the wrong
+  // control, saw no error banner, and reported a defect that was not there.
+  const submitted = await page.submitForm('input[name=studentName]', 3000);
+  check(submitted, 'the new-result form can be submitted');
+
+  const announced = await page.eval(`(() => {
+    const alerts = [...document.querySelectorAll('[role="alert"]')]
+      .map((e) => (e.textContent || '').trim().slice(0, 60));
+    return {
+      alerts,
+      invalidFields: document.querySelectorAll('[aria-invalid="true"]').length,
+      describedBy: document.querySelectorAll('[aria-describedby]').length,
+    };
+  })()`);
+  check(announced.alerts.length > 0, 'a rejected admin form announces the error (role="alert")', announced.alerts.join(' | ') || 'no live region found');
+  check(announced.invalidFields > 0, 'the failing fields are marked aria-invalid', `${announced.invalidFields} field(s)`);
+  check(announced.describedBy > 0, 'error text is tied to its field with aria-describedby', `${announced.describedBy} field(s)`);
+
+  // A success banner should be polite, not assertive - heard, but not on top of
+  // whatever the screen reader is already saying.
+  await page.goto(`${BASE}/admin/students?saved=1`);
+  const politeness = await page.eval(`(() => {
+    const s = [...document.querySelectorAll('[role="status"]')].map((e) => (e.textContent || '').trim().slice(0, 40));
+    return { statuses: s, assertive: document.querySelectorAll('[role="alert"]').length };
+  })()`);
+  check(politeness.statuses.length > 0, 'a success banner is announced politely (role="status")', politeness.statuses.join(' | ') || 'none');
+
+  /* ============================================ 9. THE ADMIN ON A PHONE ==== */
   /**
    * WHY THIS SECTION EXISTS (Phase 14).
    *
@@ -440,7 +483,7 @@ try {
    * The assumption was never unreasonable - it was just never checked. This
    * section checks it.
    */
-  section('8. THE ADMIN ON A PHONE');
+  section('9. THE ADMIN ON A PHONE');
 
   const ADMIN_MOBILE_ROUTES = [
     '/admin',
@@ -525,8 +568,8 @@ try {
   // Back to the laptop for the sign-out checks.
   await page.viewport(1280, 900, { mobile: false });
 
-  /* ==================================================== 9. SIGN OUT ==== */
-  section('9. SIGNING OUT, AND WHAT HAPPENS NEXT');
+  /* =================================================== 10. SIGN OUT ==== */
+  section('10. SIGNING OUT, AND WHAT HAPPENS NEXT');
 
   const sessionBefore = await page.eval(`document.cookie`);
   check(!/ci_admin_session/.test(sessionBefore), 'the session cookie is not readable from JavaScript (HttpOnly)');
