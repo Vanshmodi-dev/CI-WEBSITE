@@ -1,0 +1,461 @@
+/**
+ * A complete, obviously-synthetic demonstration dataset — DEVELOPMENT ONLY.
+ *
+ * =============================================================================
+ * WHY THE PREFIX IS `ZZSHOW` AND NOT `ZZTEST`
+ * =============================================================================
+ * `ZZTEST` is already owned by three verification suites - verify-integration,
+ * verify-import and synthetic-scale - and each begins by deleting every row
+ * whose name starts with it. `ZZDEMO` belongs to verify-public-isolation,
+ * `ZZQA` to verify-teacher, `ZZSEC` to verify-security.
+ *
+ * The first version of this seeder used `ZZTEST` and the dataset silently
+ * vanished the moment a test suite ran. `ZZSHOW` is unclaimed, so the demo data
+ * and the test fixtures can coexist - which matters, because someone reviewing
+ * the site will also want to run the tests.
+ *
+ * It is no less obviously synthetic: nothing named `ZZSHOW Student 001` could
+ * be mistaken for a person.
+ *
+ *   npm run seed:demo          insert or reconcile the dataset
+ *   npm run seed:demo:clean    remove it, and nothing else
+ *   npm run seed:demo -- count report what is currently there
+ *
+ * =============================================================================
+ * WHAT THIS IS FOR, AND HOW IT DIFFERS FROM synthetic-scale.mjs
+ * =============================================================================
+ * `synthetic-scale.mjs` fills the database with a thousand near-identical rows
+ * to measure how the site behaves at scale. It is filler by design and reads
+ * like it.
+ *
+ * This one is for LOOKING at the site. Every record is chosen to put a
+ * different state on screen: a full name beside an initials-only name, a
+ * photograph beside a monogram, a long highlight beside none, five programmes,
+ * three years, published rows beside drafts, an announcement inside its window
+ * beside one that has expired. Enough rows to push both list pages past their
+ * first page.
+ *
+ * Both are kept. They answer different questions.
+ *
+ * =============================================================================
+ * EVERY ROW IS UNMISTAKABLY SYNTHETIC
+ * =============================================================================
+ * Names are `ZZSHOW Student 001`, not plausible names. Phones are `9100000001`
+ * and similar. Emails end `.invalid`, a TLD reserved by RFC 2606 that can never
+ * resolve. Photographs are flat-colour PNG tiles with no face in them. If any
+ * of this ever reached a public page by accident it would be obvious at a
+ * glance rather than believable, which is the entire point.
+ *
+ * =============================================================================
+ * IT GOES THROUGH THE REAL RULES
+ * =============================================================================
+ * Prisma only, no raw SQL. Every row therefore meets the 21 CHECK constraints,
+ * the consent model and the publication rules exactly as the application does.
+ * Where a row is published it holds a consent reference and the permission for
+ * its kind of content, because the database refuses anything else - and that
+ * refusal is a feature this dataset is meant to demonstrate, not route around.
+ */
+
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../src/generated/prisma/client.ts';
+import { env, argv, exit } from 'node:process';
+import { createHash } from 'node:crypto';
+import { readFileSync, existsSync } from 'node:fs';
+
+const P = 'ZZSHOW';
+
+/* ========================================================== safety ======== */
+
+/**
+ * Fail closed. This writes a few hundred rows and deletes by prefix; neither
+ * belongs anywhere near production, and "I thought DATABASE_URL pointed at my
+ * laptop" is exactly how that goes wrong.
+ */
+function refuse(reason) {
+  console.error('\nDEMO SEED REFUSED');
+  console.error('='.repeat(60));
+  console.error(reason);
+  console.error('\nThis command is for a local development database only.');
+  exit(1);
+}
+
+function assertSafeEnvironment() {
+  if (env.NODE_ENV === 'production') {
+    refuse('NODE_ENV is "production".');
+  }
+
+  const url = env.DATABASE_URL;
+  if (!url) refuse('DATABASE_URL is not set.');
+
+  let host;
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    refuse('DATABASE_URL is not a valid URL.');
+  }
+  const local = ['localhost', '127.0.0.1', '0.0.0.0', '::1'];
+  if (!local.includes(host)) {
+    refuse(
+      `DATABASE_URL points at "${host}", which is not a local address.\n` +
+        'Refusing rather than guessing whether it is safe to write to.',
+    );
+  }
+
+  // The launch switch is the project's own signal that a deployment is real.
+  const launch = existsSync('src/config/launch.ts')
+    ? readFileSync('src/config/launch.ts', 'utf8')
+    : '';
+  if (/const\s+SITE_IS_LAUNCHED\s*=\s*true/.test(launch)) {
+    refuse('The launch switch is ON (src/config/launch.ts).');
+  }
+
+  const site = env.NEXT_PUBLIC_SITE_URL ?? '';
+  if (site.startsWith('https://') && !local.some((l) => site.includes(l))) {
+    refuse(`NEXT_PUBLIC_SITE_URL is a live origin: ${site}`);
+  }
+}
+
+/* ========================================================== fixtures ====== */
+
+const PROGRAMMES = ['CLASS_12', 'CLASS_11', 'CA_FOUNDATION', 'CA_INTERMEDIATE', 'CMA'];
+const BOARDS = ['CBSE', 'RBSE', 'ICAI', 'OTHER', null];
+const YEARS = [2026, 2025, 2024];
+const PHOTO = (n) => `/zzshow-media/zzshow-student-photo-${String(n).padStart(2, '0')}.png`;
+
+const SUBJECTS = ['Accountancy', 'Business Studies', 'Economics', 'Mathematics', 'English'];
+
+/**
+ * The five consent scenarios, as the brief asks for them, expressed in the
+ * application's OWN fields. There is no parallel consent model here.
+ *
+ * `publishable` records what the database will actually accept: a published row
+ * needs a consent reference and result permission, a name beyond initials needs
+ * name permission, and a photograph needs photograph permission. Scenario E has
+ * no permissions, so it can only ever exist as a draft - which is itself worth
+ * seeing in the admin.
+ */
+const SCENARIOS = [
+  { key: 'A', label: 'result + name + photo', result: true, name: true, photo: true, mode: 'FULL', publish: true },
+  { key: 'B', label: 'result + name, NO photo', result: true, name: true, photo: false, mode: 'FULL', publish: true },
+  { key: 'C', label: 'result only, initials', result: true, name: false, photo: false, mode: 'INITIALS', publish: true },
+  { key: 'D', label: 'photo allowed, initials only', result: true, name: false, photo: true, mode: 'INITIALS', publish: true },
+  { key: 'E', label: 'no consent at all - draft', result: false, name: false, photo: false, mode: 'INITIALS', publish: false },
+];
+
+const HIGHLIGHTS = [
+  'ZZSHOW highlight - a short line shown beside the result.',
+  'ZZSHOW highlight used to check how a much longer sentence wraps inside the card on a narrow screen without pushing the score out of view.',
+  null,
+  'ZZSHOW highlight - top of the synthetic cohort.',
+  null,
+];
+
+/**
+ * 45 results: 5 programmes x 3 years x 3, cycling the consent scenarios.
+ *
+ * The count is chosen so the PUBLISHED subset lands above RESULTS_PAGE_SIZE
+ * (24). Thirty was not enough - it produced exactly 24 published rows, one full
+ * page, and no pagination control to look at.
+ */
+function results() {
+  const rows = [];
+  let n = 0;
+  for (const year of YEARS) {
+    for (const programme of PROGRAMMES) {
+      for (let dup = 0; dup < 3; dup += 1) {
+        n += 1;
+        const s = SCENARIOS[(n - 1) % SCENARIOS.length];
+        const useMarks = n % 7 === 0;
+        rows.push({
+          importRef: `${P}-RESULT-${String(n).padStart(3, '0')}`,
+          studentName: `${P} Student ${String(n).padStart(3, '0')}`,
+          displayNameMode: s.mode,
+          photoUrl: s.photo ? PHOTO(((n - 1) % 8) + 1) : null,
+          score: useMarks ? 470 + (n % 25) : 78 + ((n * 3) % 22),
+          scoreUnit: useMarks ? 'marks' : 'percent',
+          programme,
+          board: BOARDS[n % BOARDS.length],
+          year,
+          highlight: HIGHLIGHTS[n % HIGHLIGHTS.length],
+          consentRef: s.result ? `${P}-CONSENT-${String(n).padStart(3, '0')}` : null,
+          consentResult: s.result,
+          consentName: s.name,
+          consentPhoto: s.photo,
+          published: s.publish,
+          sortOrder: n % 5,
+          scenario: s.key,
+          subjects: n % 3 === 0 ? [] : SUBJECTS.slice(0, 3 + (n % 3)).map((subject, i) => ({
+            subject: `${P} ${subject}`,
+            score: 72 + ((n + i * 5) % 27),
+          })),
+        });
+      }
+    }
+  }
+  return rows;
+}
+
+const STORY_BODY = {
+  short: {
+    challenge: 'ZZSHOW challenge text, deliberately short, to check how a compact story card sits next to a long one.',
+    journey: 'ZZSHOW journey text for local interface testing.',
+    outcome: 'ZZSHOW outcome text for local interface testing.',
+    quote: 'ZZSHOW short quote.',
+  },
+  long: {
+    challenge:
+      'ZZSHOW challenge text used to exercise long-form wrapping. This paragraph is intentionally several sentences long so that the story card, the story page and the mobile layout can all be judged with realistic body copy rather than a single line. It says nothing about any real student, because no real student is described anywhere in this dataset.',
+    journey:
+      'ZZSHOW journey text, also intentionally long. It exists to check line height, measure width and the spacing between paragraphs at every breakpoint. Reading it should be dull; looking at it should be informative.',
+    outcome:
+      'ZZSHOW outcome text describing a synthetic result, written at length so the closing block of the story is not visually lighter than the two above it.',
+    quote:
+      'ZZSHOW quote used to check how a longer pull quote behaves when it runs past a single line on a narrow screen.',
+  },
+};
+
+/** 15 stories: 13 published (two pages at 12 per page) plus 2 drafts. */
+function stories() {
+  const rows = [];
+  for (let n = 1; n <= 15; n += 1) {
+    const draft = n > 13;
+    const withPhoto = !draft && n % 3 === 0;
+    const withName = !draft && n % 2 === 1;
+    const body = n % 2 === 0 ? STORY_BODY.long : STORY_BODY.short;
+    rows.push({
+      slug: `zzshow-story-${String(n).padStart(2, '0')}`,
+      studentName: `${P} Story Student ${String(n).padStart(2, '0')}`,
+      displayNameMode: withName ? 'FULL' : 'INITIALS',
+      photoUrl: withPhoto ? PHOTO(((n - 1) % 8) + 1) : null,
+      programme: PROGRAMMES[n % PROGRAMMES.length],
+      year: YEARS[n % YEARS.length],
+      ...body,
+      consentRef: draft ? null : `${P}-STORY-CONSENT-${String(n).padStart(2, '0')}`,
+      consentStory: !draft,
+      consentName: withName,
+      consentPhoto: withPhoto,
+      published: !draft,
+    });
+  }
+  return rows;
+}
+
+const day = (n) => new Date(Date.now() + n * 86_400_000);
+
+/** 6 batches: upcoming across courses, one already started, one draft. */
+function batches() {
+  return [
+    { courseSlug: 'class-12-commerce', startsAt: day(21), mode: 'Offline - morning', seatsNote: `${P} Batch 2026-A - a few seats left`, published: true },
+    { courseSlug: 'class-11-commerce', startsAt: day(35), mode: 'Offline - evening', seatsNote: `${P} Batch 2026-B`, published: true },
+    { courseSlug: 'ca-foundation', startsAt: day(48), mode: 'Hybrid', seatsNote: `${P} Batch 2026-C - long seats note used to check how this line wraps inside a narrow batch card`, published: true },
+    { courseSlug: 'ca-intermediate', startsAt: day(62), mode: 'Online', seatsNote: `${P} Batch 2026-D`, published: true },
+    { courseSlug: 'cma', startsAt: day(90), mode: 'Offline - weekend', seatsNote: `${P} Batch 2026-E`, published: true },
+    { courseSlug: 'class-12-commerce', startsAt: day(-30), mode: 'Offline - morning', seatsNote: `${P} Batch 2025-Z - already started, must NOT show as upcoming`, published: true },
+    { courseSlug: 'cma', startsAt: day(75), mode: 'Online', seatsNote: `${P} Batch 2026-F - unpublished draft`, published: false },
+  ];
+}
+
+/** 7 announcements: active, future, expired, draft, long, short, prioritised. */
+function announcements() {
+  return [
+    { message: `${P} Announcement 01 - admissions for the 2026 session are open. This is synthetic demonstration content.`, href: '/admissions', startsAt: day(-2), endsAt: day(30), priority: 10, published: true },
+    { message: `${P} Announcement 02 - short notice.`, href: null, startsAt: day(-5), endsAt: day(20), priority: 5, published: true },
+    { message: `${P} Announcement 03 - a deliberately long announcement used to check how the banner and the updates list handle a message that runs well past a single line on a narrow screen, without clipping or overlapping the control beside it.`, href: '/courses', startsAt: day(-1), endsAt: day(45), priority: 3, published: true },
+    { message: `${P} Announcement 04 - CA Foundation batch briefing.`, href: null, startsAt: day(-10), endsAt: day(60), priority: 1, published: true },
+    { message: `${P} Announcement 05 - synthetic notice with no link.`, href: null, startsAt: day(-3), endsAt: day(14), priority: 0, published: true },
+    { message: `${P} Announcement 06 - FUTURE, must not appear yet.`, href: null, startsAt: day(20), endsAt: day(50), priority: 9, published: true },
+    { message: `${P} Announcement 07 - EXPIRED, must not appear any more.`, href: null, startsAt: day(-60), endsAt: day(-30), priority: 9, published: true },
+    { message: `${P} Announcement 08 - unpublished draft.`, href: null, startsAt: day(-1), endsAt: day(40), priority: 0, published: false },
+  ];
+}
+
+const CLASS_LEVELS = ['CLASS_11', 'CLASS_12', 'CA_FOUNDATION', 'CA_INTERMEDIATE', 'CMA', 'OTHER'];
+const STATUSES = ['NEW', 'NEW', 'CONTACTED', 'CONTACTED', 'ENROLLED', 'CLOSED', 'SPAM', 'NEW'];
+
+/**
+ * 8 enquiries across every status.
+ *
+ * Phones are digits only: `enquiries_phone_digits` is `^[0-9]{10,15}$`, so a
+ * formatted number like "+91 00000 00000" is refused by the database. The
+ * ipHash must be 64 hex characters, so it is a real SHA-256 of a synthetic
+ * string rather than a made-up literal.
+ */
+function enquiries() {
+  const messages = [
+    `${P} enquiry message 01 - short.`,
+    `${P} enquiry message 02 - a longer synthetic enquiry used to check how the admin list truncates a message and how the detail page renders the full text. It contains nothing real and refers to nobody.`,
+    null,
+    `${P} enquiry message 03 - asking about batch timings.`,
+    `${P} enquiry message 04.`,
+    null,
+    `${P} enquiry message 05 - synthetic spam-looking content for the SPAM status.`,
+    `${P} enquiry message 06 - asking whether the CMA batch is running.`,
+  ];
+  return messages.map((message, i) => {
+    const n = i + 1;
+    return {
+      name: `${P} Enquiry ${String(n).padStart(2, '0')}`,
+      phone: `91000000${String(n).padStart(4, '0')}`,
+      email: n % 3 === 0 ? null : `zzshow-enquiry-${n}@example.invalid`,
+      classLevel: CLASS_LEVELS[i % CLASS_LEVELS.length],
+      courseSlug: n % 4 === 0 ? null : ['class-12-commerce', 'ca-foundation', 'cma'][i % 3],
+      message,
+      sourcePage: n % 2 === 0 ? '/admissions' : '/contact',
+      status: STATUSES[i],
+      notes: n % 5 === 0 ? `${P} internal note - synthetic.` : null,
+      consentAt: day(-n),
+      ipHash: createHash('sha256').update(`${P}-synthetic-ip-${n}`).digest('hex'),
+      createdAt: day(-n),
+    };
+  });
+}
+
+/* ============================================================ actions ===== */
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
+});
+
+/**
+ * Remove only what this script creates.
+ *
+ * Every filter is anchored on the ZZSHOW prefix or a zzshow slug. There is no
+ * unqualified deleteMany anywhere in this file, and there must never be one:
+ * the command has to be safe to run against a database that also holds work
+ * somebody cares about.
+ */
+async function clean({ quiet = false } = {}) {
+  const removed = {
+    subjectScores: (
+      await prisma.subjectScore.deleteMany({
+        where: { topper: { studentName: { startsWith: P } } },
+      })
+    ).count,
+    results: (await prisma.topper.deleteMany({ where: { studentName: { startsWith: P } } })).count,
+    stories: (
+      await prisma.studentStory.deleteMany({ where: { studentName: { startsWith: P } } })
+    ).count,
+    batches: (await prisma.batch.deleteMany({ where: { seatsNote: { startsWith: P } } })).count,
+    announcements: (
+      await prisma.announcement.deleteMany({ where: { message: { startsWith: P } } })
+    ).count,
+    enquiries: (await prisma.enquiry.deleteMany({ where: { name: { startsWith: P } } })).count,
+  };
+  if (!quiet) {
+    console.log('\nRemoved ZZSHOW demo rows:');
+    for (const [k, v] of Object.entries(removed)) console.log(`  ${k.padEnd(16)} ${v}`);
+  }
+  return removed;
+}
+
+async function seed() {
+  // Reconcile rather than accumulate. Running twice must leave the same rows,
+  // not twice as many - so the previous dataset goes first, scoped to ZZSHOW.
+  await clean({ quiet: true });
+
+  const now = new Date();
+  const resultRows = results();
+  for (const row of resultRows) {
+    const { subjects, scenario, ...data } = row;
+    void scenario;
+    await prisma.topper.create({
+      data: {
+        ...data,
+        publishedAt: data.published ? now : null,
+        ...(subjects.length > 0 ? { subjectScores: { create: subjects } } : {}),
+      },
+    });
+  }
+
+  for (const row of stories()) {
+    await prisma.studentStory.create({
+      data: { ...row, publishedAt: row.published ? now : null },
+    });
+  }
+
+  for (const row of batches()) await prisma.batch.create({ data: row });
+  for (const row of announcements()) await prisma.announcement.create({ data: row });
+  for (const row of enquiries()) await prisma.enquiry.create({ data: row });
+
+  return resultRows;
+}
+
+async function count() {
+  const [results_, subjects, stories_, batches_, announcements_, enquiries_] = await Promise.all([
+    prisma.topper.count({ where: { studentName: { startsWith: P } } }),
+    prisma.subjectScore.count({ where: { topper: { studentName: { startsWith: P } } } }),
+    prisma.studentStory.count({ where: { studentName: { startsWith: P } } }),
+    prisma.batch.count({ where: { seatsNote: { startsWith: P } } }),
+    prisma.announcement.count({ where: { message: { startsWith: P } } }),
+    prisma.enquiry.count({ where: { name: { startsWith: P } } }),
+  ]);
+
+  const publishedResults = await prisma.topper.count({
+    where: { studentName: { startsWith: P }, published: true },
+  });
+  const publishedStories = await prisma.studentStory.count({
+    where: { studentName: { startsWith: P }, published: true },
+  });
+  const withPhoto = await prisma.topper.count({
+    where: { studentName: { startsWith: P }, photoUrl: { not: null } },
+  });
+
+  console.log('\nZZSHOW DEMO DATA');
+  console.log('='.repeat(40));
+  console.log(`  Results (toppers)   ${String(results_).padStart(4)}   (${publishedResults} published)`);
+  console.log(`  Subject marks       ${String(subjects).padStart(4)}`);
+  console.log(`  Student stories     ${String(stories_).padStart(4)}   (${publishedStories} published)`);
+  console.log(`  Batches             ${String(batches_).padStart(4)}`);
+  console.log(`  Announcements       ${String(announcements_).padStart(4)}`);
+  console.log(`  Enquiries           ${String(enquiries_).padStart(4)}`);
+  console.log(`  Results with a photo${String(withPhoto).padStart(4)}`);
+
+  // Anything NOT ours, so the operator can see this touched nothing else.
+  const foreign = {
+    results: (await prisma.topper.count()) - results_,
+    stories: (await prisma.studentStory.count()) - stories_,
+    batches: (await prisma.batch.count()) - batches_,
+    announcements: (await prisma.announcement.count()) - announcements_,
+    enquiries: (await prisma.enquiry.count()) - enquiries_,
+  };
+  const foreignTotal = Object.values(foreign).reduce((a, b) => a + b, 0);
+  console.log(`\n  Non-ZZSHOW content rows: ${foreignTotal}` + (foreignTotal ? `  ${JSON.stringify(foreign)}` : ' (nothing else in the database)'));
+  return { results: results_, foreignTotal };
+}
+
+/* =============================================================== main ===== */
+
+const command = argv[2] ?? 'seed';
+
+try {
+  if (command === 'seed') {
+    assertSafeEnvironment();
+    const rows = await seed();
+
+    const byScenario = {};
+    for (const r of rows) byScenario[r.scenario] = (byScenario[r.scenario] ?? 0) + 1;
+
+    await count();
+    console.log('\n  Consent scenarios represented:');
+    for (const s of SCENARIOS) {
+      console.log(`    ${s.key}  ${String(byScenario[s.key] ?? 0).padStart(2)} records  -  ${s.label}`);
+    }
+    console.log('\n  Run `npm run seed:demo:clean` to remove all of it.');
+    console.log('\n  NOTE: clean this dataset before running `npm run verify:integration`.');
+    console.log('        Three of its assertions need an empty content database - two');
+    console.log('        check that /results and /stories render their EMPTY state, which');
+    console.log('        cannot be true while demo content exists. That is those');
+    console.log('        assertions being right, not a conflict to work around.');
+  } else if (command === 'clean') {
+    assertSafeEnvironment();
+    await clean();
+    await count();
+  } else if (command === 'count') {
+    await count();
+  } else {
+    console.error('Usage: node scripts/seed-demo.mjs seed|clean|count');
+    exit(1);
+  }
+} finally {
+  await prisma.$disconnect();
+}

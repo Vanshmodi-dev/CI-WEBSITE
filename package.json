@@ -40,6 +40,10 @@
     "retention:dry": "node scripts/retention.mjs --dry-run",
     "verify:ux": "node scripts/verify-ux.mjs",
     "verify:teacher": "node scripts/verify-teacher.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs seed",
+    "seed:demo:clean": "node scripts/seed-demo.mjs clean",
+    "seed:demo:count": "node scripts/seed-demo.mjs count",
+    "make:demo-media": "node scripts/make-demo-media.mjs",
     "verify:import": "node scripts/verify-import.mjs",
     "verify:preflight": "node scripts/verify-preflight.mjs",
     "verify:production": "node scripts/verify-production.mjs"

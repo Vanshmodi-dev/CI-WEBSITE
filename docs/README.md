@@ -33,6 +33,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-12-REPORT.md`](PHASE-12-REPORT.md) | Spreadsheet import and export — why an import can never publish a record, and the migration that silently dropped every CHECK constraint. | **Yes** |
 | [`PHASE-13-REPORT.md`](PHASE-13-REPORT.md) | Deployment preparation — the executable pre-flight, and the build-time variable that would have told Google the site lives on localhost. | **Yes** |
 | [`PHASE-14-FINAL-AUDIT.md`](PHASE-14-FINAL-AUDIT.md) | **The final audit.** Six defects, one of them a stale tab that could restore a withdrawn photograph. Read this before deploying. | **Yes** |
+| [`DEMO-DATA-REPORT.md`](DEMO-DATA-REPORT.md) | The local demo dataset - and the finding that the app has five content models where seventeen sections were expected. | **Yes** |
 
 > **File paths in reports from Phase 3-13 predate one move.** Phase 14 put the
 > public routes inside a `(site)` route group so the public header and footer
