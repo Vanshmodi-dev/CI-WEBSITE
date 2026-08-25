@@ -575,8 +575,19 @@ export const SECRET_SCAN_SKIP: readonly RegExp[] = [
   /^src\/generated\//,
   /^public\/fonts\//,
   /\.(png|jpe?g|webp|avif|ico|woff2?|ttf|otf|pdf|zip)$/i,
-  // This file lists the patterns; it necessarily contains examples of them.
+  /**
+   * The two files that DEFINE and TEST these patterns necessarily contain
+   * examples of them: an AWS key id, a GitHub token shape, a `-----BEGIN
+   * PRIVATE KEY-----` header. Scanning them reports the samples as leaks.
+   *
+   * This is a narrow, named exclusion rather than a blanket rule, and the
+   * samples are deliberately synthetic - AWS's own documentation placeholder,
+   * and repeated-letter tokens that no issuer would mint. The patterns
+   * themselves are proved to work by the tests inside the second file, so
+   * excluding it costs no coverage.
+   */
   /^src\/lib\/deployment-contract\.ts$/,
+  /^tests\/deployment\.test\.ts$/,
 ] as const;
 
 /* ==================================================== client bundle ======= */

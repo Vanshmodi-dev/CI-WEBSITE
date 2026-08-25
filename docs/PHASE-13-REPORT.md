@@ -122,6 +122,7 @@ the username or password.
 | Run | Required | PASS | FAIL | BLOCKED | WARN | N/A | Exit |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | Local, **no database** | 50 | 43 | 0 | **1** | 6 | 17 | **1** |
+| Local, no database, `--deep` | 51 | 44 | 0 | **1** | 6 | 16 | **1** |
 | Local, database up | 62 | 58 | 0 | 0 | 4 | 4 | 0 |
 | Local, database up, `--deep` | 64 | 59 | 0 | 0 | 5 | 3 | 0 |
 
@@ -330,7 +331,16 @@ Recorded because they are the same class of bug the phase exists to prevent.
 6. **Two literal ESC bytes** landed in the new script — the same invisible-byte
    problem Phase 12 fixed. Caught immediately by scanning for control bytes
    before committing; replaced with `\u001B` escapes.
-7. **The admin CSP smoke checks measured a redirect.** `/admin` answers 307 to a
+7. **The scanner flagged its own test file.** `tests/deployment.test.ts` exists
+   to prove the credential patterns work, so it necessarily contains an AWS key
+   id, a GitHub token shape and a `-----BEGIN PRIVATE KEY-----` header. The
+   moment it was committed, both the working-tree scan and the history scan
+   reported seven leaks in it. Caught by running the preflight against the
+   committed tree rather than assuming the pre-commit run still applied. Fixed
+   with a narrow named exclusion for the two files that define and test the
+   patterns - and the history scan, which had never honoured the skip list at
+   all, now does.
+8. **The admin CSP smoke checks measured a redirect.** `/admin` answers 307 to a
    signed-out client and a bodyless redirect carries only the baseline headers,
    so the check reported a CSP failure against an admin panel whose CSP was
    correct. Fixed to probe `/admin/login`, and a new `S-HDR-10` now asserts the

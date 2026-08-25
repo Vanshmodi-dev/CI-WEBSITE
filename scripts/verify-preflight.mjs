@@ -641,6 +641,15 @@ function checkSecrets() {
       const lines = out
         .split('\n')
         .filter(Boolean)
+        // SECRET_SCAN_SKIP applies here too. The working-tree scan honoured it
+        // and this one did not, so the moment the pattern-testing file was
+        // committed the history scan reported every one of its synthetic
+        // samples as a leak. Each git grep line reads "<rev>:<path>:<n>:<text>",
+        // so the path is the second field.
+        .filter((line) => {
+          const file = line.split(':')[1] ?? '';
+          return !SECRET_SCAN_SKIP.some((skip) => skip.test(file));
+        })
         .filter((line) => {
           if (!p.localhostExempt) return true;
           const match = p.pattern.exec(line);
