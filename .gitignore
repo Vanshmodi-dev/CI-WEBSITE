@@ -63,3 +63,9 @@ venv/
 
 # local verification database (scripts/test-db.mjs) - never production data
 .tmp-pgdata/
+
+# preflight scorecard output (scripts/verify-preflight.mjs --json=...). It is a
+# snapshot of one environment at one moment, so committing it would put a stale
+# verdict in the repository next to the tool that produces a live one.
+preflight.json
+preflight-*.json

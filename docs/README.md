@@ -20,7 +20,9 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-7-REPORT.md`](PHASE-7-REPORT.md) | Admin completion, launch readiness, 229 automated checks. | **Yes** |
 | [`PHASE-7-CONTENT-MANAGEMENT-MATRIX.md`](PHASE-7-CONTENT-MANAGEMENT-MATRIX.md) | Who edits what, and why some things stay in code. | **Yes** |
 | [`PHASE-7-CONTENT-COLLECTION-CHECKLIST.md`](PHASE-7-CONTENT-COLLECTION-CHECKLIST.md) | **For the institute** — everything we still need from them. | **Yes** |
-| [`PRODUCTION-SETUP.md`](PRODUCTION-SETUP.md) | The exact manual launch steps, in order. | **Yes** |
+| [`DEPLOYMENT-RUNBOOK.md`](DEPLOYMENT-RUNBOOK.md) | **The deployment sequence, with a verification gate after every step.** The deployment contract, rollback, failure modes, and what to monitor. | **Yes** |
+| [`DEPLOYMENT-HUMAN-CHECKLIST.md`](DEPLOYMENT-HUMAN-CHECKLIST.md) | **For the institute** - the 54 things no engineer can supply, and the nine that are their decision to make. | **Yes** |
+| [`PRODUCTION-SETUP.md`](PRODUCTION-SETUP.md) | Provider-specific account creation, referenced by the runbook. | **Yes** |
 | [`COST-AND-INFRASTRUCTURE.md`](COST-AND-INFRASTRUCTURE.md) | What it costs to run, and what we deliberately did not buy. | **Yes** |
 | [`PHASE-6-REPORT.md`](PHASE-6-REPORT.md) | The public website — every page, the consent isolation rules, and 214 automated checks. | **Yes** |
 | [`PHASE-5.5-DATABASE-VERIFICATION.md`](PHASE-5.5-DATABASE-VERIFICATION.md) | **The migration actually ran.** 28 CHECK constraints exercised, 164 automated checks against real PostgreSQL, scale verified at ~1,000 students. | **Yes** |
@@ -29,6 +31,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-10-SECURITY-HARDENING.md`](PHASE-10-SECURITY-HARDENING.md) | Threat model, the CSP decision, and three real vulnerabilities found by attacking a production build. | **Yes** |
 | [`PHASE-11-REPORT.md`](PHASE-11-REPORT.md) | Full QA in real browsers — the mobile menu was 64px tall, and three other defects nobody had looked for. | **Yes** |
 | [`PHASE-12-REPORT.md`](PHASE-12-REPORT.md) | Spreadsheet import and export — why an import can never publish a record, and the migration that silently dropped every CHECK constraint. | **Yes** |
+| [`PHASE-13-REPORT.md`](PHASE-13-REPORT.md) | Deployment preparation — the executable pre-flight, and the build-time variable that would have told Google the site lives on localhost. | **Yes** |
 
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to

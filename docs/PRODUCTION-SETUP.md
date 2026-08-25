@@ -1,7 +1,14 @@
 # Production setup
 
-**The exact manual steps, in order.** Everything that could be automated has
+**Provider-specific account creation.** Everything that could be automated has
 been; what remains needs accounts and credentials only you can create.
+
+> **The ordered deployment sequence, with a verification gate after every step,
+> is [`DEPLOYMENT-RUNBOOK.md`](DEPLOYMENT-RUNBOOK.md).** That is the
+> authoritative procedure. This file covers the provider specifics it refers
+> to - which accounts to create, and where the values come from. The list of
+> things only a person can supply is
+> [`DEPLOYMENT-HUMAN-CHECKLIST.md`](DEPLOYMENT-HUMAN-CHECKLIST.md).
 
 > **Never paste a credential into a chat, an issue, or a commit.** Every secret
 > below goes into `.env.local` locally, or the hosting provider's environment
@@ -72,10 +79,19 @@ Expect: *"All migrations have been successfully applied."*
 Then confirm the schema landed:
 
 ```bash
-npm run db:inspect
+npm run verify:preflight -- --target=production
 ```
 
-Expect **10 tables, 5 enums, 2 foreign keys, 28 CHECK constraints**.
+`P-DB-04` must read **8/8 present** - those are the constraints that stop a
+student record being published without the consent that justifies it.
+
+> This used to say "expect 28 CHECK constraints". Phase 12 removed a dead table
+> and its seven constraints, and the real number became 21 - but this sentence
+> went on saying 28 for two phases, because prose cannot notice that the thing
+> it describes has changed. The numbers now live in
+> `src/lib/deployment-contract.ts`, a test fails when they drift, and the
+> preflight checks them **by name** against the live database rather than
+> counting them.
 
 The migration is deterministic and contains **no destructive statements** — no
 `DROP`, no `TRUNCATE`, no `DELETE`. Re-running it on an already-migrated
@@ -156,6 +172,11 @@ Google's index under the institute's name takes weeks to undo.
 
 ## Pre-launch checklist
 
+> The full list, with evidence columns and the items that are the institute's
+> decision rather than a task, is
+> [`DEPLOYMENT-HUMAN-CHECKLIST.md`](DEPLOYMENT-HUMAN-CHECKLIST.md). This is the
+> short technical version.
+
 Content:
 
 - [ ] Address, phones and hours confirmed **in writing** and matching the Google Business Profile
@@ -167,7 +188,7 @@ Content:
 
 Technical:
 
-- [ ] Migration applied; `npm run db:inspect` shows 28 CHECK constraints
+- [ ] Migration applied; `npm run verify:preflight -- --target=production` passes
 - [ ] Admin account created and sign-in tested on production
 - [ ] All three secrets set, none committed
 - [ ] `npm run verify` passes

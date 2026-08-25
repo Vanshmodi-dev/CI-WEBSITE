@@ -3,9 +3,11 @@
 The digital platform for **Commerce Insight**, an exclusive institute for commerce
 education in Pratap Nagar, Jaipur. Built by [TradyPerch](https://github.com/Vanshmodi-dev).
 
-> **Status: built, not launched.** Phases 0-12 are done: the public site, the
-> admin panel, SEO, security hardening, full QA and the import tooling. What
-> remains is institute content and the manual production setup.
+> **Status: built and deployment-ready, not launched.** Phases 0-13 are done:
+> the public site, the admin panel, SEO, security hardening, full QA, the import
+> tooling and the deployment pre-flight. What remains is institute content and
+> the accounts only the owner can create - see
+> [docs/DEPLOYMENT-HUMAN-CHECKLIST.md](docs/DEPLOYMENT-HUMAN-CHECKLIST.md).
 > Start at [`docs/README.md`](docs/README.md).
 
 ---
@@ -114,6 +116,7 @@ npm run dev
 | 10 | Security hardening | ● done — see [docs/PHASE-10-SECURITY-HARDENING.md](docs/PHASE-10-SECURITY-HARDENING.md) |
 | 11 | Full QA | ● done — see [docs/PHASE-11-REPORT.md](docs/PHASE-11-REPORT.md) |
 | 12 | Import / data tooling | ● done — see [docs/PHASE-12-REPORT.md](docs/PHASE-12-REPORT.md) |
+| 13 | Deployment preparation | ● done — see [docs/PHASE-13-REPORT.md](docs/PHASE-13-REPORT.md) |
 | — | **Launch** | ○ blocked on institute content + manual setup — see [PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md) |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |
