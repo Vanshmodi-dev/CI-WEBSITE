@@ -1036,7 +1036,131 @@ try {
   }
 
   /* ================================================== 19. HTTP METHODS === */
-  section('19. HTTP METHODS');
+  /* ============================= 19. SESSION LIFECYCLE ACROSS DEVICES == */
+  /**
+   * Phase 10 CLAIMED that signing out revokes every session for the account,
+   * and Phase 12 found that the audit entry for it had been silently discarded
+   * for two phases. Phase 14 discovered the behaviour ITSELF had never been
+   * tested either - so the claim rested on nothing but the code reading as if
+   * it were true.
+   *
+   * It is true. These checks are what will notice if that stops being true.
+   */
+  section('19. SESSION LIFECYCLE ACROSS DEVICES');
+
+  /**
+   * Explicit setup, not a weakening. Sections 1, 2 and 16 deliberately burn
+   * this account's failure budget and the per-instance ceiling proving the
+   * throttles work. By the time this section runs, signing in is refused - so
+   * without clearing the counters these checks would measure the throttle
+   * again instead of the session lifecycle, and report failures against code
+   * that is fine. The throttles keep their own sections.
+   */
+  await prisma.adminUser.update({
+    where: { email: EMAIL },
+    data: { failedLoginCount: 0, firstFailedLoginAt: null },
+  });
+  // The per-process ceiling is 60 attempts a minute and the sections above use
+  // most of it. Wait it out rather than measure it here.
+  await new Promise((r) => setTimeout(r, 61_000));
+
+  const deviceA = await signInForSetup();
+  const deviceB = await signInForSetup();
+  check(Boolean(deviceA.cookie) && Boolean(deviceB.cookie), 'two devices can hold sessions at once');
+  check(deviceA.cookie !== deviceB.cookie, 'each sign-in issues a distinct token');
+
+  const reach = async (jar) =>
+    (await fetch(`${BASE}/admin`, { redirect: 'manual', headers: { Cookie: jar } })).status;
+
+  check((await reach(deviceA.cookie)) === 200, 'device A reaches the admin');
+  check((await reach(deviceB.cookie)) === 200, 'device B reaches the admin');
+
+  const signOut = await fetch(`${BASE}/admin/logout`, {
+    method: 'POST', redirect: 'manual',
+    headers: { Cookie: deviceB.cookie, Origin: BASE },
+  });
+  check(signOut.status >= 300 && signOut.status < 400, 'signing out redirects', `status ${signOut.status}`);
+  check((await reach(deviceB.cookie)) !== 200, 'the device that signed out is dead');
+  check(
+    (await reach(deviceA.cookie)) !== 200,
+    'THE OTHER DEVICE IS DEAD TOO - signing out revokes every session',
+  );
+
+  // Replaying the sign-out must be harmless, not an error and not a resurrection.
+  const signOutReplay = await fetch(`${BASE}/admin/logout`, {
+    method: 'POST', redirect: 'manual',
+    headers: { Cookie: deviceB.cookie, Origin: BASE },
+  });
+  check(signOutReplay.status < 500, 'replaying sign-out does not error', `status ${signOutReplay.status}`);
+  check((await reach(deviceB.cookie)) !== 200, 'replaying sign-out does not resurrect the session');
+
+  // A session issued BEFORE the cutoff stays dead; a new one works.
+  const afterCutoff = await signInForSetup();
+  check(Boolean(afterCutoff.cookie) && (await reach(afterCutoff.cookie)) === 200,
+        'a session issued after the cutoff works');
+  check((await reach(deviceA.cookie)) !== 200, 'the pre-cutoff session is still refused');
+  cookie = afterCutoff.cookie;
+
+  /* ====================== 20. CSRF ON THE SIGN-OUT HANDLER, ODD ORIGINS == */
+  /**
+   * `null`, a malformed value and a lookalike host are the Origin shapes a
+   * naive `startsWith`/`includes` comparison lets through. Phase 10 fixed the
+   * plain cross-origin case; these are the neighbours of it.
+   */
+  section('20. SIGN-OUT ORIGIN EDGE CASES');
+
+  for (const [label, origin] of [
+    ['cross-site', 'https://evil.example'],
+    ['lookalike host', 'http://evil-localhost:3190'],
+    ['literal null', 'null'],
+    ['malformed', 'not-a-url'],
+  ]) {
+    const attempt = await fetch(`${BASE}/admin/logout`, {
+      method: 'POST', redirect: 'manual', headers: { Cookie: cookie, Origin: origin },
+    });
+    const alive = (await reach(cookie)) === 200;
+    check(attempt.status === 403 && alive,
+          `sign-out refused and session intact: ${label}`,
+          `status ${attempt.status}, alive ${alive}`);
+  }
+
+  const headerless = await fetch(`${BASE}/admin/logout`, {
+    method: 'POST', redirect: 'manual', headers: { Cookie: cookie },
+  });
+  check(headerless.status === 403 && (await reach(cookie)) === 200,
+        'sign-out with NO Origin or Referer fails closed',
+        `status ${headerless.status}`);
+
+  /* ================= 21. UNKNOWN ACCOUNTS CANNOT BUY UNLIMITED SCRYPT == */
+  /**
+   * The per-account throttle cannot see an address that has no account, and
+   * those attempts still reach the timing-equalisation hash - an N=2^17,
+   * ~128 MB operation. Without a ceiling, anyone who can set a header turns
+   * the sign-in form into a memory-exhaustion amplifier.
+   *
+   * Deliberately the LAST section: it exhausts a per-process budget that takes
+   * a minute to refill, and anything after it would be measuring the ceiling
+   * rather than itself.
+   */
+  section('21. GLOBAL SIGN-IN CEILING');
+
+  let processed = 0;
+  let refused = 0;
+  for (let i = 0; i < 70; i += 1) {
+    const page = await (await req('/admin/login', { noCookie: true })).text();
+    const attempt = await post('/admin/login', {
+      ...fieldsOf(page, 'password'),
+      email: `${PREFIX.toLowerCase()}-nobody-${i}@example.invalid`,
+      password: 'not-the-password-1',
+    }, { noCookie: true, headers: { 'x-forwarded-for': `198.51.100.${(i % 250) + 1}` } });
+    if (/too many|try again/i.test(await attempt.text())) refused += 1;
+    else processed += 1;
+  }
+  check(refused > 0,
+        'a per-instance ceiling bounds sign-in work for accounts that do not exist',
+        `${processed} processed, ${refused} refused across 70 rotated addresses`);
+
+  section('22. HTTP METHODS');
 
   // TRACE is omitted: undici refuses to send it, so it cannot be probed here.
   for (const method of ['PUT', 'DELETE', 'PATCH']) {
