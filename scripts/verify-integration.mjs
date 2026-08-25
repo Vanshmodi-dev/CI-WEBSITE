@@ -400,6 +400,65 @@ try {
   check(!updates.includes('ZZTEST future announcement'),
         'a published announcement before its start date does NOT appear');
 
+  // =================================== "TAKE MY CHILD'S PHOTOGRAPH DOWN" ==
+  /**
+   * The request the institute will actually receive, walked end to end.
+   *
+   * Note what is DIFFERENT from unpublishing: the record stays on the website.
+   * A parent usually wants the photograph gone, not their child's result
+   * erased, and that is a separate path through the code - one that no suite
+   * covered before Phase 14. verify-teacher.mjs tested unpublishing; nothing
+   * tested withdrawing photo consent alone.
+   */
+  section('WITHDRAWING PHOTOGRAPH CONSENT ALONE');
+
+  const PHOTO = '/zztest-child-photo.jpg';
+  const photoFresh = await html('/admin/students/new');
+  await post('/admin/students/new', {
+    ...fieldsOf(photoFresh, 'studentName'),
+    studentName: 'ZZTEST Photo Child', programme: 'CLASS_12', year: '2026',
+    score: '93', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
+    photoUrl: PHOTO, highlight: 'ZZTEST photo highlight', consentRef: REF,
+    consentResult: 'on', consentName: 'on', consentPhoto: 'on', published: 'on',
+  });
+  const photoRec = await prisma.topper.findFirst({ where: { studentName: 'ZZTEST Photo Child' } });
+  check(photoRec?.photoUrl === PHOTO, 'a photograph can be published with photo consent');
+  check((await publicHtml('/results')).includes(PHOTO), 'the photograph is visible publicly');
+
+  // The teacher unticks "Permission: Show Photograph" and clears the path.
+  const photoEdit = {
+    ...fieldsOf(await html(`/admin/students/${photoRec.id}`), 'studentName'),
+    programme: 'CLASS_12', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
+    photoUrl: '', consentResult: 'on', consentName: 'on', published: 'on',
+  };
+  // fieldsOf copies the TICKED box off the rendered form; deleting it is what
+  // unticking actually sends.
+  delete photoEdit.consentPhoto;
+  await post(`/admin/students/${photoRec.id}`, photoEdit);
+
+  const afterPhoto = await prisma.topper.findUnique({ where: { id: photoRec.id } });
+  check(afterPhoto?.consentPhoto === false, 'photo consent is withheld afterwards');
+  check(afterPhoto?.photoUrl === null, 'the photograph is removed from the record');
+  check(afterPhoto?.published === true, 'the record itself stays published - only the photo went');
+
+  const afterPhotoPublic = await publicHtml('/results');
+  check(!afterPhotoPublic.includes(PHOTO), 'the photograph is GONE from /results immediately');
+  check(afterPhotoPublic.includes('ZZTEST Photo Child'), 'the rest of the record is still shown');
+  check(!(await publicHtml('/')).includes(PHOTO), 'and gone from the homepage');
+
+  // Re-attaching it without permission must fail - the database constraint is
+  // the backstop, and the form should never get that far.
+  const reAttach = {
+    ...fieldsOf(await html(`/admin/students/${photoRec.id}`), 'studentName'),
+    programme: 'CLASS_12', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
+    photoUrl: PHOTO, consentResult: 'on', consentName: 'on', published: 'on',
+  };
+  delete reAttach.consentPhoto;
+  await post(`/admin/students/${photoRec.id}`, reAttach);
+  const afterReAttach = await prisma.topper.findUnique({ where: { id: photoRec.id } });
+  check(afterReAttach?.photoUrl === null,
+        'the photograph cannot be put back while photo consent is withheld');
+
   // ================================================ LOST-UPDATE GUARD ==
   /**
    * The scenario, end to end (Phase 14).

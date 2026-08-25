@@ -8,6 +8,8 @@ import {
   isPubliclyVisible,
   blockersForPublishing,
   type StudentRecord,
+  type DisplayNameModeValue,
+  type ContentKind,
 } from '../src/lib/student-display.ts';
 
 /**
@@ -223,5 +225,120 @@ describe('blockersForPublishing — what the admin shows the teacher', () => {
         );
       }
     }
+  });
+});
+
+/* ============================================================================
+ * THE WHOLE MATRIX, NOT A SAMPLE (Phase 14)
+ * ============================================================================
+ * Every test above picks a combination and asserts what it should do. That is
+ * how the interesting cases get named, and it is worth keeping - but it leaves
+ * the combinations nobody thought of unguarded.
+ *
+ * This enumerates all of them and asserts the INVARIANTS instead: whatever the
+ * inputs, a name may only appear with name permission, a photograph only with
+ * photograph permission, and neither may appear at all unless the record is
+ * published, has its paperwork reference, and holds the permission for this
+ * KIND of content.
+ *
+ * The database was verified the same way in Phase 14: 192 combinations of the
+ * fields the CHECK constraints mention, all agreeing with the constraint
+ * predicates. This is the application half of that.
+ */
+describe('the consent matrix, exhaustively', () => {
+  /** Read the permission that authorises this KIND of content. */
+  const grantFor = (record: StudentRecord, kind: ContentKind): boolean | undefined =>
+    kind === 'consentResult' ? record.consentResult : record.consentStory;
+
+  const MODES: DisplayNameModeValue[] = ['INITIALS', 'FIRST_NAME_ONLY', 'FULL'];
+  const KINDS: ContentKind[] = ['consentResult', 'consentStory'];
+  const bools = [true, false];
+
+  function everyCombination(
+    visit: (record: StudentRecord, kind: ContentKind, label: string) => void,
+  ) {
+    for (const published of bools)
+      for (const hasRef of bools)
+        for (const consentResult of bools)
+          for (const consentStory of bools)
+            for (const consentName of bools)
+              for (const consentPhoto of bools)
+                for (const hasPhoto of bools)
+                  for (const displayNameMode of MODES)
+                    for (const kind of KINDS) {
+                      const record: StudentRecord = {
+                        studentName: 'Sample Testcase',
+                        displayNameMode,
+                        photoUrl: hasPhoto ? '/sample.jpg' : null,
+                        consentRef: hasRef ? 'REF-1' : null,
+                        consentResult,
+                        consentStory,
+                        consentName,
+                        consentPhoto,
+                        published,
+                      };
+                      const label =
+                        `published=${published} ref=${hasRef} result=${consentResult} ` +
+                        `story=${consentStory} name=${consentName} photo=${consentPhoto} ` +
+                        `photoUrl=${hasPhoto} mode=${displayNameMode} kind=${kind}`;
+                      visit(record, kind, label);
+                    }
+  }
+
+  test('a photograph never appears without photograph permission', () => {
+    everyCombination((record, kind, label) => {
+      const view = present(record, kind);
+      if (view.photoUrl !== null) {
+        assert.equal(record.consentPhoto, true, `photo shown without permission: ${label}`);
+      }
+    });
+  });
+
+  test('a real name never appears without name permission', () => {
+    everyCombination((record, kind, label) => {
+      const view = present(record, kind);
+      // Initials are always safe; anything longer is a name.
+      if (view.name !== null && view.name !== view.monogram) {
+        assert.equal(record.consentName, true, `name shown without permission: ${label}`);
+      }
+    });
+  });
+
+  test('nothing at all appears unless published, referenced and permitted', () => {
+    everyCombination((record, kind, label) => {
+      const gated = !record.published || record.consentRef === null || record[kind] !== true;
+      if (gated) {
+        const view = present(record, kind);
+        assert.equal(view.name, null, `name leaked while gated: ${label}`);
+        assert.equal(view.photoUrl, null, `photo leaked while gated: ${label}`);
+      }
+    });
+  });
+
+  test('the two content kinds are independent in both directions', () => {
+    everyCombination((record, kind, label) => {
+      const view = present(record, kind);
+      if (view.name !== null || view.photoUrl !== null) {
+        // Whatever was shown, it was authorised by THIS kind, never the other.
+        assert.equal(grantFor(record, kind), true, `shown under the wrong kind: ${label}`);
+      }
+    });
+  });
+
+  test('the monogram is always safe and never reveals more than initials', () => {
+    everyCombination((record, kind, label) => {
+      const view = present(record, kind);
+      assert.ok(view.monogram.length <= 2, `monogram too long: ${label}`);
+      assert.ok(
+        !view.monogram.includes(' '),
+        `monogram contains a space, so it is more than initials: ${label}`,
+      );
+    });
+  });
+
+  test('present() never throws, for any combination', () => {
+    everyCombination((record, kind) => {
+      assert.doesNotThrow(() => present(record, kind));
+    });
   });
 });
