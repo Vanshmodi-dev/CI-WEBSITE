@@ -10,7 +10,7 @@ import { instituteFactsVerified, unverifiedFacts } from './institute.ts';
  * One place decides whether search engines may index this website. Nothing else
  * in the app makes that decision.
  *
- * ⚠ TWO conditions must BOTH be true before the site is indexable. That is
+ * ⚠ THREE conditions must ALL be true before the site is indexable. That is
  * deliberate. A single environment variable is far too easy to set by accident
  * — a copy-pasted deploy config, a shared .env, a teammate flipping something
  * to test — and the cost of getting it wrong is a half-finished site with
@@ -36,10 +36,16 @@ import { instituteFactsVerified, unverifiedFacts } from './institute.ts';
  * -----------------------------------------------------------------------------
  * When the institute has confirmed the content is real and correct:
  *
- *   1. Set SITE_IS_LAUNCHED = true here.
- *   2. Set NEXT_PUBLIC_SITE_URL to the live domain (https://…).
- *   3. Commit, deploy, then check https://<domain>/robots.txt shows `Allow: /`.
- *   4. Submit the sitemap in Google Search Console.
+ *   1. Confirm every institute fact IN WRITING with Commerce Insight, then set
+ *      each `status` to 'verified' in src/config/institute.ts. Do this FIRST:
+ *      skip it and the site deploys permanently noindex with no obvious cause.
+ *   2. Set SITE_IS_LAUNCHED = true here.
+ *   3. Set NEXT_PUBLIC_SITE_URL to the live domain (https://…).
+ *   4. Commit, deploy, then check https://<domain>/robots.txt shows `Allow: /`.
+ *   5. Submit the sitemap in Google Search Console.
+ *
+ * `npm run verify:preflight` reports all three conditions and names any fact
+ * still outstanding (P-LAUNCH-07).
  *
  * The pre-launch checklist that must be finished first is in
  * docs/PRODUCTION-SETUP.md.

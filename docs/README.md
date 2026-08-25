@@ -33,6 +33,14 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-12-REPORT.md`](PHASE-12-REPORT.md) | Spreadsheet import and export — why an import can never publish a record, and the migration that silently dropped every CHECK constraint. | **Yes** |
 | [`PHASE-13-REPORT.md`](PHASE-13-REPORT.md) | Deployment preparation — the executable pre-flight, and the build-time variable that would have told Google the site lives on localhost. | **Yes** |
 
+> **File paths in reports from Phase 3-13 predate one move.** Phase 14 put the
+> public routes inside a `(site)` route group so the public header and footer
+> would stop rendering on every admin page. A route group is path-transparent,
+> so **no URL changed** - but `src/app/about/page.tsx` is now
+> `src/app/(site)/about/page.tsx`, and the same for `page.tsx`, `admissions`,
+> `announcements`, `contact`, `courses`, `results` and `stories`. Older reports
+> are left as written; they are a record of what was true then.
+
 **Source docs describe what we want. The Master Plan describes what we do.**
 When they disagree, the Master Plan says why. Don't edit the source docs to
 match decisions — that erases the reasoning.

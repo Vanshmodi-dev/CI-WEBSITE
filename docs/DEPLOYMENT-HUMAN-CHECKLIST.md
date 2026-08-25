@@ -35,15 +35,19 @@ Recorded here so the line between "done" and "waiting on people" is unambiguous.
 | Admin panel, all entities | ✅ Complete |
 | Consent model, enforced in the database | ✅ 21 CHECK constraints, verified by name |
 | Authentication, sessions, revocation, throttling | ✅ Complete |
-| Security headers, CSP, CSRF, rate limits | ✅ 245 automated checks |
-| SEO, canonicals, sitemap, structured data | ✅ 335 automated checks |
-| Performance budgets | ✅ 72 automated checks |
-| Spreadsheet import and export | ✅ 116 automated checks |
-| Accessibility (automated) | ✅ Included in 249 real-browser checks |
+| Security headers, CSP, CSRF, rate limits | ✅ Adversarial suite, run against a production build |
+| SEO, canonicals, sitemap, structured data | ✅ Automated suite |
+| Performance budgets | ✅ Enforced against a production build |
+| Spreadsheet import and export | ✅ Automated suite; import can never publish |
+| Accessibility (automated) | ✅ Real-browser suite, Chrome and Edge. **No screen reader, Firefox or Safari** — see the Phase 14 report |
 | Deployment pre-flight tooling | ✅ `npm run verify:preflight` |
 | Production smoke test | ✅ `npm run verify:production` |
 
 **Nothing on this list is waiting on the institute.**
+
+> Counts are omitted on purpose: each suite prints its own total, and a number
+> written down here goes stale the moment a check is added. Phase 14 found four
+> such numbers already wrong in the project's README.
 
 ---
 

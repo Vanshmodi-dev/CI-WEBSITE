@@ -757,6 +757,65 @@ describe('scorecard', () => {
 
 /* ====================================================== launch remains === */
 
+describe('every Server Action authorises itself', () => {
+  /**
+   * WHY THIS IS A TEST AND NOT A REVIEW HABIT (Phase 14).
+   *
+   * In the App Router, EVERY exported async function in a `'use server'`
+   * module is a callable endpoint. Not the ones wired to a form - all of them.
+   * So an exported helper is an unauthenticated POST endpoint that nobody
+   * decided to publish.
+   *
+   * Phase 14 found one: `digestOf` in the import actions, marked "exposed for
+   * tests" and used by no test. Next had tree-shaken it because nothing
+   * imported it, so it was not live - but one client-component import away
+   * from being so. It was deleted; this is what stops the next one.
+   *
+   * Two are unauthenticated by design and are named here rather than pattern-
+   * matched, so adding a third is a deliberate act that edits this list.
+   */
+  const INTENTIONALLY_PUBLIC = [
+    { file: 'src/app/(site)/admissions/actions.ts', why: 'the public enquiry form' },
+    { file: 'src/app/admin/login/actions.ts', why: 'sign-in cannot require a session' },
+  ];
+
+  test('no exported Server Action skips its authorization check', () => {
+    const offenders: string[] = [];
+    for (const file of walk(path.join(root, 'src'))) {
+      if (!/\.tsx?$/.test(file) || file.includes(`generated${path.sep}prisma`)) continue;
+      const raw = readFileSync(file, 'utf8');
+      if (!/^\s*['"]use server['"]/m.test(raw)) continue;
+
+      const relPath = path.relative(root, file).split(path.sep).join('/');
+      if (INTENTIONALLY_PUBLIC.some((e) => relPath === e.file)) continue;
+
+      const source = stripComments(raw);
+      for (const match of source.matchAll(/export\s+async\s+function\s+(\w+)/g)) {
+        const start = match.index ?? 0;
+        const next = source.indexOf('\nexport ', start + 1);
+        const body = source.slice(start, next === -1 ? source.length : next);
+        if (!/requireAdminOrNull\(|requireAdmin\(|getCurrentAdmin\(/.test(body)) {
+          offenders.push(`${relPath} :: ${match[1]}`);
+        }
+      }
+    }
+    assert.deepEqual(
+      offenders,
+      [],
+      `Every exported async function in a "use server" module is a callable endpoint. ` +
+        `These have no authorization check: ${offenders.join(', ')}`,
+    );
+  });
+
+  test('the intentionally public actions still exist where the list says', () => {
+    // A stale exemption is worse than none: it would silently excuse a file
+    // that had been replaced by something else.
+    for (const entry of INTENTIONALLY_PUBLIC) {
+      assert.ok(existsSync(path.join(root, entry.file)), `${entry.file} is exempted but does not exist`);
+    }
+  });
+});
+
 describe('institute facts must be verified before launch', () => {
   /**
    * WHY (Phase 14). institute.ts declared UNVERIFIED_FACTS and stated in a

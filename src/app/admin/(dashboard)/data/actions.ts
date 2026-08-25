@@ -6,7 +6,7 @@ import { getPrisma } from '@/lib/db';
 import { logUnexpected, log } from '@/lib/log';
 import { revalidateResults } from '@/lib/revalidate-public';
 import { peekWindow, recordWindowHit } from '@/lib/rate-limit';
-import { checkUpload, displayFilename, planImport, executeImport, planDigest } from '@/lib/import/run';
+import { checkUpload, displayFilename, planImport, executeImport } from '@/lib/import/run';
 import type { ImportPlan } from '@/lib/import/plan';
 
 /**
@@ -252,9 +252,4 @@ export async function confirmImport(
     imported: { created: result.created, updated: result.updated, durationMs: result.durationMs },
     message: `Imported. ${result.created} added, ${result.updated} corrected, nothing published.`,
   };
-}
-
-/** Exposed for tests: the digest of a plan, without importing it. */
-export async function digestOf(plan: ImportPlan): Promise<string> {
-  return planDigest(plan);
 }

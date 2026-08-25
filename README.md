@@ -77,18 +77,26 @@ npm run dev
 | `npm run db:migrate` | Apply migrations (needs `DATABASE_URL`) |
 | `npm run create-admin` | Create the admin account (needs a database) |
 | `npm run db:test` | Start a local PostgreSQL for verification |
-| `npm run verify:constraints` | 35 consent/integrity assertions |
-| `npm run verify:e2e` | 62 end-to-end assertions over HTTP |
+| `npm run verify:constraints` | Consent and integrity rules, exercised against real PostgreSQL |
+| `npm run verify:e2e` | The whole stack over HTTP, enquiry form to database |
 | `npm run verify:scale` | ~1,000 student benchmark |
-| `npm run verify:public` | 50 public-data isolation checks |
+| `npm run verify:public` | Public-data isolation — what must NEVER reach a visitor |
 | `npm run verify:revalidation` | Proves publishing updates the public site |
-| `npm run verify:integration` | 47 admin → database → public integration checks |
-| `npm run verify:seo` | 335 metadata, canonical, sitemap, robots and JSON-LD checks |
-| `npm run verify:security` | 245 adversarial checks against a production build |
-| `npm run verify:ux` | 249 real-browser checks — responsive, drawer, keyboard, a11y |
-| `npm run verify:teacher` | 105 checks driving the admin as a teacher would |
+| `npm run verify:integration` | Admin form → database → public page, including consent withdrawal |
+| `npm run verify:seo` | Metadata, canonicals, sitemap, robots and JSON-LD |
+| `npm run verify:import` | Spreadsheet import and export, and that import can never publish |
+| `npm run verify:security` | Adversarial: auth, authorization, CSRF, XSS, IDOR, rate limits |
+| `npm run verify:ux` | Real-browser — responsive, drawer, keyboard, contrast, zoom |
+| `npm run verify:teacher` | Drives the admin as a teacher would, laptop and phone |
+| `npm run verify:preflight` | Is an environment safe to deploy? Non-zero exit when not |
+| `npm run verify:production` | Read-only smoke test against a deployed URL |
 | `npm run retention:dry` | Reports what the data-retention policy would remove |
-| `npm run verify:budget` | 72 performance-budget checks against a production build |
+| `npm run verify:budget` | Performance budgets against a production build |
+
+> **Assertion counts deliberately are not listed here.** They changed in almost
+> every phase, and a number in a table is the first thing to rot - Phase 14
+> found four of them stale in this very file. Each suite prints its own total
+> when it runs, which is the number that is actually true.
 | `npm run perf:baseline` | Measures wire bytes and TTFB for every public route |
 | `npm run scale:seed` / `scale:clean` | ~1,000 synthetic ZZTEST records, then removes them |
 | `npm run lighthouse` | Lighthouse CI, mobile preset (needs `@lhci/cli`) |
