@@ -405,6 +405,34 @@ try {
     }),
   );
 
+  /**
+   * AND THE OTHER DIRECTION, WHICH IS THE ONE THAT ACTUALLY BIT (Phase 14).
+   *
+   * Rejecting an unknown action was always checked. Accepting every KNOWN one
+   * never was - and that asymmetry is exactly how Phase 12's defect survived:
+   * `signed_out` was added to the code, never to the constraint, so the
+   * database correctly refused an action it did not know about while
+   * recordAudit() swallowed the failure. Every sign-out went unaudited for two
+   * phases and the check above passed the whole time.
+   *
+   * tests/import.test.ts cross-checks the TypeScript union against the
+   * migration SQL. This is the live-database half: the SQL on disk and the
+   * constraint actually applied are not the same thing, which is the other
+   * lesson of Phase 12.
+   */
+  for (const action of [
+    'created', 'updated', 'published', 'unpublished',
+    'deleted', 'signed_in', 'signed_out', 'imported',
+  ]) {
+    await mustAccept(
+      `the audit constraint accepts "${action}"`,
+      () => prisma.auditLog.create({
+        data: { actorLabel: 'DEMO', action, entity: 'Topper', entityId: 'demo-action' },
+      }),
+      (row) => prisma.auditLog.delete({ where: { id: row.id } }),
+    );
+  }
+
   console.log('\n=== 11. CASCADE BEHAVIOUR ===');
   const parent = await prisma.topper.create({
     data: {
