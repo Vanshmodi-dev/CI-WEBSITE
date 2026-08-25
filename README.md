@@ -3,7 +3,7 @@
 The digital platform for **Commerce Insight**, an exclusive institute for commerce
 education in Pratap Nagar, Jaipur. Built by [TradyPerch](https://github.com/Vanshmodi-dev).
 
-> **Status: built and deployment-ready, not launched.** Phases 0-13 are done:
+> **Status: audited, deployment-ready, not launched.** Phases 0-14 are done:
 > the public site, the admin panel, SEO, security hardening, full QA, the import
 > tooling and the deployment pre-flight. What remains is institute content and
 > the accounts only the owner can create - see
@@ -125,6 +125,7 @@ npm run dev
 | 11 | Full QA | ● done — see [docs/PHASE-11-REPORT.md](docs/PHASE-11-REPORT.md) |
 | 12 | Import / data tooling | ● done — see [docs/PHASE-12-REPORT.md](docs/PHASE-12-REPORT.md) |
 | 13 | Deployment preparation | ● done — see [docs/PHASE-13-REPORT.md](docs/PHASE-13-REPORT.md) |
+| 14 | Final adversarial audit | ● done — see [docs/PHASE-14-FINAL-AUDIT.md](docs/PHASE-14-FINAL-AUDIT.md) |
 | — | **Launch** | ○ blocked on institute content + manual setup — see [PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md) |
 | 6 | Eight-part audit | ○ |
 | 7 | Launch + handover | ○ |

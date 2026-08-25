@@ -32,6 +32,7 @@ TradyPerch · Client project #1 · Started August 2026
 | [`PHASE-11-REPORT.md`](PHASE-11-REPORT.md) | Full QA in real browsers — the mobile menu was 64px tall, and three other defects nobody had looked for. | **Yes** |
 | [`PHASE-12-REPORT.md`](PHASE-12-REPORT.md) | Spreadsheet import and export — why an import can never publish a record, and the migration that silently dropped every CHECK constraint. | **Yes** |
 | [`PHASE-13-REPORT.md`](PHASE-13-REPORT.md) | Deployment preparation — the executable pre-flight, and the build-time variable that would have told Google the site lives on localhost. | **Yes** |
+| [`PHASE-14-FINAL-AUDIT.md`](PHASE-14-FINAL-AUDIT.md) | **The final audit.** Six defects, one of them a stale tab that could restore a withdrawn photograph. Read this before deploying. | **Yes** |
 
 > **File paths in reports from Phase 3-13 predate one move.** Phase 14 put the
 > public routes inside a `(site)` route group so the public header and footer
