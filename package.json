@@ -45,8 +45,12 @@
     "seed:demo:count": "node scripts/seed-demo.mjs count",
     "make:demo-media": "node scripts/make-demo-media.mjs",
     "verify:import": "node scripts/verify-import.mjs",
+    "verify:cms": "node scripts/verify-cms.mjs",
     "verify:preflight": "node scripts/verify-preflight.mjs",
-    "verify:production": "node scripts/verify-production.mjs"
+    "verify:production": "node scripts/verify-production.mjs",
+    "verify:media": "node scripts/verify-media.mjs",
+    "media:audit": "node scripts/media-audit.mjs",
+    "media:clean": "node scripts/media-audit.mjs --clean"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
@@ -56,6 +60,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "sharp": "0.35.3",
     "tailwind-merge": "3.6.0"
   },
   "devDependencies": {

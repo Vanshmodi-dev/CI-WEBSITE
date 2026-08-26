@@ -124,6 +124,8 @@ async function openPage(debugPort) {
   const consoleErrors = [];
   const pageErrors = [];
   const failedRequests = [];
+  /** Method, url and headers of everything the page requested. */
+  const requests = [];
 
   socket.addEventListener('message', (event) => {
     const message = JSON.parse(event.data);
@@ -150,6 +152,17 @@ async function openPage(debugPort) {
     if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       consoleErrors.push(String(message.params.entry.text).slice(0, 400));
     }
+    if (message.method === 'Network.requestWillBeSent') {
+      const { request } = message.params;
+      requests.push({
+        method: request.method,
+        url: request.url,
+        headers: request.headers ?? {},
+      });
+      // Bounded: a long-running page must not turn this into a leak.
+      if (requests.length > 500) requests.splice(0, requests.length - 500);
+    }
+
     if (message.method === 'Network.loadingFailed') {
       failedRequests.push(`${message.params.type}: ${message.params.errorText}`);
     }
@@ -173,6 +186,7 @@ async function openPage(debugPort) {
   await send('Page.enable');
   await send('Log.enable');
   await send('Network.enable');
+  await send('DOM.enable');
 
   const page = {
     consoleErrors,
@@ -346,6 +360,105 @@ async function openPage(debugPort) {
 
     async cookie(name, value, domain = 'localhost') {
       await send('Network.setCookie', { name, value, domain, path: '/' });
+    },
+
+    /**
+     * The cookies this page holds, as a `Cookie:` header string.
+     *
+     * ⚠ USE THIS, NOT `document.cookie`, TO REPLAY A SESSION.
+     *
+     * Phase 16 wrote a suite that read `document.cookie` to replay an
+     * authenticated request, and every assertion in it passed. They passed
+     * because the admin session cookie is `httpOnly`, so `document.cookie`
+     * returned an empty string and the "authenticated" requests were in fact
+     * anonymous - which meant the checks that mattered ("this edit reaches the
+     * public site") failed, and the ones that did not ("an unauthorised write
+     * is refused") passed for the wrong reason. A test that cannot tell those
+     * two apart is worse than no test.
+     *
+     * `Network.getCookies` goes through the browser's cookie jar rather than
+     * the page's JavaScript view of it, so httpOnly cookies are included -
+     * which is the entire point.
+     */
+    /**
+     * Attach real files to a file input, the way a person picking them does.
+     *
+     * ⚠ WHY NOT BUILD A `File` IN PAGE JAVASCRIPT AND DISPATCH `change`.
+     *
+     * That is the obvious approach and it tests the wrong thing. A `File`
+     * constructed in the page never travels through the browser's file
+     * handling, and React's own change tracking may or may not see a synthetic
+     * event depending on how the input is wired - so a test can pass while the
+     * real control is broken, which is the failure mode this project has hit
+     * more than once.
+     *
+     * `DOM.setFileInputFiles` is the browser doing what the file picker does.
+     * The paths must exist on disk, which is why the media suite writes its
+     * fixtures out before using them.
+     */
+    async setFileInput(selector, filePaths) {
+      const doc = await send('DOM.getDocument', { depth: -1, pierce: true });
+      const node = await send('DOM.querySelector', {
+        nodeId: doc.root.nodeId,
+        selector,
+      });
+      if (!node.nodeId) throw new Error(`No element matched ${selector}`);
+      await send('DOM.setFileInputFiles', {
+        nodeId: node.nodeId,
+        files: Array.isArray(filePaths) ? filePaths : [filePaths],
+      });
+    },
+
+    /**
+     * Every request the page has made, newest last.
+     *
+     * Recorded so a suite can read back the headers of a request the FRAMEWORK
+     * built - a Next Server Action carries its identity in a `Next-Action`
+     * header rather than in form fields, so replaying one under different
+     * credentials means capturing the real thing first rather than guessing an
+     * internal id.
+     */
+    requests,
+
+    async cookieHeader(url) {
+      const { cookies } = await send('Network.getCookies', url ? { urls: [url] } : {});
+      return cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    },
+
+    /**
+     * Capture the page to a PNG file.
+     *
+     * Added in Phase 15, for design work. Every check in this project so far has
+     * asserted something measurable - a status code, a computed style, a
+     * contrast ratio - and that is the right way to test. But "the page is too
+     * blue and looks unfinished" is not measurable, and the only honest way to
+     * judge it is to look at it.
+     *
+     * `fullPage` captures beyond the fold by asking the renderer for the full
+     * scroll height, which is what makes a screenshot useful for judging
+     * section rhythm rather than just the hero.
+     */
+    async screenshot(file, { fullPage = false } = {}) {
+      const { writeFileSync, mkdirSync } = await import('node:fs');
+      const nodePath = await import('node:path');
+
+      let clip;
+      if (fullPage) {
+        const size = await page.eval(`(() => ({
+          w: document.documentElement.clientWidth,
+          h: Math.min(document.documentElement.scrollHeight, 8000),
+        }))()`);
+        clip = { x: 0, y: 0, width: size.w, height: size.h, scale: 1 };
+      }
+
+      const { data } = await send('Page.captureScreenshot', {
+        format: 'png',
+        ...(clip ? { clip, captureBeyondViewport: true } : {}),
+      });
+
+      mkdirSync(nodePath.dirname(file), { recursive: true });
+      writeFileSync(file, Buffer.from(data, 'base64'));
+      return file;
     },
 
     async close() {

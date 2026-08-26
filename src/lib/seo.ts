@@ -121,7 +121,43 @@ const SITE_ID = `${SITE_URL}/#website`;
  * Fields whose facts we do not yet hold are omitted rather than guessed, so
  * this object grows only when `src/config/institute.ts` grows.
  */
-export function instituteJsonLd() {
+export type JsonLdContact = {
+  addressLine: string;
+  landmark: string;
+  line1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  phoneE164: string;
+  hours: readonly string[];
+};
+
+/**
+ * `contact` overrides the code defaults with what the institute has actually
+ * entered in the admin.
+ *
+ * WHY THIS IS NOT OPTIONAL POLISH. Structured data is a MACHINE-READABLE COPY
+ * of what the page says, and Google treats a mismatch between the two as a
+ * quality signal against the site. If the visible address is edited and the
+ * JSON-LD keeps announcing the old one, the site is telling a search engine
+ * something different from what it tells a person, on the single field a local
+ * listing is matched on. The override keeps the two in step by construction.
+ *
+ * Called with no argument, this still returns exactly what it always did, so
+ * anything without database access degrades to the shipped facts.
+ */
+export function instituteJsonLd(contact?: JsonLdContact) {
+  const address = contact ?? {
+    landmark: institute.address.landmark,
+    line1: institute.address.line1,
+    city: institute.address.city,
+    state: institute.address.state,
+    postalCode: institute.address.postalCode,
+    phoneE164: institute.phonePrimary.e164,
+    hours: [] as readonly string[],
+    addressLine: addressFull,
+  };
+
   const data: Record<string, unknown> = {
     '@type': 'EducationalOrganization',
     '@id': ORG_ID,
@@ -130,13 +166,15 @@ export function instituteJsonLd() {
     url: SITE_URL,
     address: {
       '@type': 'PostalAddress',
-      streetAddress: `${institute.address.landmark}, ${institute.address.line1}`,
-      addressLocality: institute.address.city,
-      addressRegion: institute.address.state,
-      postalCode: institute.address.postalCode,
+      streetAddress: [address.landmark, address.line1]
+        .filter((part) => part.trim().length > 0)
+        .join(', '),
+      addressLocality: address.city,
+      addressRegion: address.state,
+      postalCode: address.postalCode,
       addressCountry: institute.address.country,
     },
-    telephone: institute.phonePrimary.e164,
+    telephone: address.phoneE164,
   };
 
   if (institute.email) data.email = institute.email;
@@ -156,6 +194,20 @@ export function instituteJsonLd() {
   );
   if (sameAs.length > 0) data.sameAs = sameAs;
 
+  /*
+    OPENING HOURS ARE DELIBERATELY NOT EMITTED FROM THE ADMIN FIELD.
+
+    `openingHoursSpecification` needs a machine day-of-week and 24-hour opens
+    and closes times. The admin field is free text, because that is what a
+    teacher can actually write ("Mon to Sat, 9 to 7, closed Sunday"), and
+    parsing that into a schema is guessing. Emitting a GUESSED opening time to
+    a search engine is worse than emitting none: it can put wrong hours in a
+    knowledge panel, which sends people to a locked door.
+
+    So the visible page shows the teacher's words, and the structured data stays
+    silent until `institute.hours` holds a properly structured value. That is a
+    deliberate gap, recorded here rather than papered over.
+  */
   if (institute.hours && institute.hours.length > 0) {
     data.openingHoursSpecification = institute.hours.map((h) => ({
       '@type': 'OpeningHoursSpecification',
@@ -196,10 +248,10 @@ export function websiteJsonLd() {
  * the organisation by `@id`, and a single graph is what lets a consumer resolve
  * that reference without guessing they describe the same institute.
  */
-export function siteJsonLd() {
+export function siteJsonLd(contact?: JsonLdContact) {
   return {
     '@context': 'https://schema.org',
-    '@graph': [instituteJsonLd(), websiteJsonLd()],
+    '@graph': [instituteJsonLd(contact), websiteJsonLd()],
   };
 }
 

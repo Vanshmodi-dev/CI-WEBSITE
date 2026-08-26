@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { institute, publishedCourses, telHref } from '@/config/institute';
+import { institute, publishedCourses } from '@/config/institute';
+import { getSiteContent, getContactBlock } from '@/lib/site-content';
+import { fieldFor } from '@/config/site-content';
 import { pageMetadata } from '@/lib/seo';
-import { Container, Section } from '@/components/primitives/section';
+import {
+  Section,
+  SectionHeader,
+  PageHeader,
+  ClosingCta,
+} from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 
 export const metadata: Metadata = pageMetadata({
@@ -34,45 +41,46 @@ export const metadata: Metadata = pageMetadata({
  * states plainly what the institute does — which is verifiable from its own
  * name and its own programme list.
  */
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [content, contact] = await Promise.all([getSiteContent(), getContactBlock()]);
+
+  /**
+   * Has somebody actually written the story yet?
+   *
+   * The fallback text SAYS the story is still being written, and it is framed
+   * in a dashed border to make that visibly deliberate. The moment a real story
+   * is saved in the admin, both of those become wrong — a finished paragraph
+   * inside a "coming soon" frame, under an eyebrow reading "Being written", is
+   * worse than either state on its own. So the frame is tied to whether the
+   * text is still the placeholder.
+   */
+  const storyWritten =
+    (content['about.story'] ?? '').trim() !==
+    (fieldFor('about.story')?.fallback ?? '').trim();
+
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">About</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              {institute.tagline}
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              {institute.name} teaches commerce, and only commerce, in{' '}
-              {institute.locality}.
-            </p>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="About"
+        title={<>{content['about.title']}</>}
+        standfirst={<>{content['about.standfirst']}</>}
+      />
 
       {/* What we do — grounded entirely in the programme list. */}
       <Section tone="surface" labelledBy="what-heading">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-16">
           <div>
-            <h2
+            <SectionHeader
               id="what-heading"
-              className="font-display text-h2 font-bold text-heading"
-            >
-              What we teach
-            </h2>
-            <p className="measure mt-4 text-[17px] leading-relaxed text-text">
-              We cover the commerce path from school through professional
-              examinations — Class XI and XII, and the CA and CMA
-              qualifications. A student can start with us in Class XI and stay
-              through CA Intermediate without changing institute.
+              eyebrow="Commerce only"
+              title="What we teach"
+              className="mb-6"
+            />
+            <p className="measure text-[17px] leading-relaxed text-text">
+              {content['about.whatWeTeach']}
             </p>
             <p className="measure mt-4 text-[17px] leading-relaxed text-text">
-              Being commerce-only is the point. Every programme below shares the
-              same subjects at its foundation, so what a student learns for
-              their boards is the same material that carries them into CA
-              Foundation.
+              {content['about.whatWeTeachMore']}
             </p>
           </div>
 
@@ -102,44 +110,59 @@ export default function AboutPage() {
         what is true today and offers a way to ask.
       */}
       <Section tone="paper" labelledBy="story-heading">
-        <h2 id="story-heading" className="font-display text-h2 font-bold text-heading">
-          Our story
-        </h2>
-        <p className="measure mt-4 text-[17px] leading-relaxed text-muted">
-          We are writing this properly, with the people who built the institute,
-          rather than putting up something approximate. It will appear here
-          shortly. Until then, the fastest way to learn how we work is to call
-          and ask.
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button href={telHref} variant="secondary">
-            Call {institute.phonePrimary.display}
-          </Button>
-          <Button href="/contact" variant="secondary">
-            Visit us
-          </Button>
-        </div>
-      </Section>
-
-      <Section tone="band" labelledBy="about-cta">
-        <div className="max-w-2xl">
-          <h2 id="about-cta" className="text-h2 font-bold leading-tight text-band-text">
-            Come and see the place
-          </h2>
-          <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
-            The clearest way to judge an institute is to visit it and talk to
-            the people teaching. We are in {institute.locality}.
+        <div
+          className={
+            storyWritten
+              ? 'max-w-2xl'
+              : 'max-w-2xl rounded-lg border border-dashed border-rule-strong p-8 md:p-10'
+          }
+        >
+          <SectionHeader
+            id="story-heading"
+            eyebrow={storyWritten ? 'The institute' : 'Being written'}
+            title="Our story"
+            className="mb-5"
+          />
+          <p
+            className={
+              storyWritten
+                ? 'text-[17px] leading-relaxed text-text'
+                : 'text-[17px] leading-relaxed text-muted'
+            }
+          >
+            {content['about.story']}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button href="/admissions" size="lg" variant="onBand">
-              Send an enquiry
+            <Button href={contact.telHref} variant="secondary">
+              Call {contact.phonePrimaryDisplay}
             </Button>
-            <Button href="/contact" size="lg" variant="onBand">
-              Get directions
+            <Button href="/contact" variant="secondary">
+              Visit us
             </Button>
           </div>
         </div>
       </Section>
+
+      <ClosingCta
+        id="about-cta"
+        title={<>Come and see the place</>}
+        body={
+          <>
+            The clearest way to judge an institute is to visit it and talk to
+            the people teaching. We are in {institute.locality}.
+          </>
+        }
+        actions={
+          <>
+            <Button href="/admissions" size="lg">
+              Send an enquiry
+            </Button>
+            <Button href="/contact" size="lg" variant="secondary">
+              Get directions
+            </Button>
+          </>
+        }
+      />
     </>
   );
 }

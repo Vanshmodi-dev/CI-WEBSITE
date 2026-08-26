@@ -106,7 +106,14 @@ export function ResultCard({ result }: { result: PublicResult }) {
         </dl>
       ) : null}
 
-      <div className="mt-4 flex items-center gap-3 border-t border-rule pt-4">
+      {/* Attribution sits directly under the content, not pinned to the foot
+          of a stretched card. A result carries anything from no subject rows
+          to five, so stretching every card in a row to the tallest one and
+          pushing the portrait to the bottom opened a void in the middle of the
+          short cards. The grid uses `items-start` instead: each card is as
+          tall as what is in it, and the row is ragged along the bottom rather
+          than hollow in the middle. */}
+      <div className="mt-5 flex items-center gap-3 border-t border-rule pt-4">
         <Portrait
           photoUrl={result.photoUrl}
           monogram={result.monogram}
@@ -191,6 +198,57 @@ export function BatchCard({
         </p>
       ) : null}
     </article>
+  );
+}
+
+/**
+ * BatchRow / BatchList — the same records as BatchCard, laid out as rows.
+ *
+ * Phase 15. Before this, every band on the homepage was a three-column card
+ * grid: courses, results, batches. Three identical shapes stacked vertically
+ * is why the page scanned as one undifferentiated column no matter what the
+ * colours did. Batches are the band that gains most from rows, because a batch
+ * is a schedule — course, date, mode read as a table far better than as three
+ * loose paragraphs in a box, and the dates line up down the page where they
+ * can actually be compared.
+ *
+ * BatchCard is kept: /courses/[slug] shows one course's batches, where a card
+ * beside sibling content is still right.
+ */
+export function BatchList({
+  batches,
+  courseName,
+}: {
+  batches: PublicBatch[];
+  courseName: (slug: string) => string;
+}) {
+  return (
+    <ul className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-paper">
+      {batches.map((batch) => (
+        <li key={batch.id}>
+          <div className="flex flex-col gap-x-6 gap-y-2 px-5 py-5 sm:flex-row sm:items-center sm:px-6">
+            <p className="font-display text-[19px] font-semibold leading-tight text-heading sm:w-[34%] sm:shrink-0">
+              {courseName(batch.courseSlug)}
+            </p>
+
+            <p className="text-small text-muted sm:w-[26%] sm:shrink-0">
+              Starts{' '}
+              <strong className="font-medium text-text">
+                {IST_DATE.format(batch.startsAt)}
+              </strong>
+            </p>
+
+            <p className="text-small text-muted sm:w-[16%] sm:shrink-0">{batch.mode}</p>
+
+            {batch.seatsNote ? (
+              <p className="inline-flex w-fit rounded-sm border border-accent/40 bg-accent-wash px-2 py-0.5 text-[12px] font-medium text-accent-text sm:ml-auto">
+                {batch.seatsNote}
+              </p>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 

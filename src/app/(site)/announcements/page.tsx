@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
 import { pageMetadata } from '@/lib/seo';
 import { getActiveAnnouncements } from '@/lib/public-data';
-import { Container, Section } from '@/components/primitives/section';
+import { Section, PageHeader } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { AnnouncementCard } from '@/components/domain/public-cards';
 
@@ -28,19 +28,19 @@ export default async function AnnouncementsPage() {
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">Updates</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              What&rsquo;s happening
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              Admission dates, batch news and notices from the institute.
-            </p>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="Updates"
+        title={
+          <>
+            What&rsquo;s happening
+          </>
+        }
+        standfirst={
+          <>
+            Admission dates, batch news and notices from the institute.
+          </>
+        }
+      />
 
       <Section tone="surface" labelledBy="updates-heading">
         <h2 id="updates-heading" className="sr-only">

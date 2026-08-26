@@ -42,10 +42,32 @@
   --ink-100: #eff2f5;
   --ink-50: #f8f9fb;
 
-  /* semantic · LIGHT (the complete palette lives here) */
+  /* =========================================================================
+     semantic · LIGHT (the complete palette lives here)
+     =========================================================================
+     PHASE 15 REBALANCE. The palette was measured before it was changed:
+
+       paper vs surface   1.05:1
+       surface vs surface-2  1.07:1
+
+     Sections alternated between grounds five percent apart, which is why the
+     page read as one continuous field rather than a sequence of bands. Raising
+     them helps a little - 1.12:1 now - but the honest conclusion is that you
+     cannot build section rhythm out of a background step this small at the
+     light end of the scale.
+
+     So rhythm now comes from hairline rules (paper vs rule is 1.36:1, which IS
+     visible), from spacing, and from varying what a section contains. The
+     tinted surface is used occasionally rather than every other band.
+
+     The other change is `--text-heading`. It was navy, so every heading on
+     every page was blue - which, with navy links, a navy band and a navy
+     footer, is where "excessively blue" came from. Headings are now ink at
+     18.05:1, and navy is kept for the things that are actually navy: links,
+     the band, the primary button, active states. */
   --paper: #ffffff;
-  --surface: var(--ink-50);
-  --surface-2: var(--ink-100);
+  --surface: #eef2f7;
+  --surface-2: #e2e8f0;
 
   /**
    * The wash behind a SELECTED or HOVERED control on a page surface.
@@ -56,22 +78,27 @@
    * — 1.97:1, effectively invisible — which Lighthouse caught in Phase 9.
    * Any selected/hover state that sits under themed text must use this.
    */
-  --selected: var(--navy-50);
-  --text: var(--ink-900);
-  --text-muted: var(--ink-600);
-  --text-heading: var(--navy-800);
+  --selected: #e4edfa;
+  --text: #1f2937;
+  --text-muted: #55627a;
+  /* INK, not navy. See the note above. 18.05:1 on paper, 16.05:1 on surface. */
+  --text-heading: #0f1720;
   --link: var(--navy-600);
   --link-hover: var(--navy-700);
-  --rule: var(--ink-200);
-  --rule-strong: var(--ink-300);
+  --rule: #d6dee8;
+  --rule-strong: #b9c4d2;
 
   --accent: var(--accent-500);
-  --accent-text: var(--accent-600);
+  /* Darkened from #bc5915 to 5.47:1, so orange text clears AA on the tinted
+     surface as well as on paper - it previously only cleared it on white. */
+  --accent-text: #a9500f;
   --accent-wash: var(--accent-50);
 
-  --band: var(--navy-800);
+  /* Deeper than the old #002d66 so the one band on the page reads as a
+     deliberate full-strength surface rather than a slightly darker blue. */
+  --band: #00224f;
   --band-text: #ffffff;
-  --band-text-muted: var(--navy-100);
+  --band-text-muted: #c3d6f2;
 
   --ok: #1a6449;
   --ok-bg: #e6f2ec;
@@ -93,25 +120,29 @@
    separates light from dark. Guarded so an explicit light choice still wins. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #0a121c;
-    --surface: #111c2a;
-    --surface-2: #182534;
-    --selected: #182534; /* 7.06:1 against --text-heading, 12.32:1 against --text */
-    --text: #dce6f4;
-    --text-muted: #8fa0ba;
-    --text-heading: #7fb0ff;
-    --link: #7fb0ff;
-    --link-hover: #a8c8ff;
-    --rule: #22303f;
-    --rule-strong: #33455a;
+    /* Phase 15: paper/surface/surface-2 were 1.10 and 1.11 apart, so nothing
+       separated. Headings were #7fb0ff - bright blue text on a blue ground,
+       which is the worst of the "too blue" problem. Headings are near-white
+       now at 16.35:1, and blue is kept for links. */
+    --paper: #0b1017;
+    --surface: #131b25;
+    --surface-2: #1c2733;
+    --selected: #1c2733;
+    --text: #d2dce9;
+    --text-muted: #93a2b8;
+    --text-heading: #e8eef6;
+    --link: #8fbcff;
+    --link-hover: #b6d3ff;
+    --rule: #28323f;
+    --rule-strong: #3d4a5c;
 
-    --accent: #ea853f; /* 7.10:1 here — safe as text on dark */
+    --accent: #ea853f;
     --accent-text: #f0995f;
     --accent-wash: #2a1c10;
 
-    --band: #001d42;
+    --band: #0a1930;
     --band-text: #ffffff;
-    --band-text-muted: #a8c8ff;
+    --band-text-muted: #c3d6f2;
 
     --ok: #7fcca6;
     --ok-bg: #0f241b;
@@ -130,25 +161,25 @@
 
 /* An explicit dark choice wins over a light OS setting. */
 :root[data-theme='dark'] {
-  --paper: #0a121c;
-  --surface: #111c2a;
-  --surface-2: #182534;
-  --selected: #182534;
-  --text: #dce6f4;
-  --text-muted: #8fa0ba;
-  --text-heading: #7fb0ff;
-  --link: #7fb0ff;
-  --link-hover: #a8c8ff;
-  --rule: #22303f;
-  --rule-strong: #33455a;
+  --paper: #0b1017;
+  --surface: #131b25;
+  --surface-2: #1c2733;
+  --selected: #1c2733;
+  --text: #d2dce9;
+  --text-muted: #93a2b8;
+  --text-heading: #e8eef6;
+  --link: #8fbcff;
+  --link-hover: #b6d3ff;
+  --rule: #28323f;
+  --rule-strong: #3d4a5c;
 
   --accent: #ea853f;
   --accent-text: #f0995f;
   --accent-wash: #2a1c10;
 
-  --band: #001d42;
+  --band: #0a1930;
   --band-text: #ffffff;
-  --band-text-muted: #a8c8ff;
+  --band-text-muted: #c3d6f2;
 
   --ok: #7fcca6;
   --ok-bg: #0f241b;

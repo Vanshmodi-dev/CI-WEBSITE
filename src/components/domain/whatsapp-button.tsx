@@ -1,4 +1,4 @@
-import { whatsappHref } from '@/config/institute';
+import { getContactBlock, whatsappLink } from '@/lib/site-content';
 
 /**
  * The single persistent action — Master Plan §07.
@@ -10,13 +10,19 @@ import { whatsappHref } from '@/config/institute';
  * DELIBERATELY A SERVER COMPONENT. Per-page message pre-filling would need
  * `usePathname`, which would push a client component onto every route for one
  * string. Course pages — where attribution actually matters for a lead —
- * render their own contextual CTA via `whatsappHref(courseName)` instead. This
- * keeps the global JS budget intact (§18).
+ * render their own contextual CTA with the course name instead. This keeps the
+ * global JS budget intact (§18).
+ *
+ * Phase 15: the number is read rather than imported, so changing it in the
+ * admin changes the one control that appears on every page. Still a server
+ * component - the read is a cached query shared with the header and footer.
  */
-export function WhatsAppButton() {
+export async function WhatsAppButton() {
+  const contact = await getContactBlock();
+
   return (
     <a
-      href={whatsappHref()}
+      href={whatsappLink(contact.whatsappNumber)}
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-navy-800 text-white shadow-e3 transition-colors hover:bg-navy-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"

@@ -69,3 +69,9 @@ venv/
 # verdict in the repository next to the tool that produces a live one.
 preflight.json
 preflight-*.json
+
+# uploaded media (development only)
+# The local MediaStore adapter writes here. It is NOT production storage - the
+# deployment target has an ephemeral filesystem. See
+# docs/PHASE-16-TOPIC-5-MEDIA.md. Never commit uploaded photographs.
+.media-store/

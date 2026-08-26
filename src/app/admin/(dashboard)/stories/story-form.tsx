@@ -6,6 +6,7 @@ import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import { saveStory, type StoryFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
+import { MediaField } from '@/components/admin/media-field';
 import { Field, inputClass, selectClass, textareaClass } from '@/components/primitives/field';
 import { Button } from '@/components/primitives/button';
 import { blockersForPublishing, type DisplayNameModeValue } from '@/lib/student-display';
@@ -280,19 +281,14 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
               </select>
             )}
           </Field>
-          <Field name="photoUrl" label="Photo" hint="Optional.">
-            {(props) => (
-              <input
-                {...props}
-                type="text"
-                maxLength={500}
-                placeholder="/photos/example.jpg"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className={inputClass(false)}
-              />
-            )}
-          </Field>
+          <MediaField
+            name="photoUrl"
+            label="Photo"
+            hint="Shown only if you tick the photograph permission below."
+            value={photoUrl}
+            error={state.errors?.photoUrl}
+            onChange={setPhotoUrl}
+          />
         </div>
       </Card>
 

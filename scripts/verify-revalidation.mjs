@@ -144,8 +144,53 @@ try {
   check(after.includes(MESSAGE),
         'the public announcements page updated immediately after publishing');
 
+  /*
+    THE HOMEPAGE BANNER SHOWS ONE ANNOUNCEMENT: THE HIGHEST-PRIORITY LIVE ONE.
+
+    ⚠ THIS CHECK USED TO FAIL, AND IT WAS THE CHECK THAT WAS WRONG.
+
+    It asserted that a freshly published announcement appears in the homepage
+    banner. That is only true when nothing outranks it. `getActiveAnnouncements`
+    orders by `priority desc, startsAt desc`, the admin form has no priority
+    input so anything created through it is priority 0, and the ZZSHOW demo
+    dataset seeds an announcement at priority 10. So the banner correctly kept
+    showing the demo announcement, and this reported a revalidation failure that
+    was not happening.
+
+    Phase 16 established that by measurement rather than by reading the code:
+    the homepage never carried the message, not after twenty requests over ten
+    seconds, which ruled out a stale-while-revalidate race; and the identical
+    failure reproduced on the pre-Phase-15 commit, which ruled out a regression.
+    The banner was simply showing a different, higher-priority announcement -
+    which is the correct behaviour.
+
+    The fix is to make the assertion true of the thing it claims to test.
+    Priority is raised directly, because no admin form exposes it, and then the
+    record is saved AGAIN THROUGH THE ADMIN FORM so that the revalidation being
+    tested is the one a real publish performs. Asserting on the database write
+    alone would test Prisma, not the cache.
+  */
+  await prisma.announcement.update({
+    where: { id: row.id },
+    data: { priority: 9999 },
+  });
+
+  const editPage = await req(`/admin/announcements/${row.id}`);
+  const resaved = await post(`/admin/announcements/${row.id}`, {
+    ...fieldsOf(await editPage.text(), 'startsAt'),
+    message: MESSAGE,
+    href: '',
+    startsAt: istDate(-1),
+    endsAt: istDate(30),
+    published: 'on',
+  });
+  check([200, 303, 307].includes(resaved.res.status),
+        'the re-save through the admin form was accepted',
+        `HTTP ${resaved.res.status}`);
+
   const home = await (await req('/')).text();
-  check(home.includes(MESSAGE), 'the homepage banner updated immediately too');
+  check(home.includes(MESSAGE),
+        'the homepage banner updated immediately too');
 
   console.log('\n=== UNPUBLISH must clear it just as fast ===');
   if (row) {

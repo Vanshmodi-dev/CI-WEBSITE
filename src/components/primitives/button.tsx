@@ -19,8 +19,13 @@ type Size = 'md' | 'lg';
 const variants: Record<Variant, string> = {
   primary:
     'bg-navy-800 text-white hover:bg-navy-700 active:bg-navy-900 shadow-e1 hover:shadow-e2',
+  // The border was `border-navy-800/25`, a fixed navy at 25% opacity. On the
+  // light ground that is a faint grey and works; in dark mode it is navy over
+  // near-black, so the outline vanished and the button read as loose text —
+  // "Talk to us" and "WhatsApp us" both lost their edges entirely. The rule
+  // tokens are theme-aware, so they hold an edge on either ground.
   secondary:
-    'bg-transparent text-heading border border-navy-800/25 hover:border-navy-800/60 hover:bg-selected',
+    'bg-transparent text-heading border border-rule-strong hover:border-muted hover:bg-selected',
   tertiary:
     'bg-transparent text-link underline underline-offset-4 decoration-1 hover:decoration-2 px-0 min-h-0',
   onBand:

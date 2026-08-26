@@ -7,7 +7,7 @@ import {
 } from '@/lib/admin-data';
 import { Card, StatusPill, QuickAction, Notice } from '@/components/admin/ui';
 import { CLASS_LEVEL_LABELS, type ClassLevelValue } from '@/lib/validation';
-import { formatDate, ENQUIRY_STATUS_LABELS } from '@/lib/admin-format';
+import { ENQUIRY_STATUS_LABELS, courseLabel, formatDate } from '@/lib/admin-format';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,7 +146,7 @@ export default async function AdminDashboard() {
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-medium text-text">
-                          {b.courseSlug}
+                          {courseLabel(b.courseSlug)}
                         </span>
                         <span className="block text-[13px] text-muted">
                           Starts {formatDate(b.startsAt)}

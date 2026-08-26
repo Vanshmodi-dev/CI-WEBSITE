@@ -149,7 +149,57 @@ export const ENV_CONTRACT: readonly EnvSpec[] = [
 ] as const;
 
 /** Names only, for cross-checking against the source tree and `.env.example`. */
-export const ENV_NAMES: readonly string[] = ENV_CONTRACT.map((e) => e.name);
+/**
+ * Variables the HOST sets, which this application only reads.
+ *
+ * Listed separately because they are not configuration: nobody sets these in a
+ * dashboard, and "missing" is a normal, correct state that means "not running
+ * on that platform". Putting them in ENV_CONTRACT would make the pre-flight
+ * check demand a value that must not be supplied.
+ *
+ * They exist for one decision, in `src/lib/media/store.ts`: is this host's
+ * filesystem thrown away between deploys? If it is, local media storage is
+ * refused rather than silently losing photographs on the next deployment.
+ */
+export const PLATFORM_ENV: readonly EnvSpec[] = [
+  {
+    name: 'VERCEL',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose: 'Set by Vercel. Signals an ephemeral filesystem, so local media storage is refused.',
+    remediation: 'Never set this yourself. The platform sets it.',
+  },
+  {
+    name: 'AWS_LAMBDA_FUNCTION_NAME',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose: 'Set by AWS Lambda. Same signal as VERCEL.',
+    remediation: 'Never set this yourself. The platform sets it.',
+  },
+  {
+    name: 'NETLIFY',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose: 'Set by Netlify. Same signal as VERCEL.',
+    remediation: 'Never set this yourself. The platform sets it.',
+  },
+  {
+    name: 'CF_PAGES',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose: 'Set by Cloudflare Pages. Same signal as VERCEL.',
+    remediation: 'Never set this yourself. The platform sets it.',
+  },
+];
+
+export const ENV_NAMES: readonly string[] = [
+  ...ENV_CONTRACT.map((e) => e.name),
+  ...PLATFORM_ENV.map((e) => e.name),
+];
 
 /**
  * Placeholder values, in the spellings people actually leave behind.
@@ -296,6 +346,8 @@ export const EXPECTED_TABLES: readonly string[] = [
   'batches',
   'enquiries',
   'import_runs',
+  'media_assets',
+  'site_settings',
   'student_stories',
   'subject_scores',
   'toppers',
@@ -336,6 +388,20 @@ export const INTEGRITY_CONSTRAINTS: readonly string[] = [
   'enquiries_iphash_is_sha256_hex',
   'enquiries_name_not_blank',
   'enquiries_phone_digits',
+  // Phase 15. Editable website copy. The key charset mirrors `isEditableKey()`
+  // in src/config/site-content.ts; the application allowlist is the real gate
+  // and these are the backstop if a future code path forgets to call it.
+  'site_settings_key_charset',
+  'site_settings_value_bounded',
+  'site_settings_value_printable',
+  // Phase 16, Topic 5. Uploaded images. The key shape mirrors `isMediaKey()`
+  // in src/lib/media/format.ts, which is the gate the retrieval route uses;
+  // this is the backstop if a future code path forgets to call it.
+  'media_assets_key_shape',
+  'media_assets_content_type_known',
+  'media_assets_dimensions_sane',
+  'media_assets_bytes_sane',
+  'media_assets_name_printable',
   'student_stories_year_sane',
   'subject_scores_score_sane',
   'toppers_percent_range',
@@ -385,6 +451,11 @@ export const OPERATIONAL_TABLES: readonly string[] = [
   'admin_users',
   'audit_log',
   'import_runs',
+  // Empty until a photograph is uploaded. An empty table is normal.
+  'media_assets',
+  // Empty until the institute edits any website copy. An empty table is the
+  // normal, correct state: every field falls back to the text in code.
+  'site_settings',
 ] as const;
 
 /* ====================================================== migrations ======== */
@@ -700,6 +771,21 @@ export type RouteSpec = {
  */
 export const ROUTES: readonly RouteSpec[] = [
   { path: '/', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
+  {
+    path: '/media/[key]',
+    kind: 'route-handler',
+    requiresAuth: false,
+    mutates: false,
+    inSitemap: false,
+    crawlable: false,
+    note:
+      'Serves an uploaded image by content hash. DELIBERATELY UNAUTHENTICATED: ' +
+      'the key is a 128-bit hash and cannot be enumerated, and a student photo ' +
+      'without consent is never given a URL at all - present() returns null. ' +
+      'Signing every image URL would defeat next/image and CDN caching for ' +
+      'every legitimate photo. Recorded as an accepted risk in ' +
+      'docs/PHASE-16-TOPIC-5-MEDIA.md.',
+  },
   { path: '/about', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
   { path: '/courses', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
   {
@@ -781,6 +867,28 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/announcements/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  {
+    path: '/admin/media',
+    kind: 'admin',
+    requiresAuth: true,
+    mutates: true,
+    inSitemap: false,
+    crawlable: false,
+    note:
+      'Photo library. Uploads are re-encoded through sharp and stored under a ' +
+      'content hash; deletion refuses while a record still references the file.',
+  },
+  {
+    path: '/admin/website',
+    kind: 'admin',
+    requiresAuth: true,
+    mutates: true,
+    inSitemap: false,
+    crawlable: false,
+    note:
+      'The Website Editor. Writes site_settings, which every public page reads. ' +
+      'Only keys declared in src/config/site-content.ts can be written.',
+  },
   {
     path: '/admin/preview',
     kind: 'admin',

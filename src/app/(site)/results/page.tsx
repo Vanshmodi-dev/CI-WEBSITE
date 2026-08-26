@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute } from '@/config/institute';
 import { pageMetadata, listingIndexing } from '@/lib/seo';
 import { getPublishedResults, asProgramme } from '@/lib/public-data';
-import { Container, Section } from '@/components/primitives/section';
+import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { ResultCard } from '@/components/domain/public-cards';
 import { PROGRAMME_LABELS } from '@/lib/admin-format';
@@ -95,20 +95,20 @@ export default async function ResultsPage({
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">Results</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              Our students&rsquo; results
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              Published with each student&rsquo;s permission. Where a student
-              asked us not to show their name or photograph, we don&rsquo;t.
-            </p>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="Results"
+        title={
+          <>
+            Our students&rsquo; results
+          </>
+        }
+        standfirst={
+          <>
+            Published with each student&rsquo;s permission. Where a student
+            asked us not to show their name or photograph, we don&rsquo;t.
+          </>
+        }
+      />
 
       <Section tone="surface" labelledBy="results-heading">
         <h2 id="results-heading" className="sr-only">
@@ -173,7 +173,7 @@ export default async function ResultsPage({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {data.results.map((result) => (
                     <ResultCard key={result.id} result={result} />
                   ))}
@@ -218,21 +218,22 @@ export default async function ResultsPage({
         )}
       </Section>
 
-      <Section tone="band" labelledBy="results-cta">
-        <div className="max-w-2xl">
-          <h2 id="results-cta" className="text-h2 font-bold leading-tight text-band-text">
-            Want to study with us?
-          </h2>
-          <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
+      <ClosingCta
+        id="results-cta"
+        title={<>Want to study with us?</>}
+        body={
+          <>
             Tell us which class you are in and we will explain how we can help.
-          </p>
-          <div className="mt-8">
-            <Button href="/admissions" size="lg" variant="onBand">
+          </>
+        }
+        actions={
+          <>
+            <Button href="/admissions" size="lg">
               Send an enquiry
             </Button>
-          </div>
-        </div>
-      </Section>
+          </>
+        }
+      />
     </>
   );
 }

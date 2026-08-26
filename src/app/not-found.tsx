@@ -3,6 +3,7 @@ import { Container } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { SiteHeader } from '@/components/domain/site-header';
 import { SiteFooter } from '@/components/domain/site-footer';
+import { getPrimaryNav, getContactBlock } from '@/lib/site-content';
 
 /**
  * A 404 is served with a 404 status, which is the signal that matters; the
@@ -23,15 +24,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function NotFound() {
+export default async function NotFound() {
+  const [nav, contact] = await Promise.all([getPrimaryNav(), getContactBlock()]);
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader
+        nav={nav}
+        phoneDisplay={contact.phonePrimaryDisplay}
+        telHref={contact.telHref}
+      />
       <main id="main">
         <Container>
           <div className="flex min-h-[60vh] max-w-xl flex-col justify-center py-20">
             <p className="eyebrow text-accent-text">Page not found</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
+            <h1 className="mt-4 font-display text-h1 font-bold leading-[1.1] tracking-[-0.02em] text-heading lg:text-[46px]">
               We could not find that page.
             </h1>
             <p className="measure mt-4 text-[17px] leading-relaxed text-muted">

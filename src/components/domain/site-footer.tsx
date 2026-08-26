@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { footerNav } from '@/config/nav';
-import { institute, addressFull, telHref, whatsappHref } from '@/config/institute';
+import { institute } from '@/config/institute';
+import { getFooterNav, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { LogoWordmark } from '@/components/domain/logo';
 
 /**
@@ -14,9 +14,14 @@ import { LogoWordmark } from '@/components/domain/logo';
  * links and hours are currently null in the config, so they are absent rather
  * than shown as placeholders — the same rule that governs the rest of the site.
  */
-export function SiteFooter() {
+export async function SiteFooter() {
   const year = new Date().getFullYear();
   const hasSocial = Boolean(institute.social.youtube || institute.social.instagram);
+
+  // Server component, so it reads the edited content directly. `cache()` in
+  // site-content.ts means this shares one query with the header above it.
+  const [footerNav, contact] = await Promise.all([getFooterNav(), getContactBlock()]);
+  const whatsappHref = () => whatsappLink(contact.whatsappNumber);
 
   return (
     <footer className="bg-band text-band-text">
@@ -61,7 +66,7 @@ export function SiteFooter() {
           <div>
             <h2 className="eyebrow font-sans text-accent">Visit</h2>
             <address className="mt-3 text-small leading-relaxed text-band-muted not-italic">
-              {addressFull}
+              {contact.addressLine}
             </address>
           </div>
 
@@ -69,8 +74,11 @@ export function SiteFooter() {
             <h2 className="eyebrow font-sans text-accent">Talk to us</h2>
             <ul className="mt-3 flex flex-col gap-2 text-small">
               <li>
-                <a href={telHref} className="text-band-muted hover:text-band-text">
-                  {institute.phonePrimary.display}
+                <a
+                  href={contact.telHref}
+                  className="text-band-muted hover:text-band-text"
+                >
+                  {contact.phonePrimaryDisplay}
                 </a>
               </li>
               <li>
@@ -97,6 +105,20 @@ export function SiteFooter() {
               ) : null}
             </ul>
           </div>
+
+          {/* Hours appear only once the institute has entered them in the
+              admin. Never a guessed "9 AM - 7 PM": a wrong opening time sends
+              somebody to a locked door. */}
+          {contact.hours.length > 0 ? (
+            <div>
+              <h2 className="eyebrow font-sans text-accent">Opening hours</h2>
+              <ul className="mt-3 flex flex-col gap-2 text-small text-band-muted">
+                {contact.hours.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           {/* Social block renders only when an account actually exists (§32) */}
           {hasSocial ? (

@@ -87,3 +87,36 @@ export class StaleEditError extends Error {
 export function isStaleEditError(error: unknown): boolean {
   return error instanceof StaleEditError || (error as { name?: string })?.name === 'StaleEditError';
 }
+
+/**
+ * The lost-update token for a SET of rows, used by the Website Editor.
+ *
+ * PHASE 16 CLOSES A REAL GAP. Phase 15 shipped the Website Editor with no
+ * stale-edit guard at all, while every student and story form has had one since
+ * Phase 14. The scenario is identical: two people, or one person in two tabs,
+ * and the second save silently discards the first. For website copy that is
+ * less grave than restoring a withdrawn photograph, but it is the same defect,
+ * and "less grave" is not a reason to leave it unguarded.
+ *
+ * A single record has one `updatedAt` to compare. A CMS group does not: it is
+ * many rows, and a key nobody has saved yet has no row and therefore no
+ * timestamp. So the token is the LATEST `updatedAt` across the keys the save
+ * will touch, and the empty string when none of them exists.
+ *
+ * That gets the create case right too. If the form was rendered while no row
+ * existed and somebody else has since created one, the recomputed token is
+ * non-empty, the two disagree, and the save is refused rather than clobbering a
+ * value this form never saw.
+ *
+ * Lives here, in the pure module, for two reasons: it is the kind of comparison
+ * that must be unit-tested, and a module marked 'use server' may only export
+ * async functions - exporting this from the action file would make it a
+ * callable endpoint, which is the Phase 14 lesson.
+ */
+export function contentToken(rows: ReadonlyArray<{ updatedAt: Date }>): string {
+  let latest: Date | null = null;
+  for (const row of rows) {
+    if (!latest || row.updatedAt > latest) latest = row.updatedAt;
+  }
+  return editToken(latest);
+}

@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import { saveStudentResult, type StudentFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
+import { MediaField } from '@/components/admin/media-field';
 import { Field, inputClass, selectClass } from '@/components/primitives/field';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import { Button } from '@/components/primitives/button';
@@ -315,24 +316,22 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
         </div>
 
         <div className="mt-5">
-          <Field
+          {/*
+            Was a text box the teacher typed `/photos/example.jpg` into, having
+            first sent the file to a developer to put it there. Phase 16.
+
+            The live preview below still reads `photoUrl`, so it keeps showing
+            what a visitor would see the moment a photo is chosen - including
+            showing NOTHING while photo consent is unticked.
+          */}
+          <MediaField
             name="photoUrl"
             label="Photo"
-            hint="Optional. The address of a photo already on this website."
+            hint="Shown only if you tick the photograph permission below."
+            value={photoUrl}
             error={state.errors?.photoUrl}
-          >
-            {(props) => (
-              <input
-                {...props}
-                type="text"
-                maxLength={500}
-                placeholder="/photos/example.jpg"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className={inputClass(Boolean(state.errors?.photoUrl))}
-              />
-            )}
-          </Field>
+            onChange={setPhotoUrl}
+          />
         </div>
       </Card>
 

@@ -1,4 +1,4 @@
-import { publishedCourses } from './institute';
+import { publishedCourses } from './institute.ts';
 
 export type NavLink = {
   href: string;

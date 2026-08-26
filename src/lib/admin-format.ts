@@ -6,6 +6,8 @@
  * because the host runs in UTC.
  */
 
+import { institute } from '@/config/institute';
+
 const IST = 'Asia/Kolkata';
 
 export function formatDate(value: Date | string): string {
@@ -68,3 +70,19 @@ export const DISPLAY_NAME_LABELS: Record<string, string> = {
   FIRST_NAME_ONLY: 'First name only',
   FULL: 'Full name',
 };
+
+/**
+ * Course slug → the name the institute uses for it.
+ *
+ * Phase 15. The admin dashboard and the enquiry detail page were printing the
+ * raw slug — a teacher reading their own dashboard saw "class-12-commerce"
+ * where the public site, two clicks away, says "Class XII Commerce". The
+ * preview page already resolved it, by hand, inline; this is that same lookup
+ * in one place so the three cannot drift apart again.
+ *
+ * Falls back to the slug rather than to an empty string: an unknown slug is a
+ * data problem the teacher needs to SEE, not one to hide behind a blank.
+ */
+export function courseLabel(slug: string): string {
+  return institute.courses.find((c) => c.slug === slug)?.name ?? slug;
+}

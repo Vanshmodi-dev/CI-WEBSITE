@@ -7,7 +7,10 @@ import { initialEnquiryState, type EnquiryFormState } from './form-state';
 import { CLASS_LEVELS, CLASS_LEVEL_LABELS, LIMITS } from '@/lib/validation';
 import { Field, inputClass, selectClass, textareaClass } from '@/components/primitives/field';
 import { Button } from '@/components/primitives/button';
-import { institute, whatsappHref } from '@/config/institute';
+// The institute NAME is confirmed brand copy and is not editable, so it stays
+// a static import. Only the contact details arrive as props.
+import { institute } from '@/config/institute';
+
 
 /**
  * Enquiry form.
@@ -27,9 +30,22 @@ export function EnquiryForm({
   formToken,
   sourcePage,
   courseSlug,
+  phoneDisplay,
+  whatsappHref,
 }: {
   formToken: string;
   sourcePage: string;
+  /**
+   * The live phone number and WhatsApp link, passed in rather than imported.
+   *
+   * This is a client component, so it cannot read the edited contact details
+   * itself. It used to import them from config, which meant the fallback
+   * message shown when an enquiry FAILS to send — the one moment the visitor
+   * most needs a working number — would have kept quoting the old one after a
+   * change.
+   */
+  phoneDisplay: string;
+  whatsappHref: string;
   courseSlug?: string;
 }) {
   const [state, formAction] = useActionState<EnquiryFormState, FormData>(
@@ -58,10 +74,10 @@ export function EnquiryForm({
         <p className="measure mt-2 text-small text-text">
           Someone from {institute.name} will call you back on the number you
           gave us. If you would rather talk now, WhatsApp us or call{' '}
-          {institute.phonePrimary.display}.
+          {phoneDisplay}.
         </p>
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <Button href={whatsappHref()} external variant="secondary">
+          <Button href={whatsappHref} external variant="secondary">
             Message on WhatsApp
           </Button>
         </div>
@@ -113,13 +129,13 @@ export function EnquiryForm({
           {state.status === 'rate-limited' ? (
             <>
               You have sent several enquiries recently. Please give us a little
-              time to respond, or call {institute.phonePrimary.display}.
+              time to respond, or call {phoneDisplay}.
             </>
           ) : null}
           {state.status === 'unavailable' ? (
             <>
               We could not save your enquiry just now. Please call{' '}
-              {institute.phonePrimary.display} or try again shortly.
+              {phoneDisplay} or try again shortly.
               {state.ref ? (
                 <span className="block text-[13px] text-muted">
                   Reference: {state.ref}

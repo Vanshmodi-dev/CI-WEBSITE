@@ -392,3 +392,71 @@ model AuditLog {
   @@index([entity, entityId])
   @@map("audit_log")
 }
+
+/// Editable website copy, one row per named field.
+///
+/// A KEY/VALUE TABLE, DELIBERATELY. The alternative — a column per editable
+/// field — means a migration every time the institute wants to change a
+/// sentence, which is the thing this table exists to avoid. The usual cost of
+/// key/value is that it accepts anything; that cost is paid off here by
+/// `src/config/site-content.ts`, which declares the closed list of permitted
+/// keys, and by CHECK constraints that bound the key charset and the value
+/// length in the database itself.
+///
+/// A MISSING ROW IS NOT AN ERROR. Every key has a fallback in code, so an
+/// empty table renders exactly the site that shipped. Deleting a row is the
+/// undo.
+model SiteSetting {
+  key   String @id @db.VarChar(64)
+  value String @db.VarChar(2000)
+
+  updatedAt  DateTime @updatedAt
+  /// Denormalised: the entry must stay readable if the account is removed.
+  updatedBy  String?  @db.VarChar(80)
+
+  @@map("site_settings")
+}
+
+/// One stored image.
+///
+/// WHY THIS TABLE IS GENUINELY REQUIRED, since the rule is to add none.
+///
+/// The bytes could live in storage alone — the record's `photoUrl` already
+/// addresses them, and serving needs no database at all. Three requirements
+/// make a row necessary anyway:
+///
+///   1. CHOOSING AN EXISTING IMAGE. The admin must be able to pick a photo
+///      already uploaded rather than re-uploading it. Listing an object store
+///      is slow, unpaginated and tells you nothing about what a file is.
+///   2. ORPHAN RECONCILIATION. "Which stored files does nothing reference?" and
+///      "which references point at a file that is gone?" are both unanswerable
+///      without a manifest to compare storage against.
+///   3. METADATA THE ADMIN SHOWS. Dimensions and size are read once at upload;
+///      re-deriving them means decoding every image on every page render.
+///
+/// It deliberately does NOT hold consent, publication state, or any link to a
+/// student. A media row is a file, not a permission — see the consent boundary
+/// in docs/PHASE-16-TOPIC-5-MEDIA.md. Which record uses which photo stays in
+/// that record's own `photoUrl`, under that record's own consent rules.
+model MediaAsset {
+  /// `<sha256 of the stored bytes, first 32 hex>.<ext>`. Content-addressed, so
+  /// the same picture is always the same key and a different picture is always
+  /// a different URL.
+  key String @id @db.VarChar(40)
+
+  contentType String @db.VarChar(40)
+  width       Int
+  height      Int
+  bytes       Int
+
+  /// The teacher's own filename, kept ONLY so they recognise their upload in a
+  /// list. Never a path, never trusted, always escaped on render.
+  originalName String @db.VarChar(160)
+
+  uploadedAt DateTime @default(now())
+  /// Denormalised so the row stays readable if the account is removed.
+  uploadedBy String   @db.VarChar(80)
+
+  @@index([uploadedAt])
+  @@map("media_assets")
+}

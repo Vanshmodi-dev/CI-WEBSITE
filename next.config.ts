@@ -106,7 +106,19 @@ const nextConfig: NextConfig = {
    * letting an admin post arbitrarily large bodies.
    */
   experimental: {
-    serverActions: { bodySizeLimit: '3mb' },
+    /*
+      Raised from 3 MB to 8 MB in Phase 16 for photo uploads.
+
+      `MEDIA_LIMITS.maxBytes` is 6 MB — a photograph straight off a phone. This
+      sits above it, with room for multipart overhead, for the same reason the
+      CSV limit does: whichever cap is lower is the one a teacher meets, and
+      ours produces a sentence they can act on where the framework's produces a
+      500 with no explanation.
+
+      It is NOT a licence to post 8 MB. Every upload path checks its own limit
+      first, before the bytes are read.
+    */
+    serverActions: { bodySizeLimit: '8mb' },
   },
 
   // Fail the build on type errors. A client project should never deploy with

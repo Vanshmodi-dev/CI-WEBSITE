@@ -9,26 +9,73 @@ import { institute } from '@/config/institute';
 /**
  * Admin shell — sidebar, header, mobile drawer.
  *
- * SIX navigation items, deliberately. Grouping them into sections would add a
- * layer of hierarchy for one person managing one small site; a flat list of six
- * is faster to scan than three groups of two.
+ * NAVIGATION STRUCTURE — Phase 15.
+ *
+ * This list used to be flat, under a comment reading "SIX navigation items,
+ * deliberately … a flat list of six is faster to scan than three groups of
+ * two". That reasoning was sound when it was written and the comment was, by
+ * the time Phase 15 read it, describing a list of EIGHT — two items had been
+ * added underneath it without the argument being revisited.
+ *
+ * Eight is the point at which a flat list stops being scannable, and the
+ * argument does not survive what this phase adds on top: a website editor,
+ * media, contact and location, header and footer, faculty, reviews, gallery
+ * and videos. Sixteen undifferentiated links is a wall.
+ *
+ * So the list is grouped, by the question the teacher is answering when they
+ * come here:
+ *
+ *   (no group)  Dashboard      — where am I, what came in
+ *   Students    the people and what they achieved
+ *   Website     what the public site says
+ *   Data        import, export, and the record of what changed
+ *
+ * Dashboard sits above the groups rather than inside one, because it is the
+ * landing page rather than a category.
  *
  * Client component only because of the mobile drawer. Every page inside it is a
  * server component.
  */
 
 type NavItem = { href: string; label: string; exact?: boolean };
+type NavGroup = { heading: string | null; items: readonly NavItem[] };
 
-const NAV: readonly NavItem[] = [
-  { href: '/admin', label: 'Dashboard', exact: true },
-  { href: '/admin/enquiries', label: 'Enquiries' },
-  { href: '/admin/students', label: 'Students & Results' },
-  { href: '/admin/batches', label: 'Batches' },
-  { href: '/admin/announcements', label: 'Announcements' },
-  { href: '/admin/stories', label: 'Student Stories' },
-  { href: '/admin/data', label: 'Data' },
-  { href: '/admin/preview', label: 'Website preview' },
+const NAV: readonly NavGroup[] = [
+  {
+    heading: null,
+    items: [
+      { href: '/admin', label: 'Dashboard', exact: true },
+      { href: '/admin/enquiries', label: 'Enquiries' },
+    ],
+  },
+  {
+    heading: 'Students',
+    items: [
+      { href: '/admin/students', label: 'Students & results' },
+      { href: '/admin/stories', label: 'Student stories' },
+    ],
+  },
+  {
+    heading: 'Website',
+    items: [
+      { href: '/admin/website', label: 'Website text' },
+      { href: '/admin/batches', label: 'Batches' },
+      { href: '/admin/announcements', label: 'Announcements' },
+      { href: '/admin/preview', label: 'Website preview' },
+    ],
+  },
+  {
+    heading: 'Media',
+    items: [{ href: '/admin/media', label: 'Photos' }],
+  },
+  {
+    heading: 'Data',
+    items: [{ href: '/admin/data', label: 'Import & export' }],
+  },
 ];
+
+/** Flat view, for "which page am I on?" lookups. */
+const NAV_ITEMS: readonly NavItem[] = NAV.flatMap((g) => g.items);
 
 export function AdminShell({
   adminName,
@@ -44,8 +91,9 @@ export function AdminShell({
   const open = openPath !== null && openPath === pathname;
 
   const current =
-    NAV.find((i) => (i.exact ? pathname === i.href : pathname.startsWith(i.href)))
-      ?.label ?? 'Admin';
+    NAV_ITEMS.find((i) =>
+      i.exact ? pathname === i.href : pathname.startsWith(i.href),
+    )?.label ?? 'Admin';
 
   return (
     <div className="min-h-screen bg-surface">
@@ -149,28 +197,40 @@ export function AdminShell({
 
 function NavList({ pathname }: { pathname: string }) {
   return (
-    <ul className="flex flex-col gap-0.5">
-      {NAV.map((item) => {
-        const active = item.exact
-          ? pathname === item.href
-          : pathname.startsWith(item.href);
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              aria-current={active ? 'page' : undefined}
-              className={cn(
-                'flex min-h-11 items-center rounded-sm px-3 text-small transition-colors',
-                active
-                  ? 'bg-selected font-medium text-heading'
-                  : 'text-muted hover:bg-surface hover:text-heading',
-              )}
-            >
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="flex flex-col gap-6">
+      {NAV.map((group, index) => (
+        <div key={group.heading ?? `group-${index}`}>
+          {/* The heading is a real <h2>, not a styled <span>: a screen-reader
+              user navigating this sidebar by heading gets the same four-way
+              split a sighted user gets from the gaps. */}
+          {group.heading ? (
+            <h2 className="eyebrow px-3 pb-2 text-muted">{group.heading}</h2>
+          ) : null}
+          <ul className="flex flex-col gap-0.5">
+            {group.items.map((item) => {
+              const active = item.exact
+                ? pathname === item.href
+                : pathname.startsWith(item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={cn(
+                      'flex min-h-11 items-center rounded-sm px-3 text-small transition-colors',
+                      active
+                        ? 'bg-selected font-medium text-heading'
+                        : 'text-muted hover:bg-surface hover:text-heading',
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }

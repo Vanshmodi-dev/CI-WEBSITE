@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { institute, publishedCourses, whatsappHref } from '@/config/institute';
+import { institute, publishedCourses } from '@/config/institute';
+import { getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata } from '@/lib/seo';
 import { getUpcomingBatches } from '@/lib/public-data';
-import { Container, Section } from '@/components/primitives/section';
+import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { CourseCard } from '@/components/domain/public-cards';
 
@@ -16,26 +17,29 @@ export const metadata: Metadata = pageMetadata({
 export const revalidate = 3600;
 
 export default async function CoursesPage() {
-  const batches = await getUpcomingBatches();
+  const [batches, contact] = await Promise.all([
+    getUpcomingBatches(),
+    getContactBlock(),
+  ]);
   const countFor = (slug: string) =>
     batches.filter((b) => b.courseSlug === slug).length;
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">Programmes</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              What we teach
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              Commerce programmes for school and professional examinations, in{' '}
-              {institute.locality}.
-            </p>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="Programmes"
+        title={
+          <>
+            What we teach
+          </>
+        }
+        standfirst={
+          <>
+            Commerce programmes for school and professional examinations, in{' '}
+            {institute.locality}.
+          </>
+        }
+      />
 
       <Section tone="surface" labelledBy="courses-heading">
         <h2 id="courses-heading" className="sr-only">
@@ -53,25 +57,31 @@ export default async function CoursesPage() {
         </div>
       </Section>
 
-      <Section tone="band" labelledBy="courses-cta">
-        <div className="max-w-2xl">
-          <h2 id="courses-cta" className="text-h2 font-bold leading-tight text-band-text">
-            Not sure which one fits?
-          </h2>
-          <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
+      <ClosingCta
+        id="courses-cta"
+        title={<>Not sure which one fits?</>}
+        body={
+          <>
             Tell us which class you are in and what you are aiming for, and we
             will talk you through the options.
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button href="/admissions" size="lg" variant="onBand">
+          </>
+        }
+        actions={
+          <>
+            <Button href="/admissions" size="lg">
               Ask about a course
             </Button>
-            <Button href={whatsappHref()} external size="lg" variant="onBand">
+            <Button
+              href={whatsappLink(contact.whatsappNumber)}
+              external
+              size="lg"
+              variant="secondary"
+            >
               WhatsApp us
             </Button>
-          </div>
-        </div>
-      </Section>
+          </>
+        }
+      />
     </>
   );
 }

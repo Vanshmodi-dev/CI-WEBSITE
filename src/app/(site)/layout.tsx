@@ -2,6 +2,7 @@ import { SiteHeader } from '@/components/domain/site-header';
 import { SiteFooter } from '@/components/domain/site-footer';
 import { WhatsAppButton } from '@/components/domain/whatsapp-button';
 import { siteJsonLd, jsonLdScript } from '@/lib/seo';
+import { getPrimaryNav, getContactBlock, getSiteContent } from '@/lib/site-content';
 
 /**
  * The PUBLIC site chrome.
@@ -36,12 +37,25 @@ import { siteJsonLd, jsonLdScript } from '@/lib/seo';
  * The root layout keeps only `<html>`, `<body>` and the skip link - the things
  * every route genuinely shares.
  */
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Resolved once per request and handed to the header, which is a client
+  // component and cannot read the database itself. The footer is a server
+  // component and reads it directly; `cache()` makes that the same query.
+  const [nav, contact, content] = await Promise.all([
+    getPrimaryNav(),
+    getContactBlock(),
+    getSiteContent(),
+  ]);
+
   return (
     <>
-      <SiteHeader />
+      <SiteHeader
+        nav={nav}
+        phoneDisplay={contact.phonePrimaryDisplay}
+        telHref={contact.telHref}
+      />
       <main id="main">{children}</main>
       <SiteFooter />
       <WhatsAppButton />
@@ -54,7 +68,20 @@ export default function SiteLayout({
           describes the institute to nobody. */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(siteJsonLd()) }}
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript(
+            siteJsonLd({
+              addressLine: contact.addressLine,
+              landmark: content['contact.landmark'] ?? '',
+              line1: content['contact.line1'] ?? '',
+              city: content['contact.city'] ?? '',
+              state: content['contact.state'] ?? '',
+              postalCode: content['contact.postalCode'] ?? '',
+              phoneE164: contact.phonePrimaryE164,
+              hours: contact.hours,
+            }),
+          ),
+        }}
       />
     </>
   );

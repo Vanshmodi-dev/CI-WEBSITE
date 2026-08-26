@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { institute, publishedCourses, whatsappHref, telHref } from '@/config/institute';
+import { institute, publishedCourses } from '@/config/institute';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata, breadcrumbJsonLd, jsonLdScript, SITE_URL } from '@/lib/seo';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
@@ -58,7 +59,17 @@ export default async function CoursePage({
   const course = findCourse(slug);
   if (!course) notFound();
 
-  const batches = await getUpcomingBatches({ courseSlug: course.slug });
+  const [batches, content, contact] = await Promise.all([
+    getUpcomingBatches({ courseSlug: course.slug }),
+    getSiteContent(),
+    getContactBlock(),
+  ]);
+
+  // Written by the institute in Admin -> Website text -> Programme
+  // descriptions. Blank until somebody writes one, and blank is a real state
+  // here: the honest "will be published here" notice below is what shows, not
+  // an invented syllabus.
+  const description = (content[`courses.${course.slug}.description`] ?? '').trim();
 
   /**
    * Course schema.org carries the name and provider only. No price, no
@@ -105,7 +116,7 @@ export default async function CoursePage({
           </nav>
 
           <div className="max-w-3xl py-10 md:py-14">
-            <h1 className="text-h1 font-bold leading-tight text-heading lg:text-[44px]">
+            <h1 className="font-display text-h1 font-bold leading-[1.1] tracking-[-0.02em] text-heading lg:text-[46px]">
               {course.name}
             </h1>
             <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
@@ -116,7 +127,7 @@ export default async function CoursePage({
                 Ask about this course
               </Button>
               <Button
-                href={whatsappHref(course.name)}
+                href={whatsappLink(contact.whatsappNumber, course.name)}
                 external
                 size="lg"
                 variant="secondary"
@@ -162,14 +173,25 @@ export default async function CoursePage({
         >
           Course details
         </h2>
-        <p className="measure mt-4 text-[17px] leading-relaxed text-muted">
-          Subjects, timings and fees for {course.name} will be published here.
-          In the meantime, call or message us and we will answer your questions
-          directly.
-        </p>
+        {description ? (
+          /*
+            A description the institute actually wrote. `whitespace-pre-line`
+            is safe because the value is a plain string React escapes — there is
+            no markup path here, by design: see src/config/site-content.ts.
+          */
+          <p className="measure mt-4 whitespace-pre-line text-[17px] leading-relaxed text-text">
+            {description}
+          </p>
+        ) : (
+          <p className="measure mt-4 text-[17px] leading-relaxed text-muted">
+            Subjects, timings and fees for {course.name} will be published here.
+            In the meantime, call or message us and we will answer your
+            questions directly.
+          </p>
+        )}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button href={telHref} variant="secondary">
-            Call {institute.phonePrimary.display}
+          <Button href={contact.telHref} variant="secondary">
+            Call {contact.phonePrimaryDisplay}
           </Button>
           <Button href="/admissions" variant="secondary">
             Send an enquiry

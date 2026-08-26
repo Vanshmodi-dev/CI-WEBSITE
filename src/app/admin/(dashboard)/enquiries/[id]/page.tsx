@@ -4,7 +4,7 @@ import { requireAdmin } from '@/lib/auth';
 import { getEnquiry } from '@/lib/admin-data';
 import { PageHeader, Card, StatusPill } from '@/components/admin/ui';
 import { CLASS_LEVEL_LABELS, type ClassLevelValue } from '@/lib/validation';
-import { formatDateTime, ENQUIRY_STATUS_LABELS } from '@/lib/admin-format';
+import { ENQUIRY_STATUS_LABELS, courseLabel, formatDateTime } from '@/lib/admin-format';
 import { whatsappHref } from '@/config/institute';
 import { EnquiryControls } from './controls';
 
@@ -49,7 +49,9 @@ export default async function EnquiryDetailPage({
                   enquiry.classLevel}
               </Detail>
               {enquiry.courseSlug ? (
-                <Detail label="Came from course">{enquiry.courseSlug}</Detail>
+                <Detail label="Came from course">
+                  {courseLabel(enquiry.courseSlug)}
+                </Detail>
               ) : null}
               <Detail label="Phone">
                 <a href={`tel:${enquiry.phone}`} className="text-link tabular-nums">

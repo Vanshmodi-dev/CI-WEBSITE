@@ -29,6 +29,20 @@ if (!env.DATABASE_URL) {
   exit(1);
 }
 
+/**
+ * The single <article> containing `marker`.
+ *
+ * Public result and story cards are <article> elements, so isolating one lets
+ * an assertion talk about OUR record instead of every record on the page. That
+ * distinction stopped being academic the moment a demo dataset existed.
+ */
+function cardContaining(markup, marker) {
+  for (const m of markup.matchAll(/<article[\s\S]*?<\/article>/g)) {
+    if (m[0].includes(marker)) return m[0];
+  }
+  return '';
+}
+
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
 });
@@ -229,7 +243,23 @@ try {
   });
   publicResults = await publicHtml('/results');
   check(publicResults.includes('93%'), 'editing the mark updated the public page immediately');
-  check(!publicResults.includes('88%'), 'the old mark is gone from the public page');
+
+  /*
+    SCOPED TO OUR OWN CARD, NOT THE WHOLE PAGE.
+
+    ⚠ This asserted `!publicResults.includes('88%')` and began failing once the
+    ZZSHOW demo dataset existed - because a different, unrelated demo result
+    legitimately scores 88%. The page was correct; the assertion was reading
+    every card on it and blaming ours.
+
+    The claim worth testing is that OUR record now reads 93% and no longer
+    reads 88%, so the card is isolated by the subject marker only this suite
+    writes before the score is checked.
+  */
+  const ourCard = cardContaining(publicResults, 'ZZTEST Accounts');
+  check(Boolean(ourCard), 'our result card is on the public page');
+  check(ourCard.includes('93%'), 'our card shows the new mark');
+  check(!ourCard.includes('88%'), 'the old mark is gone from our card');
 
   // Grant name consent — the name should now appear.
   await post(`/admin/students/${row.id}`, {
@@ -563,10 +593,39 @@ try {
   const emptyStories = await publicHtml('/stories');
   check(!emptyResults.includes('ZZTEST'), 'deleted results are gone from /results');
   check(!emptyStories.includes('ZZTEST'), 'deleted stories are gone from /stories');
-  check(/will be published here|Results will be published/i.test(emptyResults),
-        '/results shows an empty state, not a broken page');
-  check(/will appear here|Student stories will appear/i.test(emptyStories),
-        '/stories shows an empty state, not a broken page');
+  /*
+    THE EMPTY STATE IS ONLY CORRECT WHEN THE SITE IS ACTUALLY EMPTY.
+
+    ⚠ These asserted the empty-state wording unconditionally, and began failing
+    once the ZZSHOW demo dataset existed: with 36 published results, /results
+    correctly shows results rather than "nothing published yet". The page was
+    right; the assertion assumed a database state that stopped being true.
+
+    Both branches are worth testing, so the suite asks the database which one
+    applies rather than assuming. What is asserted unconditionally is the part
+    that actually matters here - that the records this suite deleted are gone,
+    and that the page rendered rather than erroring.
+  */
+  // The suite's own ZZTEST records were deleted a few lines above, so anything
+  // still published belongs to somebody else - which is exactly the question.
+  const otherResults = await prisma.topper.count({ where: { published: true } });
+  const otherStories = await prisma.studentStory.count({ where: { published: true } });
+
+  if (otherResults === 0) {
+    check(/will be published here|Results will be published/i.test(emptyResults),
+          '/results shows an empty state, not a broken page');
+  } else {
+    check(/<main|<article|Our students/i.test(emptyResults),
+          `/results still renders the ${otherResults} unrelated published result(s)`);
+  }
+
+  if (otherStories === 0) {
+    check(/will appear here|Student stories will appear/i.test(emptyStories),
+          '/stories shows an empty state, not a broken page');
+  } else {
+    check(/<main|<article|How they got there/i.test(emptyStories),
+          `/stories still renders the ${otherStories} unrelated published story/stories`);
+  }
 } catch (error) {
   console.error('\nHarness error:', error instanceof Error ? error.stack : error);
   fail += 1;

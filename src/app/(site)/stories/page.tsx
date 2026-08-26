@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute } from '@/config/institute';
 import { pageMetadata, listingIndexing } from '@/lib/seo';
 import { getPublishedStoriesPage } from '@/lib/public-data';
-import { Container, Section } from '@/components/primitives/section';
+import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { StoryCard } from '@/components/domain/public-cards';
 
@@ -69,20 +69,20 @@ export default async function StoriesPage({
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">Student stories</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              How they got there
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              A result is one number. These are the longer versions — what was
-              hard, what changed, and how it turned out.
-            </p>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="Student stories"
+        title={
+          <>
+            How they got there
+          </>
+        }
+        standfirst={
+          <>
+            A result is one number. These are the longer versions — what was
+            hard, what changed, and how it turned out.
+          </>
+        }
+      />
 
       <Section tone="surface" labelledBy="stories-heading">
         <h2 id="stories-heading" className="sr-only">
@@ -150,21 +150,22 @@ export default async function StoriesPage({
         )}
       </Section>
 
-      <Section tone="band" labelledBy="stories-cta">
-        <div className="max-w-2xl">
-          <h2 id="stories-cta" className="text-h2 font-bold leading-tight text-band-text">
-            Your story could start here
-          </h2>
-          <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
+      <ClosingCta
+        id="stories-cta"
+        title={<>Your story could start here</>}
+        body={
+          <>
             Talk to us about which programme suits where you are now.
-          </p>
-          <div className="mt-8">
-            <Button href="/admissions" size="lg" variant="onBand">
+          </>
+        }
+        actions={
+          <>
+            <Button href="/admissions" size="lg">
               Send an enquiry
             </Button>
-          </div>
-        </div>
-      </Section>
+          </>
+        }
+      />
     </>
   );
 }

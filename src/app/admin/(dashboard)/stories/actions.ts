@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
-import { isValidRecordId } from '@/lib/validation';
+import { isValidRecordId, isSafePhotoPath } from '@/lib/validation';
 import {
   EDIT_TOKEN_FIELD,
   STALE_EDIT_MESSAGE,
@@ -31,7 +31,17 @@ export type StoryFormState = {
   message?: string;
   blockers?: string[];
   errors?: Partial<
-    Record<'studentName' | 'slug' | 'challenge' | 'journey' | 'outcome' | 'year' | 'programme', string>
+    Record<
+      | 'studentName'
+      | 'slug'
+      | 'challenge'
+      | 'journey'
+      | 'outcome'
+      | 'year'
+      | 'programme'
+      | 'photoUrl',
+      string
+    >
   >;
 };
 
@@ -104,6 +114,30 @@ export async function saveStory(
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
     errors.year = 'Enter the year, for example 2026.';
   }
+  /*
+    ⚠ D5-1 — THIS CHECK WAS MISSING ENTIRELY UNTIL PHASE 16.
+
+    `admin/students/actions.ts` has validated `photoUrl` with `isSafePhotoPath`
+    since it was written. This action, saving the same kind of record with the
+    same kind of field, did not: it accepted any 500-character string and wrote
+    it straight to a column that the public story card renders through
+    `next/image`.
+
+    Nothing downstream compensated. `present()` in student-display.ts gates the
+    photo on `consentPhoto` and never looks at the PATH, so a value like
+    `https://someone-elses-server/track.gif` reached the public page - and since
+    that host is not in `remotePatterns`, the optimiser throws and the whole
+    /stories page fails to render. An admin-only write, but a stored one: it
+    persists until somebody edits the record.
+
+    Found by inventory at the start of Topic 5, fixed here, and pinned by a
+    regression test.
+  */
+  if (photoUrl.length > 0 && !isSafePhotoPath(photoUrl)) {
+    errors.photoUrl =
+      'That does not look like a photo on this website. Use the Choose photo button.';
+  }
+
   if (challenge.length < 10) errors.challenge = 'Describe what they found hard.';
   if (journey.length < 10) errors.journey = 'Describe how they worked on it.';
   if (outcome.length < 10) errors.outcome = 'Describe how it turned out.';

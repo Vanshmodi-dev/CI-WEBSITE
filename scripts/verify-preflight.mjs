@@ -1853,18 +1853,59 @@ function checkRoutes() {
 
   // -- P-ROUTE-05 ------------------------------------------------------------
   // Route handlers are not Server Actions: they get no automatic CSRF check.
+  //
+  // ⚠ THE EXEMPTION BELOW IS TIED TO THE CONTRACT, NOT TO A FILENAME.
+  //
+  // An origin check defends against a CROSS-SITE REQUEST CHANGING SOMETHING. A
+  // handler that only reads, needs no session, and serves a public asset has
+  // nothing to defend: it must be fetchable cross-origin, because that is what
+  // an image tag, an image optimiser and a CDN all do. Demanding an origin
+  // check there would not harden anything - it would break every photograph on
+  // the site.
+  //
+  // So a handler is exempt only when the DEPLOYMENT CONTRACT says it neither
+  // mutates nor requires auth, and only when it exports no mutating verb. That
+  // cannot be bypassed by adding a file: a new handler with no contract entry
+  // is not exempt, and P-ROUTE-06 / the contract tests fail on it separately.
+  const MUTATING_VERB = /export\s+(?:async\s+)?function\s+(POST|PUT|PATCH|DELETE)/;
+
+  /** `src/app/media/[key]/route.ts` -> `/media/[key]`, route groups removed. */
+  const routePathOf = (file) => {
+    const rel = path.relative('.', file).split(path.sep).join('/');
+    return (
+      '/' +
+      rel
+        .replace(/^src\/app\//, '')
+        .replace(/\/route\.ts$/, '')
+        .split('/')
+        .filter((seg) => !/^\(.*\)$/.test(seg))
+        .join('/')
+    );
+  };
+
   const handlers = files.filter((f) => path.basename(f) === 'route.ts');
   const unprotected = [];
+  const exempt = [];
   for (const file of handlers) {
     const text = readIfExists(file) ?? '';
     const rel = path.relative('.', file).split(path.sep).join('/');
-    if (!/rejectCrossOrigin|rejectForeignOrigin/.test(text)) unprotected.push(rel);
+    if (/rejectCrossOrigin|rejectForeignOrigin/.test(text)) continue;
+
+    const spec = ROUTES.find((r) => r.path === routePathOf(file));
+    const readOnlyPublic =
+      spec && spec.mutates === false && spec.requiresAuth === false && !MUTATING_VERB.test(text);
+
+    if (readOnlyPublic) exempt.push(rel);
+    else unprotected.push(rel);
   }
   if (unprotected.length === 0) {
     pass(
       'P-ROUTE-05',
       'every route handler enforces an origin check',
-      `${handlers.length} handlers`,
+      `${handlers.length} handlers` +
+        (exempt.length > 0
+          ? `; ${exempt.length} read-only public asset handler(s) exempt by contract: ${exempt.join(', ')}`
+          : ''),
     );
   } else {
     fail(

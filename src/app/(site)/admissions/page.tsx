@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
-import { institute, telHref, whatsappHref } from '@/config/institute';
+import { institute } from '@/config/institute';
+import { getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata } from '@/lib/seo';
 import { issueFormToken } from '@/lib/crypto';
-import { Container, Section } from '@/components/primitives/section';
+import { Section, PageHeader } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { Hidden } from '@/components/primitives/empty-state';
 import { EnquiryForm } from './enquiry-form';
@@ -22,33 +23,40 @@ export const metadata: Metadata = pageMetadata({
 export const dynamic = 'force-dynamic';
 
 export default async function AdmissionsPage() {
+  const contact = await getContactBlock();
+
   const formToken = issueFormToken();
 
   return (
     <>
-      <section className="border-b border-rule bg-paper">
-        <Container>
-          <div className="max-w-3xl py-16 md:py-20">
-            <p className="eyebrow text-accent-text">Admissions</p>
-            <h1 className="mt-4 text-h1 font-bold leading-tight text-heading lg:text-[44px]">
-              Talk to us about joining
-            </h1>
-            <p className="measure mt-5 text-[18px] leading-relaxed text-muted">
-              Tell us which class or course you are asking about and we will
-              call you back. If you would rather talk straight away, WhatsApp or
-              call us — that is often quicker.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button href={whatsappHref()} external variant="secondary">
-                Message on WhatsApp
-              </Button>
-              <Button href={telHref} variant="secondary">
-                Call {institute.phonePrimary.display}
-              </Button>
-            </div>
-          </div>
-        </Container>
-      </section>
+      <PageHeader
+        eyebrow="Admissions"
+        title={
+          <>
+            Talk to us about joining
+          </>
+        }
+        standfirst={
+          <>
+            Tell us which class or course you are asking about and we will
+            call you back. If you would rather talk straight away, WhatsApp or
+            call us — that is often quicker.
+          </>
+        }
+      >
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <Button
+            href={whatsappLink(contact.whatsappNumber)}
+            external
+            variant="secondary"
+          >
+            Message on WhatsApp
+          </Button>
+          <Button href={contact.telHref} variant="secondary">
+            Call {contact.phonePrimaryDisplay}
+          </Button>
+        </div>
+      </PageHeader>
 
       {/*
         The admission process itself — steps, documents, whether a demo class
@@ -73,7 +81,12 @@ export default async function AdmissionsPage() {
               us answer you better.
             </p>
 
-            <EnquiryForm formToken={formToken} sourcePage="/admissions" />
+            <EnquiryForm
+              formToken={formToken}
+              sourcePage="/admissions"
+              phoneDisplay={contact.phonePrimaryDisplay}
+              whatsappHref={whatsappLink(contact.whatsappNumber)}
+            />
           </div>
 
           <aside className="lg:pt-2">
@@ -83,13 +96,16 @@ export default async function AdmissionsPage() {
               </h3>
               <ul className="mt-4 flex flex-col gap-3 text-small">
                 <li>
-                  <a href={telHref} className="text-link hover:text-link-hover">
-                    {institute.phonePrimary.display}
+                  <a
+                    href={contact.telHref}
+                    className="text-link hover:text-link-hover"
+                  >
+                    {contact.phonePrimaryDisplay}
                   </a>
                 </li>
                 <li>
                   <a
-                    href={whatsappHref()}
+                    href={whatsappLink(contact.whatsappNumber)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-link hover:text-link-hover"

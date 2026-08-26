@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
-import { primaryNav } from '@/config/nav';
-import { institute, telHref } from '@/config/institute';
+import { institute } from '@/config/institute';
+import type { ResolvedNavLink } from '@/lib/site-content';
 import { Button } from '@/components/primitives/button';
 import { LogoLockup } from '@/components/domain/logo';
 
@@ -19,7 +19,26 @@ import { LogoLockup } from '@/components/domain/logo';
  * in thumb reach — the top of a full-height drawer is the hardest place to
  * reach one-handed, and Enquire is the action we most want tapped.
  */
-export function SiteHeader() {
+/**
+ * The menu and the phone number now arrive as PROPS, resolved on the server.
+ *
+ * This component is a client component because of the drawer, and a client
+ * component cannot read the database. Importing `primaryNav` and `telHref`
+ * directly, as it used to, meant the header could only ever show what was
+ * hardcoded — so a teacher renaming "Updates" to "News" in the admin would see
+ * it change everywhere except the one place every visitor looks first.
+ *
+ * `(site)/layout.tsx` resolves both once per request and passes them down.
+ */
+export function SiteHeader({
+  nav,
+  phoneDisplay,
+  telHref,
+}: {
+  nav: readonly ResolvedNavLink[];
+  phoneDisplay: string;
+  telHref: string;
+}) {
   const pathname = usePathname();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -116,7 +135,7 @@ export function SiteHeader() {
           {/* Desktop navigation — appears at lg, per §21 */}
           <nav aria-label="Primary" className="hidden lg:block">
             <ul className="flex items-center gap-1">
-              {primaryNav.map((item) => {
+              {nav.map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
@@ -154,11 +173,11 @@ export function SiteHeader() {
             <a
               href={telHref}
               className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted transition-colors hover:bg-surface hover:text-heading lg:px-4"
-              aria-label={`Call ${institute.name} on ${institute.phonePrimary.display}`}
+              aria-label={`Call ${institute.name} on ${phoneDisplay}`}
             >
               <PhoneIcon />
               <span className="ml-2 hidden text-[15px] xl:inline">
-                {institute.phonePrimary.display}
+                {phoneDisplay}
               </span>
             </a>
 
@@ -233,7 +252,7 @@ export function SiteHeader() {
 
             <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-5 py-4">
               <ul className="flex flex-col">
-                {primaryNav.map((item) => {
+                {nav.map((item) => {
                   const active = pathname === item.href;
                   return (
                     <li key={item.href} className="border-b border-rule/70">
@@ -263,7 +282,7 @@ export function SiteHeader() {
                 className="mt-3 flex min-h-11 items-center justify-center gap-2 text-[15px] text-link"
               >
                 <PhoneIcon />
-                {institute.phonePrimary.display}
+                {phoneDisplay}
               </a>
             </div>
           </div>

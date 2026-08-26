@@ -1144,21 +1144,68 @@ try {
    */
   section('21. GLOBAL SIGN-IN CEILING');
 
-  let processed = 0;
-  let refused = 0;
-  for (let i = 0; i < 70; i += 1) {
+  /**
+   * THE ATTEMPTS MUST BE CONCURRENT, AND THAT IS NOT A SHORTCUT.
+   *
+   * This ran as a sequential loop of 70 and reported a pass for several
+   * phases. Phase 15 found it failing and, before touching any product code,
+   * measured what was actually happening from the server log: the 70 attempts
+   * took 76.5 seconds, and the busiest 60-second window inside that run held
+   * 55 of them. The ceiling is 60 in 60 seconds. It was never crossed.
+   *
+   * So the check had quietly become a measurement of how fast this laptop can
+   * issue HTTP requests. On a fast machine it passed; on a loaded one - the
+   * same machine now also running PostgreSQL and a seeded dataset - it failed,
+   * and the failure said "the ceiling is broken" when the ceiling was fine.
+   * A check that reports a product defect when the harness is slow is worse
+   * than no check, because it trains the reader to ignore it.
+   *
+   * Issuing them concurrently fixes that AND is more faithful: nobody attacking
+   * a sign-in form does it one request at a time, waiting for each reply.
+   *
+   * The batching is deliberate too. Firing all 70 at once can exhaust the
+   * client's socket pool and produce transport errors that look like refusals;
+   * batches keep every attempt a real, completed HTTP exchange.
+   */
+  const CEILING_ATTEMPTS = 90;
+  const BATCH = 15;
+
+  async function ceilingAttempt(i) {
     const page = await (await req('/admin/login', { noCookie: true })).text();
     const attempt = await post('/admin/login', {
       ...fieldsOf(page, 'password'),
       email: `${PREFIX.toLowerCase()}-nobody-${i}@example.invalid`,
       password: 'not-the-password-1',
     }, { noCookie: true, headers: { 'x-forwarded-for': `198.51.100.${(i % 250) + 1}` } });
-    if (/too many|try again/i.test(await attempt.text())) refused += 1;
-    else processed += 1;
+    return /too many|try again/i.test(await attempt.text());
   }
+
+  let processed = 0;
+  let refused = 0;
+  const startedAt = Date.now();
+
+  for (let start = 0; start < CEILING_ATTEMPTS; start += BATCH) {
+    const batch = Array.from(
+      { length: Math.min(BATCH, CEILING_ATTEMPTS - start) },
+      (_, k) => ceilingAttempt(start + k),
+    );
+    for (const wasRefused of await Promise.all(batch)) {
+      if (wasRefused) refused += 1;
+      else processed += 1;
+    }
+    // Once it has fired there is nothing further to learn, and every extra
+    // attempt makes the per-process budget take longer to refill for whatever
+    // runs next.
+    if (refused > 0) break;
+  }
+
+  const elapsedS = ((Date.now() - startedAt) / 1000).toFixed(1);
+
   check(refused > 0,
         'a per-instance ceiling bounds sign-in work for accounts that do not exist',
-        `${processed} processed, ${refused} refused across 70 rotated addresses`);
+        `${processed} processed, ${refused} refused in ${elapsedS}s ` +
+        `(ceiling is 60 per 60s; if processed >= 60 with 0 refused the ceiling is broken, ` +
+        `if processed < 60 the harness was too slow to reach it)`);
 
   section('22. HTTP METHODS');
 

@@ -13,11 +13,18 @@
  * permission that way on a paper form, and the institute requires them kept
  * separate.
  *
- * Pure and unit-tested (tests/student-display.test.ts). No imports, no I/O.
+ * Pure and unit-tested (tests/student-display.test.ts). No I/O.
+ *
+ * Phase 16 added ONE import: `isSafePhotoPath` from the equally pure
+ * `validation.ts`. Copying that check in here instead would have been the
+ * mistake - two copies of a security predicate drift, and the one nobody
+ * remembers is the one that stops refusing things.
  *
  * See docs/design/STUDENT-DATA-POLICY.md. That document is implementation
  * guidance agreed for this project; it is not a legal opinion.
  */
+
+import { isSafePhotoPath } from './validation.ts';
 
 export type DisplayNameModeValue = 'INITIALS' | 'FIRST_NAME_ONLY' | 'FULL';
 
@@ -128,7 +135,25 @@ export function present(
 
   // A photograph needs its OWN permission. A story grant does not confer it,
   // and neither does a name grant.
-  const photoUrl = record.consentPhoto ? (record.photoUrl ?? null) : null;
+  /*
+    TWO CONDITIONS, NOT ONE.
+
+    Consent decides WHETHER a photograph may be shown. It says nothing about
+    whether the stored value is a path this site can safely render, and until
+    Phase 16 nothing on the read path checked that - `admin/stories/actions.ts`
+    was writing `photoUrl` with no validation at all (D5-1), and this function
+    handed whatever it found straight to `next/image`.
+
+    That write is fixed. This check is the second, independent line, and it
+    exists because the two fail differently: the write guard protects new data,
+    and this protects against a row that is ALREADY poisoned - by the old bug,
+    by a direct database edit, or by an import path nobody has re-read lately.
+    A bad path here degrades to a monogram, which is exactly what the component
+    renders when there is no photo.
+  */
+  const storedPhoto = record.photoUrl ?? null;
+  const photoUrl =
+    record.consentPhoto && storedPhoto && isSafePhotoPath(storedPhoto) ? storedPhoto : null;
 
   return { name: name && name.length > 0 ? name : null, photoUrl, monogram };
 }
