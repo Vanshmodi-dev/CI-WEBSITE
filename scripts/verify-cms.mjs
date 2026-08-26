@@ -583,14 +583,28 @@ section('15. AN XSS PAYLOAD IS RENDERED AS TEXT, NOT EXECUTED');
 
   await postAction(PREVIEW, fields, { cookie: adminCookie });
 
-  const html = await publicHtml('/');
+  /*
+    POLLED, like every other post-save assertion in this suite.
+
+    This one fetched once and began failing in Topic 6: the homepage gained a
+    faculty query, regeneration got a little slower, and a race that used to
+    resolve inside the first request stopped doing so. The payload WAS being
+    saved and escaped correctly - the check was reading the previous render.
+
+    A single fetch after `revalidatePath` measures how fast the page rebuilds,
+    not whether it escapes. The count is reported so a regression in
+    revalidation is still visible rather than smoothed away.
+  */
+  const escaped = await waitForPublic('/', '&lt;script&gt;');
+  const html = escaped.html;
   check(
     !html.includes('<script>window.__zzcmsPwned'),
     'the payload is not present as live markup',
   );
   check(
-    html.includes('&lt;script&gt;'),
+    escaped.found,
     'the payload IS present, escaped, as text',
+    `after ${escaped.attempt} anonymous request(s)`,
   );
 
   // And prove it in a real browser rather than by reading bytes.

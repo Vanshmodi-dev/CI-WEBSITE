@@ -71,3 +71,18 @@ export function revalidateStories(): void {
   revalidatePath('/stories');
   revalidateSitemap();
 }
+
+/**
+ * Faculty appear on their own page and in the homepage band.
+ *
+ * Both are cleared on every change - including a visibility change and a photo
+ * replacement, which are the two a teacher is most likely to make and then
+ * immediately go and check. A photo replacement produces a NEW url (the key is
+ * a content hash), so without this the homepage would keep serving a card
+ * pointing at the previous photograph until its ISR window expired.
+ */
+export function revalidateFaculty(): void {
+  revalidatePath('/');
+  revalidatePath('/faculty');
+  revalidateSitemap();
+}

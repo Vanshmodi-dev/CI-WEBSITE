@@ -460,3 +460,62 @@ model MediaAsset {
   @@index([uploadedAt])
   @@map("media_assets")
 }
+
+/// A member of teaching staff, as shown on /faculty.
+///
+/// ⚠ THIS REVERSES MASTER PLAN DECISION 03, DELIBERATELY AND ON INSTRUCTION.
+///
+/// That decision reads: "Content that changes gets a database. Content that
+/// carries design stays in code. Results, toppers, announcements and enquiries
+/// go to Postgres with an admin UI. Course and faculty pages stay typed content
+/// in the repo, because a generic CMS shape would flatten exactly the layouts
+/// that make this site feel bespoke."
+///
+/// The owner has since required faculty to be admin-managed, because the
+/// alternative is that the institute cannot correct a teacher's name without a
+/// developer. The reversal keeps the REASONING of Decision 03 intact by
+/// splitting it where the decision itself did not: the DATA lives here, and the
+/// DESIGN stays a typed React component. There is no layout field, no HTML
+/// field, no colour, no ordering of sections - nothing a CMS could use to
+/// flatten the page.
+///
+/// WHAT IS DELIBERATELY ABSENT.
+///
+/// No phone, no email, no address: the brief forbids storing personal contact
+/// details for staff, and the site has no use for them. No qualifications,
+/// experience or achievements either - the master directive says "only publish
+/// verified information", none is supplied, and a text box invites somebody to
+/// fill it with a claim nobody checked.
+///
+/// CONSENT. `docs/design/STUDENT-DATA-POLICY.md` is scoped to students and says
+/// nothing about staff, so no consent COLUMN is modelled here - inventing one
+/// would be inventing a policy. What IS guaranteed technically is that nothing
+/// is public until somebody deliberately publishes it: `published` defaults to
+/// false, exactly as it does for every other record on this site. Whether the
+/// institute holds each teacher's permission is a human decision, recorded in
+/// docs/PHASE-16-TOPIC-6-FACULTY.md and surfaced in the admin as a reminder,
+/// not asserted here as law.
+model Faculty {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String  @db.VarChar(120)
+  /// "Position" in the master directive: Director, Senior Faculty, and so on.
+  designation String  @db.VarChar(120)
+  /// Subject or specialisation. Optional: not everyone teaches one subject.
+  subject     String? @db.VarChar(120)
+  /// A short description. Deliberately short - a card, not a biography page.
+  bio         String? @db.VarChar(600)
+  /// A site-relative path produced by the Topic 5 media pipeline, or null.
+  photoUrl    String? @db.VarChar(500)
+
+  /// Higher sorts first, matching the announcements convention. Ties break on
+  /// name, so the public order is always total and never flickers.
+  priority  Int     @default(0)
+  /// Nothing is public until somebody publishes it. Never defaults to true.
+  published Boolean @default(false)
+
+  @@index([published, priority])
+  @@map("faculty")
+}

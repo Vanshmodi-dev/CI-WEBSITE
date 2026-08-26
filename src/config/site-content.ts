@@ -1,5 +1,5 @@
 import { institute, addressFull, publishedCourses } from './institute.ts';
-import { primaryNav, footerNav } from './nav.ts';
+import { primaryNav, footerNav, HIDDEN_UNTIL_POPULATED } from './nav.ts';
 
 /**
  * THE EDITABLE-CONTENT REGISTRY.
@@ -428,7 +428,13 @@ const NAV_FIELDS: readonly EditableField[] = primaryNav.flatMap((link) => [
     label: `Show "${link.label}" in the menu`,
     kind: 'toggle' as const,
     maxLength: 3,
-    fallback: 'on',
+    /*
+      Most menu entries are shown by default. A page that exists but has no
+      content yet starts hidden - see HIDDEN_UNTIL_POPULATED in nav.ts. The
+      teacher turns it on here when the section is ready, which is the same
+      control they use for every other entry.
+    */
+    fallback: HIDDEN_UNTIL_POPULATED.includes(link.href) ? '' : 'on',
   },
 ]);
 

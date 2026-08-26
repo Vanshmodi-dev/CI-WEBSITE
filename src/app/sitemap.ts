@@ -67,6 +67,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // a date would be inventing one.
     entry('/about'),
     entry('/courses'),
+    /*
+      Faculty carries no `lastModified`. The sitemap's dates come from
+      `lastPublishedAt()`, which is built on the same visibility predicates the
+      public pages use, and adding a faculty date there would mean an
+      UNPUBLISHED draft edit could move a public date - telling a crawler
+      something changed when nothing visible did. A dateless entry is the
+      honest one until faculty joins that function.
+    */
+    entry('/faculty'),
     entry('/results', content.results),
     entry('/stories', content.stories),
     entry('/announcements', content.announcements),

@@ -50,7 +50,8 @@
     "verify:production": "node scripts/verify-production.mjs",
     "verify:media": "node scripts/verify-media.mjs",
     "media:audit": "node scripts/media-audit.mjs",
-    "media:clean": "node scripts/media-audit.mjs --clean"
+    "media:clean": "node scripts/media-audit.mjs --clean",
+    "verify:faculty": "node scripts/verify-faculty.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

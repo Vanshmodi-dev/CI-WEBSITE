@@ -8,6 +8,7 @@ import {
   getPublishedStories,
   getUpcomingBatches,
   getTopAnnouncement,
+  getPublishedFaculty,
 } from '@/lib/public-data';
 import {
   Container,
@@ -20,6 +21,7 @@ import {
   ResultCard,
   StoryCard,
   BatchList,
+  FacultyCard,
 } from '@/components/domain/public-cards';
 
 export const metadata: Metadata = pageMetadata({
@@ -68,7 +70,8 @@ function MoreLink({ href, children }: { href: string; children: string }) {
  * different silhouettes.
  */
 export default async function HomePage() {
-  const [content, contact, announcement, courseBatches, results, stories] = await Promise.all([
+  const [content, contact, announcement, courseBatches, results, stories, faculty] =
+    await Promise.all([
     getSiteContent(),
     getContactBlock(),
     getTopAnnouncement(),
@@ -78,6 +81,8 @@ export default async function HomePage() {
     getUpcomingBatches(),
     getPublishedResults({ limit: 6 }),
     getPublishedStories(2),
+    // Three is the homepage band; the full list is /faculty.
+    getPublishedFaculty(3),
   ]);
 
   const batchCountFor = (slug: string) =>
@@ -255,9 +260,33 @@ export default async function HomePage() {
       ) : null}
 
       {/*
-        Faculty, reviews, videos and gallery bands are absent. Each needs
-        content the institute has not supplied — credentials and portraits, an
-        activated Review Engine, a channel ID, photography. Master Plan §22.
+        Faculty — "Meet Your Mentors" in the master directive.
+
+        Like every other band on this page, it DOES NOT RENDER when there is
+        nothing real to show. That rule is what let this site launch honestly,
+        and a faculty band is exactly where it matters most: a grid of stock
+        portraits is the single most common lie on a coaching website.
+      */}
+      {faculty.length > 0 ? (
+        <Section tone="paper" labelledBy="home-faculty">
+          <SectionHeader
+            id="home-faculty"
+            eyebrow="Meet your mentors"
+            title="Who will teach you"
+            action={<MoreLink href="/faculty">All teachers</MoreLink>}
+          />
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {faculty.map((member) => (
+              <FacultyCard key={member.id} member={member} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/*
+        Reviews, videos and gallery bands are still absent. Each needs content
+        the institute has not supplied — an activated Review Engine, a channel
+        ID, photography. Master Plan §22.
       */}
 
       {/*

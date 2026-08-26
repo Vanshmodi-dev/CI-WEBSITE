@@ -2,7 +2,12 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/cn';
 import { PROGRAMME_LABELS, BOARD_LABELS } from '@/lib/admin-format';
-import type { PublicResult, PublicStory, PublicBatch } from '@/lib/public-data';
+import type {
+  PublicResult,
+  PublicStory,
+  PublicBatch,
+  PublicFaculty,
+} from '@/lib/public-data';
 
 /**
  * Public content cards.
@@ -312,5 +317,79 @@ export function AnnouncementCard({
     >
       {body}
     </Link>
+  );
+}
+
+/* -------------------------------------------------------------- faculty -- */
+
+/**
+ * One member of teaching staff.
+ *
+ * SHAPE, NOT DECORATION. The site's other cards are rectangular with a small
+ * round avatar; this one leads with a larger portrait because a faculty card
+ * exists to put a face to a name, and that is the one piece of information a
+ * parent is actually scanning for.
+ *
+ * The portrait is a fixed square with `object-cover`. A square is the only
+ * ratio that survives both a phone snapshot and a studio headshot without
+ * letterboxing, and `object-cover` crops the edges rather than stretching the
+ * face - a distorted portrait of a real person is worse than a tight crop.
+ *
+ * No photograph renders a MONOGRAM, exactly as the student cards do, so a
+ * teacher who has not supplied one does not leave a grey rectangle in the grid.
+ */
+export function FacultyCard({ member }: { member: PublicFaculty }) {
+  return (
+    /*
+      `h-full` so every card in a row is the same height.
+
+      The results grid deliberately lets cards take their natural height,
+      because a result with five subject rows and one with none are genuinely
+      different amounts of content. Faculty cards are not like that: the
+      portraits are identical squares, so a short card next to a tall one reads
+      as a rendering fault rather than as variation. Equal heights, ragged text.
+    */
+    <article className="flex h-full flex-col overflow-hidden rounded-md border border-rule bg-paper">
+      <div className="aspect-square w-full bg-surface-2">
+        {member.photoUrl ? (
+          <Image
+            src={member.photoUrl}
+            /*
+              Named, not decorative. A visitor using a screen reader is being
+              introduced to a person, and "photograph of Ravi Sharma" is the
+              introduction. The name is repeated below in text, which is
+              correct: the heading identifies, the alt describes the image.
+            */
+            alt={`${member.name}, ${member.designation}`}
+            width={640}
+            height={640}
+            sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 92vw"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="flex h-full w-full items-center justify-center bg-navy-800 font-display text-[44px] font-bold text-white"
+          >
+            {member.monogram}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-1 flex-col p-5">
+        <h3 className="font-display text-[19px] font-semibold leading-tight text-heading">
+          {member.name}
+        </h3>
+        <p className="mt-1 text-small font-medium text-accent-text">
+          {member.designation}
+        </p>
+        {member.subject ? (
+          <p className="mt-0.5 text-small text-muted">{member.subject}</p>
+        ) : null}
+        {member.bio ? (
+          <p className="mt-3 text-small leading-relaxed text-text">{member.bio}</p>
+        ) : null}
+      </div>
+    </article>
   );
 }

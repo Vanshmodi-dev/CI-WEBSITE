@@ -26,6 +26,10 @@ const PUBLIC_ROUTES = [
   '/about',
   '/courses',
   '/courses/class-11-commerce',
+  // Phase 16, Topic 6. Included so the new page gets the same contrast,
+  // overflow, semantics and metadata coverage as every other public route -
+  // a page nobody checks is a page that quietly stops meeting the standard.
+  '/faculty',
   '/results',
   '/stories',
   '/announcements',

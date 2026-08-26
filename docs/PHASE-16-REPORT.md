@@ -271,13 +271,43 @@ obstacle, not a control.
 
 ---
 
+## Topic 6 — Faculty · **COMPLETE**
+
+Full detail in [`PHASE-16-TOPIC-6-FACULTY.md`](PHASE-16-TOPIC-6-FACULTY.md).
+
+**Faculty did not exist** — no model, no route, no component, no static content.
+It is now a real content surface: admin CRUD, a public `/faculty` page, a
+homepage band, photographs through the Topic 5 picker, and a draft state.
+
+**This reverses Master Plan Decision 03** ("course and faculty pages stay typed
+content in the repo"), on the owner's instruction, and keeps its reasoning by
+splitting where the decision did not: the **data** is in the database, the
+**design** stays a typed React component. No layout field, no HTML field.
+
+**Consent is stated honestly.** The data policy is scoped to students and says
+nothing about staff, so no consent column was invented. What is guaranteed
+technically is that nothing is public until published; whether the institute
+holds each teacher's permission is recorded as a **human decision**, and the
+admin says so in plain words without asserting law.
+
+**No `Person` structured data and no per-teacher pages** — both would require
+credentials nobody has verified, against the directive's "only publish verified
+information".
+
+**130 checks**, 0 failed. Five harness defects found and fixed, including two
+vacuous passes: a card-semantics check that passed because there were zero
+cards, and a public-page assertion written against a record created through
+Prisma, which fires no revalidation.
+
+---
+
 ## Status of the remaining topics
 
 **Not started. Not claimed.**
 
 | # | Topic | Status |
 | :-: | --- | --- |
-| 6 | Faculty / Teachers | NOT STARTED |
+
 | 7 | Reviews / Review Engine | NOT STARTED — design settled during inventory (§0) |
 | 8 | Gallery | NOT STARTED |
 | 9 | Videos | NOT STARTED |
@@ -287,5 +317,5 @@ obstacle, not a control.
 
 ## Final verdict
 
-**NOT COMPLETE.** Topics 4 and 5 are finished and verified; Topics 6-12 are not
-begun. No Phase 16 completion is claimed.
+**NOT COMPLETE.** Topics 4, 5 and 6 are finished and verified; Topics 7-12 are
+not begun. No Phase 16 completion is claimed.

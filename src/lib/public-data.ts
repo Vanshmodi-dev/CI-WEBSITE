@@ -3,6 +3,8 @@ import 'server-only';
 import { getPrisma, isDatabaseConfigured } from '@/lib/db';
 import { present, type DisplayNameModeValue } from '@/lib/student-display';
 import { logUnexpected } from '@/lib/log';
+import { isSafePhotoPath } from '@/lib/validation';
+import { facultyInitials } from '@/lib/faculty-display';
 
 /**
  * Programme values, narrowed from untrusted query strings.
@@ -598,3 +600,71 @@ export async function lastPublishedAt(): Promise<ContentFreshness> {
     return empty;
   }
 }
+
+/* -------------------------------------------------------------- faculty -- */
+
+export type PublicFaculty = {
+  id: string;
+  name: string;
+  designation: string;
+  subject: string | null;
+  bio: string | null;
+  photoUrl: string | null;
+  /** Initials, for the monogram shown when there is no photograph. */
+  monogram: string;
+};
+
+/**
+ * Teaching staff, for /faculty and the homepage band.
+ *
+ * TWO THINGS THIS SHARES WITH EVERY OTHER PUBLIC READER, ON PURPOSE.
+ *
+ * `published: true` is in the WHERE clause, not applied afterwards in
+ * JavaScript. A filter that runs after the query is a filter somebody can
+ * forget to apply on the next call site; a filter in the query cannot return
+ * the row at all.
+ *
+ * The photo path is re-checked with `isSafePhotoPath` even though the save
+ * action validates it and a CHECK constraint backs that up. Topic 5 found the
+ * stories action writing an unvalidated path for its entire existence with
+ * nothing downstream compensating, so a row that is already wrong must
+ * degrade to a monogram rather than reach `next/image`.
+ *
+ * Faculty are NOT students. There is no consent model here and none is
+ * invented - see the note on the model in schema.prisma. What replaces it is
+ * the same publication gate everything else uses.
+ */
+export async function getPublishedFaculty(limit?: number): Promise<PublicFaculty[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  try {
+    const rows = await getPrisma().faculty.findMany({
+      where: { published: true },
+      orderBy: [{ priority: 'desc' }, { name: 'asc' }],
+      ...(limit ? { take: limit } : {}),
+      select: {
+        id: true,
+        name: true,
+        designation: true,
+        subject: true,
+        bio: true,
+        photoUrl: true,
+      },
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      designation: row.designation,
+      subject: row.subject,
+      bio: row.bio,
+      photoUrl:
+        row.photoUrl && isSafePhotoPath(row.photoUrl) ? row.photoUrl : null,
+      monogram: facultyInitials(row.name),
+    }));
+  } catch (error) {
+    logUnexpected('public.faculty.failed', error);
+    return [];
+  }
+}
+

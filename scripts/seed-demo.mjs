@@ -324,6 +324,77 @@ const prisma = new PrismaClient({
  * the command has to be safe to run against a database that also holds work
  * somebody cares about.
  */
+/**
+ * Teaching staff.
+ *
+ * Every name is unmistakably synthetic. This project's whole premise is that
+ * the site it replaces published invented people, so demo faculty must be
+ * impossible to mistake for real staff even at a glance - which is why they are
+ * "ZZSHOW Faculty One", not plausible Indian names.
+ *
+ * The photographs reuse the existing ZZSHOW placeholder tiles rather than
+ * anything resembling a face. A stock portrait in demo data is exactly the
+ * thing that ends up shipped by accident.
+ *
+ * The set deliberately covers the states the page has to handle: with and
+ * without a photo, with and without a subject, with a long description and a
+ * short one, published and draft, and a non-zero priority so ordering is
+ * visible rather than assumed.
+ */
+function faculty() {
+  return [
+    {
+      name: `${P} Faculty One`,
+      designation: 'Director',
+      subject: 'Accountancy',
+      bio: `${P} synthetic description. Teaches Accountancy for Class XI, Class XII and CA Foundation.`,
+      photoUrl: '/zzshow-media/zzshow-student-photo-01.png',
+      priority: 100,
+      published: true,
+    },
+    {
+      name: `${P} Faculty Two`,
+      designation: 'Senior Faculty',
+      subject: 'Economics',
+      bio: `${P} deliberately long synthetic description, written to run past a single line on a narrow screen so that the card layout can be judged with realistic body copy rather than with two short words that would fit anywhere.`,
+      photoUrl: '/zzshow-media/zzshow-student-photo-02.png',
+      priority: 50,
+      published: true,
+    },
+    {
+      // No photograph: the monogram path, which is the common case while an
+      // institute is still collecting portraits.
+      name: `${P} Faculty Three`,
+      designation: 'Faculty',
+      subject: 'Business Studies',
+      bio: `${P} short synthetic description.`,
+      photoUrl: null,
+      priority: 0,
+      published: true,
+    },
+    {
+      // No subject and no description: the sparsest card the page can render.
+      name: `${P} Faculty Four`,
+      designation: 'Visiting Faculty',
+      subject: null,
+      bio: null,
+      photoUrl: null,
+      priority: 0,
+      published: true,
+    },
+    {
+      // Draft. Must never appear publicly, which is what makes it useful.
+      name: `${P} Faculty Five Draft`,
+      designation: 'Not Yet Shown',
+      subject: 'Mathematics',
+      bio: `${P} draft record. This one must not appear on the public website.`,
+      photoUrl: null,
+      priority: 0,
+      published: false,
+    },
+  ];
+}
+
 async function clean({ quiet = false } = {}) {
   const removed = {
     subjectScores: (
@@ -340,6 +411,7 @@ async function clean({ quiet = false } = {}) {
       await prisma.announcement.deleteMany({ where: { message: { startsWith: P } } })
     ).count,
     enquiries: (await prisma.enquiry.deleteMany({ where: { name: { startsWith: P } } })).count,
+    faculty: (await prisma.faculty.deleteMany({ where: { name: { startsWith: P } } })).count,
   };
   if (!quiet) {
     console.log('\nRemoved ZZSHOW demo rows:');
@@ -376,19 +448,26 @@ async function seed() {
   for (const row of batches()) await prisma.batch.create({ data: row });
   for (const row of announcements()) await prisma.announcement.create({ data: row });
   for (const row of enquiries()) await prisma.enquiry.create({ data: row });
+  for (const row of faculty()) await prisma.faculty.create({ data: row });
 
   return resultRows;
 }
 
 async function count() {
-  const [results_, subjects, stories_, batches_, announcements_, enquiries_] = await Promise.all([
+  const [results_, subjects, stories_, batches_, announcements_, enquiries_, faculty_] =
+    await Promise.all([
     prisma.topper.count({ where: { studentName: { startsWith: P } } }),
     prisma.subjectScore.count({ where: { topper: { studentName: { startsWith: P } } } }),
     prisma.studentStory.count({ where: { studentName: { startsWith: P } } }),
     prisma.batch.count({ where: { seatsNote: { startsWith: P } } }),
     prisma.announcement.count({ where: { message: { startsWith: P } } }),
     prisma.enquiry.count({ where: { name: { startsWith: P } } }),
+    prisma.faculty.count({ where: { name: { startsWith: P } } }),
   ]);
+
+  const publishedFaculty = await prisma.faculty.count({
+    where: { name: { startsWith: P }, published: true },
+  });
 
   const publishedResults = await prisma.topper.count({
     where: { studentName: { startsWith: P }, published: true },
@@ -408,6 +487,7 @@ async function count() {
   console.log(`  Batches             ${String(batches_).padStart(4)}`);
   console.log(`  Announcements       ${String(announcements_).padStart(4)}`);
   console.log(`  Enquiries           ${String(enquiries_).padStart(4)}`);
+  console.log(`  Faculty             ${String(faculty_).padStart(4)}   (${publishedFaculty} published)`);
   console.log(`  Results with a photo${String(withPhoto).padStart(4)}`);
 
   // Anything NOT ours, so the operator can see this touched nothing else.
@@ -417,6 +497,7 @@ async function count() {
     batches: (await prisma.batch.count()) - batches_,
     announcements: (await prisma.announcement.count()) - announcements_,
     enquiries: (await prisma.enquiry.count()) - enquiries_,
+    faculty: (await prisma.faculty.count()) - faculty_,
   };
   const foreignTotal = Object.values(foreign).reduce((a, b) => a + b, 0);
   console.log(`\n  Non-ZZSHOW content rows: ${foreignTotal}` + (foreignTotal ? `  ${JSON.stringify(foreign)}` : ' (nothing else in the database)'));
@@ -441,11 +522,13 @@ try {
       console.log(`    ${s.key}  ${String(byScenario[s.key] ?? 0).padStart(2)} records  -  ${s.label}`);
     }
     console.log('\n  Run `npm run seed:demo:clean` to remove all of it.');
-    console.log('\n  NOTE: clean this dataset before running `npm run verify:integration`.');
-    console.log('        Three of its assertions need an empty content database - two');
-    console.log('        check that /results and /stories render their EMPTY state, which');
-    console.log('        cannot be true while demo content exists. That is those');
-    console.log('        assertions being right, not a conflict to work around.');
+    console.log('');
+    console.log('  NOTE: this dataset no longer conflicts with verify:integration.');
+    console.log('        Three of its assertions used to require an empty content');
+    console.log('        database. Phase 16 Topic 5 corrected them: they now ask');
+    console.log('        the database which state applies and test the populated');
+    console.log('        branch as well as the empty one, so both suites can run');
+    console.log('        against the same machine.');
   } else if (command === 'clean') {
     assertSafeEnvironment();
     await clean();

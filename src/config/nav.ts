@@ -16,7 +16,9 @@ export type NavLink = {
  * served from the most prominent element on the site. Those four are removed
  * until their pages exist and the content behind them is confirmed:
  *
- *   /faculty  — needs verified credentials and portraits (not supplied)
+ *   /faculty  — BUILT IN PHASE 16, TOPIC 6. The page exists, so by the rule
+ *               above it belongs here. It is HIDDEN BY DEFAULT until the
+ *               institute adds staff: see HIDDEN_UNTIL_POPULATED below.
  *   /reviews  — needs the Review Engine activated (client action pending)
  *   /videos   — needs the YouTube channel ID (not supplied)
  *   /gallery  — needs photography (not supplied)
@@ -34,11 +36,29 @@ export const primaryNav: ReadonlyArray<NavLink> = [
       label: c.name,
     })),
   },
+  { href: '/faculty', label: 'Teachers' },
   { href: '/results', label: 'Results' },
   { href: '/stories', label: 'Stories' },
   { href: '/announcements', label: 'Updates' },
   { href: '/contact', label: 'Contact' },
 ];
+
+/**
+ * Menu entries whose page exists but which start HIDDEN.
+ *
+ * The Phase 6 rule — "a route appears here only if the page exists" — is about
+ * never linking to a 404. It is silent on a page that exists and is empty, and
+ * an empty section is a different kind of weak: a visitor who clicks Teachers
+ * and finds "we are putting this together" learns that the institute has not
+ * finished its website.
+ *
+ * So the route is registered (it exists, it is reachable, it is in the
+ * sitemap), and the MENU entry defaults to hidden. The teacher turns it on in
+ * Website text once there are teachers to show. That reuses the visibility
+ * toggle Phase 15 already built rather than adding a second mechanism, and it
+ * puts the decision with the person who knows whether the page is ready.
+ */
+export const HIDDEN_UNTIL_POPULATED: readonly string[] = ['/faculty'];
 
 /** Footer groups. Same rule: only routes that exist. */
 export const footerNav: ReadonlyArray<{

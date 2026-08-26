@@ -345,6 +345,7 @@ export const EXPECTED_TABLES: readonly string[] = [
   'audit_log',
   'batches',
   'enquiries',
+  'faculty',
   'import_runs',
   'media_assets',
   'site_settings',
@@ -397,6 +398,14 @@ export const INTEGRITY_CONSTRAINTS: readonly string[] = [
   // Phase 16, Topic 5. Uploaded images. The key shape mirrors `isMediaKey()`
   // in src/lib/media/format.ts, which is the gate the retrieval route uses;
   // this is the backstop if a future code path forgets to call it.
+  // Phase 16, Topic 6. Teaching staff. `faculty_photo_is_site_relative`
+  // mirrors isSafePhotoPath() - the backstop that would have caught the
+  // stories defect Topic 5 found.
+  'faculty_name_not_blank',
+  'faculty_designation_not_blank',
+  'faculty_priority_sane',
+  'faculty_photo_is_site_relative',
+  'faculty_text_printable',
   'media_assets_key_shape',
   'media_assets_content_type_known',
   'media_assets_dimensions_sane',
@@ -453,6 +462,9 @@ export const OPERATIONAL_TABLES: readonly string[] = [
   'import_runs',
   // Empty until a photograph is uploaded. An empty table is normal.
   'media_assets',
+  // Empty until the institute adds teaching staff. An empty table is normal
+  // and the public page has a real state for it.
+  'faculty',
   // Empty until the institute edits any website copy. An empty table is the
   // normal, correct state: every field falls back to the text in code.
   'site_settings',
@@ -787,6 +799,18 @@ export const ROUTES: readonly RouteSpec[] = [
       'docs/PHASE-16-TOPIC-5-MEDIA.md.',
   },
   { path: '/about', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
+  {
+    path: '/faculty',
+    kind: 'public',
+    requiresAuth: false,
+    mutates: false,
+    inSitemap: true,
+    crawlable: true,
+    note:
+      'Teaching staff. Renders only published records; an empty list shows a ' +
+      'real "being prepared" state rather than invented people. No Person ' +
+      'structured data - see the note on the page.',
+  },
   { path: '/courses', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
   {
     path: '/courses/[slug]',
@@ -867,6 +891,9 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/announcements/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/faculty', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/faculty/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/faculty/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {
     path: '/admin/media',
     kind: 'admin',
