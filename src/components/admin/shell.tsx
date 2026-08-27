@@ -61,6 +61,7 @@ const NAV: readonly NavGroup[] = [
       { href: '/admin/website', label: 'Website text' },
       { href: '/admin/faculty', label: 'Faculty' },
       { href: '/admin/reviews', label: 'Reviews' },
+      { href: '/admin/gallery', label: 'Gallery' },
       { href: '/admin/batches', label: 'Batches' },
       { href: '/admin/announcements', label: 'Announcements' },
       { href: '/admin/preview', label: 'Website preview' },

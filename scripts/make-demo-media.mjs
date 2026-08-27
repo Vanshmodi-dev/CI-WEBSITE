@@ -109,16 +109,16 @@ const WHITE = [0xff, 0xff, 0xff];
  * results page carries an identical image and the grid stops being useful for
  * judging layout.
  */
-function tile(variant) {
-  const px = Buffer.alloc(SIZE * SIZE * 3);
+function tile(variant, width = SIZE, height = SIZE) {
+  const px = Buffer.alloc(width * height * 3);
   const [a, b] = variant % 2 === 0 ? [NAVY, PALE] : [ORANGE, WHITE];
   const phase = (variant * 37) % 64;
 
-  for (let y = 0; y < SIZE; y += 1) {
-    for (let x = 0; x < SIZE; x += 1) {
-      const i = (y * SIZE + x) * 3;
-      const border = x < 10 || y < 10 || x >= SIZE - 10 || y >= SIZE - 10;
-      const cornerBlock = x >= SIZE - 96 && y >= SIZE - 40 && !border;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * 3;
+      const border = x < 10 || y < 10 || x >= width - 10 || y >= height - 10;
+      const cornerBlock = x >= width - 96 && y >= height - 40 && !border;
       const stripe = Math.floor((x + y + phase) / 32) % 2 === 0;
 
       const colour = border ? NAVY : cornerBlock ? ORANGE : stripe ? a : b;
@@ -127,7 +127,7 @@ function tile(variant) {
       px[i + 2] = colour[2];
     }
   }
-  return encodePng(SIZE, SIZE, px);
+  return encodePng(width, height, px);
 }
 
 /* ------------------------------------------------------------------ main -- */
@@ -143,7 +143,30 @@ for (let n = 1; n <= 8; n += 1) {
   written.push(`${file.split(path.sep).join('/')}  ${(bytes.length / 1024).toFixed(1)} KB`);
 }
 
+/*
+  Gallery tiles are LANDSCAPE, because the gallery grid is.
+
+  A 4:3 box with `object-cover` crops a square fixture to a strip and the demo
+  then tells you nothing about how a real landscape photograph sits in the grid.
+  These are 480x360, which is the same 4:3 the tiles render at.
+
+  Twelve of them, so the demo gallery fills more than one row at every
+  breakpoint and the category filter has something to filter.
+*/
+const GALLERY_W = 480;
+const GALLERY_H = 360;
+for (let n = 1; n <= 12; n += 1) {
+  const name = `zzshow-gallery-${String(n).padStart(2, '0')}.png`;
+  const file = path.join(OUT, name);
+  const bytes = tile(n + 3, GALLERY_W, GALLERY_H);
+  writeFileSync(file, bytes);
+  written.push(`${file.split(path.sep).join('/')}  ${(bytes.length / 1024).toFixed(1)} KB`);
+}
+
 console.log('Synthetic placeholder images written:');
 for (const line of written) console.log(`  ${line}`);
-console.log(`\n  ${SIZE}x${SIZE} flat-colour tiles. No faces, no photographs, no people.`);
+console.log(
+  `\n  ${SIZE}x${SIZE} and ${GALLERY_W}x${GALLERY_H} flat-colour tiles.` +
+    ' No faces, no photographs, no people.',
+);
 console.log('  Referenced as /zzshow-media/... so the synthetic origin shows in the DOM.');

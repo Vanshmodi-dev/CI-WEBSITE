@@ -325,6 +325,73 @@ const prisma = new PrismaClient({
  * somebody cares about.
  */
 /**
+ * Gallery photographs.
+ *
+ * =============================================================================
+ * THE ALT TEXT CARRIES THE ZZSHOW PREFIX, AND THAT IS THE CLEANUP KEY
+ * =============================================================================
+ * Every other table here is deleted by a prefix on a human-readable column.
+ * Gallery has no name column, so `alt` does the job - it is required, non-blank
+ * by CHECK constraint, and visible in the DOM, so a stray demo row announces
+ * itself on the page rather than hiding in a database.
+ *
+ * =============================================================================
+ * THE SET EXISTS TO EXERCISE THE CONSENT MODEL, NOT TO LOOK FULL
+ * =============================================================================
+ * These twelve rows deliberately cover every state the visibility rule has:
+ *
+ *   - no people in it, published            -> PUBLIC without any consent
+ *   - people, full consent, published       -> PUBLIC
+ *   - people, consent reference but the photograph box NOT ticked -> HIDDEN
+ *   - people, photograph ticked but NO reference                  -> HIDDEN
+ *   - people, full consent, NOT published   -> HIDDEN (draft)
+ *
+ * The two hidden-despite-consent rows are the ones worth having: they are what
+ * a reviewer looks at to confirm the gallery is filtering rather than merely
+ * rendering whatever it is given.
+ *
+ * ⚠ THE THREE ROWS THAT ARE HIDDEN FOR A CONSENT REASON CANNOT BE PUBLISHED.
+ * The database refuses them, so they are created with `published: false` — the
+ * demo cannot accidentally create the state the constraint exists to prevent.
+ */
+function galleryItems() {
+  const img = (n) => `/zzshow-media/zzshow-gallery-${String(n).padStart(2, '0')}.png`;
+  const REF = `${P}-CONSENT-2026`;
+
+  return [
+    // --- no people: publishable with no consent at all ----------------------
+    { image: 1, category: 'CLASSROOMS', alt: `${P} synthetic tile standing in for an empty classroom with desks in rows.`, caption: `${P} A classroom before the morning batch.`, showsPeople: false, consentRef: null, consentPhoto: false, published: true, priority: 100 },
+    { image: 2, category: 'CLASSROOMS', alt: `${P} synthetic tile standing in for a whiteboard at the front of a classroom.`, caption: null, showsPeople: false, consentRef: null, consentPhoto: false, published: true, priority: 0 },
+    { image: 3, category: 'CLASSROOMS', alt: `${P} synthetic tile standing in for the library corner and its shelves.`, caption: `${P} The reading corner.`, showsPeople: false, consentRef: null, consentPhoto: false, published: true, priority: 0 },
+
+    // --- people, full consent: publishable ----------------------------------
+    { image: 4, category: 'EVENTS', alt: `${P} synthetic tile standing in for a seminar audience seen from the back.`, caption: `${P} A synthetic caption long enough to run onto a second line on a narrow screen, so the tile caption can be judged with realistic copy.`, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 90 },
+    { image: 5, category: 'EVENTS', alt: `${P} synthetic tile standing in for a prize-giving on a stage.`, caption: `${P} Prize day.`, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 0 },
+    { image: 6, category: 'ACHIEVEMENTS', alt: `${P} synthetic tile standing in for a group holding certificates.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 0 },
+    { image: 7, category: 'SEMINARS', alt: `${P} synthetic tile standing in for a guest speaker at a lectern.`, caption: `${P} A visiting speaker.`, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 0 },
+    { image: 8, category: 'CELEBRATIONS', alt: `${P} synthetic tile standing in for a festival decoration in the corridor.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 0 },
+
+    // --- people, consent incomplete: MUST stay hidden ------------------------
+    { image: 9, category: 'STUDENTS', alt: `${P} synthetic tile: reference on file, photograph permission NOT ticked. Must never be public.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: false, published: false, priority: 0 },
+    { image: 10, category: 'STUDENTS', alt: `${P} synthetic tile: photograph permission ticked but NO reference on file. Must never be public.`, caption: null, showsPeople: true, consentRef: null, consentPhoto: true, published: false, priority: 0 },
+    { image: 11, category: 'STUDENTS', alt: `${P} synthetic tile: no permission recorded at all. Must never be public.`, caption: null, showsPeople: true, consentRef: null, consentPhoto: false, published: false, priority: 0 },
+
+    // --- people, full consent, still a draft ---------------------------------
+    { image: 12, category: 'STUDENTS', alt: `${P} synthetic tile: fully consented but still a draft. Must not be public until it is published.`, caption: `${P} Not published yet.`, showsPeople: true, consentRef: REF, consentPhoto: true, published: false, priority: 0 },
+  ].map((row) => ({
+    imageUrl: img(row.image),
+    alt: row.alt,
+    caption: row.caption,
+    category: row.category,
+    priority: row.priority,
+    published: row.published,
+    showsPeople: row.showsPeople,
+    consentRef: row.consentRef,
+    consentPhoto: row.consentPhoto,
+  }));
+}
+
+/**
  * Teaching staff.
  *
  * Every name is unmistakably synthetic. This project's whole premise is that
@@ -412,6 +479,7 @@ async function clean({ quiet = false } = {}) {
     ).count,
     enquiries: (await prisma.enquiry.deleteMany({ where: { name: { startsWith: P } } })).count,
     faculty: (await prisma.faculty.deleteMany({ where: { name: { startsWith: P } } })).count,
+    gallery: (await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: P } } })).count,
   };
   if (!quiet) {
     console.log('\nRemoved ZZSHOW demo rows:');
@@ -449,12 +517,13 @@ async function seed() {
   for (const row of announcements()) await prisma.announcement.create({ data: row });
   for (const row of enquiries()) await prisma.enquiry.create({ data: row });
   for (const row of faculty()) await prisma.faculty.create({ data: row });
+  for (const row of galleryItems()) await prisma.galleryItem.create({ data: row });
 
   return resultRows;
 }
 
 async function count() {
-  const [results_, subjects, stories_, batches_, announcements_, enquiries_, faculty_] =
+  const [results_, subjects, stories_, batches_, announcements_, enquiries_, faculty_, gallery_] =
     await Promise.all([
     prisma.topper.count({ where: { studentName: { startsWith: P } } }),
     prisma.subjectScore.count({ where: { topper: { studentName: { startsWith: P } } } }),
@@ -463,10 +532,28 @@ async function count() {
     prisma.announcement.count({ where: { message: { startsWith: P } } }),
     prisma.enquiry.count({ where: { name: { startsWith: P } } }),
     prisma.faculty.count({ where: { name: { startsWith: P } } }),
+    prisma.galleryItem.count({ where: { alt: { startsWith: P } } }),
   ]);
 
   const publishedFaculty = await prisma.faculty.count({
     where: { name: { startsWith: P }, published: true },
+  });
+
+  /*
+    Counted with the SAME predicate the public page uses, not with
+    `published: true`. A row can be marked published and still be correctly
+    absent from the site, and a demo report that counted the flag would say
+    twelve photographs are live when eight are.
+  */
+  const publicGallery = await prisma.galleryItem.count({
+    where: {
+      alt: { startsWith: P },
+      published: true,
+      OR: [
+        { showsPeople: false },
+        { AND: [{ consentPhoto: true }, { consentRef: { not: null } }] },
+      ],
+    },
   });
 
   const publishedResults = await prisma.topper.count({
@@ -488,6 +575,7 @@ async function count() {
   console.log(`  Announcements       ${String(announcements_).padStart(4)}`);
   console.log(`  Enquiries           ${String(enquiries_).padStart(4)}`);
   console.log(`  Faculty             ${String(faculty_).padStart(4)}   (${publishedFaculty} published)`);
+  console.log(`  Gallery             ${String(gallery_).padStart(4)}   (${publicGallery} on the website)`);
   console.log(`  Results with a photo${String(withPhoto).padStart(4)}`);
 
   // Anything NOT ours, so the operator can see this touched nothing else.
@@ -498,6 +586,7 @@ async function count() {
     announcements: (await prisma.announcement.count()) - announcements_,
     enquiries: (await prisma.enquiry.count()) - enquiries_,
     faculty: (await prisma.faculty.count()) - faculty_,
+    gallery: (await prisma.galleryItem.count()) - gallery_,
   };
   const foreignTotal = Object.values(foreign).reduce((a, b) => a + b, 0);
   console.log(`\n  Non-ZZSHOW content rows: ${foreignTotal}` + (foreignTotal ? `  ${JSON.stringify(foreign)}` : ' (nothing else in the database)'));

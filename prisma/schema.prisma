@@ -166,13 +166,13 @@ model Topper {
   // ---- publication control ---------------------------------------------
   /// Reference to the signed authorisation the institute holds on file.
   /// A published row cannot have this null — enforced by CHECK constraint.
-  consentRef    String? @db.VarChar(200)
-  consentResult Boolean @default(false)
-  consentName   Boolean @default(false)
-  consentPhoto  Boolean @default(false)
-  published     Boolean @default(false)
+  consentRef    String?   @db.VarChar(200)
+  consentResult Boolean   @default(false)
+  consentName   Boolean   @default(false)
+  consentPhoto  Boolean   @default(false)
+  published     Boolean   @default(false)
   publishedAt   DateTime?
-  sortOrder     Int     @default(0)
+  sortOrder     Int       @default(0)
 
   /// THE IMPORT KEY (Phase 12).
   ///
@@ -227,16 +227,16 @@ model StudentStory {
   programme Programme
   year      Int
 
-  challenge String @db.VarChar(2000)
-  journey   String @db.VarChar(4000)
-  outcome   String @db.VarChar(2000)
+  challenge String  @db.VarChar(2000)
+  journey   String  @db.VarChar(4000)
+  outcome   String  @db.VarChar(2000)
   quote     String? @db.VarChar(600)
 
-  consentRef   String? @db.VarChar(200)
-  consentStory Boolean @default(false)
-  consentName  Boolean @default(false)
-  consentPhoto Boolean @default(false)
-  published    Boolean @default(false)
+  consentRef   String?   @db.VarChar(200)
+  consentStory Boolean   @default(false)
+  consentName  Boolean   @default(false)
+  consentPhoto Boolean   @default(false)
+  published    Boolean   @default(false)
   publishedAt  DateTime?
 
   @@index([published, year])
@@ -256,12 +256,12 @@ model Announcement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  message   String    @db.VarChar(300)
-  href      String?   @db.VarChar(300)
+  message   String   @db.VarChar(300)
+  href      String?  @db.VarChar(300)
   startsAt  DateTime
   endsAt    DateTime
-  priority  Int       @default(0)
-  published Boolean   @default(false)
+  priority  Int      @default(0)
+  published Boolean  @default(false)
 
   @@index([published, startsAt, endsAt])
   @@map("announcements")
@@ -300,9 +300,9 @@ model AdminUser {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  email       String @unique @db.VarChar(160)
+  email        String @unique @db.VarChar(160)
   /// Shown in the admin header. "Sir", a first name — whatever the owner wants.
-  displayName String @db.VarChar(80)
+  displayName  String @db.VarChar(80)
   /// scrypt, encoded as "scrypt$N$r$p$salt$hash". NEVER a plaintext password.
   passwordHash String @db.VarChar(255)
 
@@ -322,7 +322,7 @@ model AdminUser {
 
   // ---- sign-in throttling (Phase 10) -----------------------------------
   /// Consecutive failed sign-ins since the last success or window expiry.
-  failedLoginCount Int       @default(0)
+  failedLoginCount   Int       @default(0)
   /// When the current run of failures began. The window is measured from here.
   firstFailedLoginAt DateTime?
 
@@ -343,23 +343,23 @@ model AdminUser {
 /// sanitised on the way in - it is a label, not a path, and nothing ever opens
 /// it.
 model ImportRun {
-  id   String   @id @default(cuid())
-  at   DateTime @default(now())
+  id String   @id @default(cuid())
+  at DateTime @default(now())
 
   actorId    String?
   actorLabel String  @db.VarChar(80)
 
   /// Sanitised for display only. Never used as a path.
-  filename   String  @db.VarChar(160)
+  filename   String @db.VarChar(160)
   /// SHA-256 of the normalised plan the administrator approved.
-  planDigest String  @db.Char(64)
+  planDigest String @db.Char(64)
 
   rowsTotal    Int
   rowsCreated  Int
   rowsUpdated  Int
   rowsRejected Int
   /// How many records this import made publicly visible. Usually zero.
-  madePublic   Int    @default(0)
+  madePublic   Int @default(0)
   durationMs   Int
 
   @@index([at])
@@ -375,10 +375,10 @@ model AuditLog {
   id String   @id @default(cuid())
   at DateTime @default(now())
 
-  actorId String?
-  actor   AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorId    String?
+  actor      AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
   /// Denormalised so the entry stays readable if the account is ever removed.
-  actorLabel String @db.VarChar(80)
+  actorLabel String     @db.VarChar(80)
 
   /// "created" | "updated" | "published" | "unpublished" | "deleted"
   action   String  @db.VarChar(30)
@@ -410,9 +410,9 @@ model SiteSetting {
   key   String @id @db.VarChar(64)
   value String @db.VarChar(2000)
 
-  updatedAt  DateTime @updatedAt
+  updatedAt DateTime @updatedAt
   /// Denormalised: the entry must stay readable if the account is removed.
-  updatedBy  String?  @db.VarChar(80)
+  updatedBy String?  @db.VarChar(80)
 
   @@map("site_settings")
 }
@@ -518,4 +518,115 @@ model Faculty {
 
   @@index([published, priority])
   @@map("faculty")
+}
+
+/// The categories the master directive names, minus the ones that are a UI
+/// filter rather than a property of a photograph.
+///
+/// "All" is not here: it is the absence of a filter, not a category a
+/// photograph can belong to. The remaining six are exactly the list in
+/// `docs/brief/01-master-directive.md` section 22, which also says "only use
+/// categories that correspond to real content" - so the PUBLIC page renders a
+/// filter only for categories that actually have published photographs in them.
+/// Storing the full set and displaying the populated subset satisfies both
+/// halves of that instruction without inventing a category or hiding one.
+///
+/// A closed enum rather than free text. A text field would accumulate
+/// "Classroom", "classrooms" and "Class rooms" within a month, and the public
+/// filter would then advertise three categories that are one category.
+enum GalleryCategory {
+  CLASSROOMS
+  EVENTS
+  STUDENTS
+  ACHIEVEMENTS
+  SEMINARS
+  CELEBRATIONS
+}
+
+/// One photograph in the institute gallery.
+///
+/// =============================================================================
+/// THIS MODEL IS COVERED BY THE STUDENT DATA POLICY, AND THAT IS THE WHOLE
+/// DESIGN
+/// =============================================================================
+/// `docs/design/STUDENT-DATA-POLICY.md` line 4 names its scope: "toppers,
+/// results, student stories, **gallery photographs**". So a row here is not a
+/// decorative asset - it is potentially a photograph of a minor, published,
+/// permanent and indexable.
+///
+/// The policy's stated design position is "assume publication is NOT authorised
+/// until a specific record says otherwise", and that is implemented here three
+/// times over: in the save action, in a CHECK constraint below, and again on the
+/// read path. Each protects against a different writer.
+///
+/// =============================================================================
+/// WHY THE CONSENT COLUMNS ARE NOT THE STUDENT COLUMNS
+/// =============================================================================
+/// `Topper` and `StudentStory` carry `studentName` and `displayNameMode`,
+/// because each row is ABOUT one identified student and the question is how much
+/// of them to show. A photograph is not about one student: a picture of a
+/// prize-giving may contain thirty, or none.
+///
+/// So `blockersForPublishing()` in src/lib/student-display.ts cannot be reused -
+/// it needs a name and a display mode that do not exist here. What IS reused is
+/// the POLICY: a photograph needs its own permission, that permission is never
+/// implied by anything else, and a published record cannot have a null
+/// `consentRef`. `galleryBlockers()` applies exactly those rules to the shape
+/// this model actually has.
+///
+/// =============================================================================
+/// `showsPeople` DEFAULTS TO TRUE, AND THE DEFAULT IS THE POINT
+/// =============================================================================
+/// A photograph of an empty classroom needs no student's permission, and
+/// demanding a consent reference for a picture of furniture would be inventing
+/// policy in the opposite direction. But the safe default when nobody has said
+/// either way is that there ARE people in it - so the teacher must deliberately
+/// declare a photograph people-free to publish it without a consent reference,
+/// rather than deliberately declare it sensitive to protect it.
+///
+/// Fail closed means the unset state is the protected state.
+model GalleryItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// A site-relative path produced by the Topic 5 media pipeline.
+  /// NOT NULLABLE: a gallery entry with no photograph is not a gallery entry.
+  /// This is the one photo field on the site that is genuinely required, and
+  /// the admin says so in words rather than discovering it at save time.
+  imageUrl String @db.VarChar(500)
+
+  /// What the photograph shows, for somebody who cannot see it. Required,
+  /// because an image-only page with no alt text is unusable with a screen
+  /// reader and there is no sensible fallback to compute.
+  alt String @db.VarChar(200)
+
+  /// An optional editorial line under the photograph. The brief asks for
+  /// "stories through visuals" rather than a wall of images, and this is the
+  /// only field that carries the story.
+  caption String? @db.VarChar(300)
+
+  category GalleryCategory
+
+  /// Higher sorts first, matching faculty and announcements. Ties break on
+  /// createdAt so the public order is total and never flickers.
+  priority Int @default(0)
+
+  /// Nothing is public until somebody publishes it. Never defaults to true.
+  published Boolean @default(false)
+
+  /// Does this photograph show identifiable people? Conservative default.
+  showsPeople Boolean @default(true)
+
+  /// Reference to the signed authorisation the institute holds on file.
+  /// A published photograph of people cannot have this null - CHECK constraint.
+  consentRef String? @db.VarChar(200)
+
+  /// Permission to publish a photograph. Never implied by anything else -
+  /// STUDENT-DATA-POLICY, "The four permissions".
+  consentPhoto Boolean @default(false)
+
+  @@index([published, priority])
+  @@index([published, category])
+  @@map("gallery_items")
 }

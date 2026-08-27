@@ -86,3 +86,20 @@ export function revalidateFaculty(): void {
   revalidatePath('/faculty');
   revalidateSitemap();
 }
+
+/**
+ * Gallery photographs appear on their own page and in the homepage band.
+ *
+ * Both are cleared on every change, including a visibility change, a consent
+ * withdrawal and a photo replacement. The consent case is the one that must not
+ * be missed: a teacher who has just been asked to take a photograph down needs
+ * it gone from the website now, not when an ISR window happens to expire.
+ *
+ * The category filter pages are query-string states of /gallery rather than
+ * routes of their own, so clearing /gallery clears all of them.
+ */
+export function revalidateGallery(): void {
+  revalidatePath('/');
+  revalidatePath('/gallery');
+  revalidateSitemap();
+}

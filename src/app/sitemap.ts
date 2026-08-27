@@ -82,6 +82,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       `lastPublishedAt()` only knows about our own content.
     */
     entry('/reviews'),
+    /*
+      Gallery carries no `lastModified` for the same reason faculty does not:
+      `lastPublishedAt()` is built on the public visibility predicates and adding
+      a gallery date there would let an UNPUBLISHED edit move a public date.
+    */
+    entry('/gallery'),
     entry('/results', content.results),
     entry('/stories', content.stories),
     entry('/announcements', content.announcements),

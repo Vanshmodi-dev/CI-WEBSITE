@@ -360,6 +360,7 @@ export const EXPECTED_TABLES: readonly string[] = [
   'batches',
   'enquiries',
   'faculty',
+  'gallery_items',
   'import_runs',
   'media_assets',
   'site_settings',
@@ -373,6 +374,8 @@ export const EXPECTED_ENUMS: readonly string[] = [
   'ClassLevel',
   'DisplayNameMode',
   'EnquiryStatus',
+  // Phase 16, Topic 8. The closed set of gallery sections.
+  'GalleryCategory',
   'Programme',
 ] as const;
 
@@ -420,6 +423,14 @@ export const INTEGRITY_CONSTRAINTS: readonly string[] = [
   'faculty_priority_sane',
   'faculty_photo_is_site_relative',
   'faculty_text_printable',
+  // Phase 16, Topic 8. The gallery. `gallery_items_published_requires_consent`
+  // is the privacy constraint: a published photograph that shows people cannot
+  // exist without a consent reference AND the photograph permission.
+  'gallery_items_published_requires_consent',
+  'gallery_items_image_is_site_relative',
+  'gallery_items_alt_not_blank',
+  'gallery_items_priority_sane',
+  'gallery_items_text_printable',
   'media_assets_key_shape',
   'media_assets_content_type_known',
   'media_assets_dimensions_sane',
@@ -467,6 +478,16 @@ export const CONTENT_TABLES: readonly string[] = [
   'batches',
   'announcements',
   'enquiries',
+  /*
+    Phase 16, Topic 8. CONTENT rather than operational, deliberately.
+
+    `docs/design/STUDENT-DATA-POLICY.md` names gallery photographs in the same
+    breath as toppers, results and student stories, and every one of those is
+    here. A gallery row can be a photograph of somebody's child, so a demo row
+    reaching production is exactly the failure this list exists to stop -
+    faculty is operational because a staff card is not covered by that policy.
+  */
+  'gallery_items',
 ] as const;
 
 /** Operational tables. Empty is expected pre-launch but not a hard requirement. */
@@ -826,6 +847,14 @@ export const ROUTES: readonly RouteSpec[] = [
       'hidden entirely when the payload is absent or refused.',
   },
   {
+    path: '/gallery',
+    kind: 'public',
+    requiresAuth: false,
+    mutates: false,
+    inSitemap: true,
+    crawlable: true,
+  },
+  {
     path: '/faculty',
     kind: 'public',
     requiresAuth: false,
@@ -918,6 +947,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/enquiries', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/faculty', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/gallery', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {
     path: '/admin/reviews',
     kind: 'admin',
@@ -932,6 +962,8 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/admin/faculty/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/faculty/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/gallery/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/gallery/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {
     path: '/admin/media',
     kind: 'admin',

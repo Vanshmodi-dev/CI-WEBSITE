@@ -10,6 +10,7 @@ import {
   getUpcomingBatches,
   getTopAnnouncement,
   getPublishedFaculty,
+  getPublishedGallery,
 } from '@/lib/public-data';
 import {
   Container,
@@ -25,6 +26,7 @@ import {
   FacultyCard,
   ReviewCard,
 } from '@/components/domain/public-cards';
+import { GalleryStrip } from '@/components/domain/gallery-strip';
 
 export const metadata: Metadata = pageMetadata({
   title: `Commerce coaching in ${institute.locality}`,
@@ -72,8 +74,17 @@ function MoreLink({ href, children }: { href: string; children: string }) {
  * different silhouettes.
  */
 export default async function HomePage() {
-  const [content, contact, announcement, courseBatches, results, stories, faculty, reviewPayload] =
-    await Promise.all([
+  const [
+    content,
+    contact,
+    announcement,
+    courseBatches,
+    results,
+    stories,
+    faculty,
+    reviewPayload,
+    gallery,
+  ] = await Promise.all([
     getSiteContent(),
     getContactBlock(),
     getTopAnnouncement(),
@@ -86,6 +97,20 @@ export default async function HomePage() {
     // Three is the homepage band; the full list is /faculty.
     getPublishedFaculty(3),
     getPublicReviews(),
+    /*
+      FOUR, AND THE NUMBER IS A BUDGET DECISION RATHER THAN A DESIGN ONE.
+
+      Eight looked better and cost eight image requests. The homepage request
+      budget in `scripts/verify-budget.mjs` is 20, the page was already at 22
+      before this topic, and eight more took it to 30 - a regression this topic
+      introduced and should not hand onward.
+
+      Four is one full row at the desktop breakpoint and two rows on a phone,
+      which still reads as a gallery rather than as a stray photograph. The
+      band is a taste of the gallery; the full page is one link away and capped
+      separately at 60.
+    */
+    getPublishedGallery({ limit: 4 }),
   ]);
 
   const batchCountFor = (slug: string) =>
@@ -312,9 +337,30 @@ export default async function HomePage() {
       ) : null}
 
       {/*
-        Videos and gallery bands are still absent. Each needs content the
-        institute has not supplied — a channel ID, photography. Master Plan §22.
+        11 · Gallery.
+
+        The master directive's homepage flow puts the gallery between the videos
+        and the location, and that is where it sits. Like every other band it
+        renders nothing at all when there is nothing real to show — the
+        photographs here have already passed the consent filter in
+        `getPublishedGallery()`, so a picture whose permission was withdrawn
+        disappears from the homepage at the same moment it disappears from
+        /gallery.
+
+        The VIDEOS band is still absent: it needs a channel ID the institute has
+        not supplied. Master Plan §22.
       */}
+      {gallery.length > 0 ? (
+        <Section tone="surface" labelledBy="home-gallery">
+          <SectionHeader
+            id="home-gallery"
+            eyebrow="Gallery"
+            title="Inside the institute"
+            action={<MoreLink href="/gallery">See the gallery</MoreLink>}
+          />
+          <GalleryStrip items={gallery} />
+        </Section>
+      ) : null}
 
       {/*
         13 · Location.

@@ -59,7 +59,7 @@ async function storedKeys() {
   }
 }
 
-const [files, rows, toppers, stories] = await Promise.all([
+const [files, rows, toppers, stories, faculty, gallery] = await Promise.all([
   storedKeys(),
   prisma.mediaAsset.findMany({ select: { key: true, originalName: true, bytes: true } }),
   prisma.topper.findMany({
@@ -70,6 +70,28 @@ const [files, rows, toppers, stories] = await Promise.all([
     where: { photoUrl: { not: null } },
     select: { id: true, photoUrl: true },
   }),
+  /*
+    FACULTY AND GALLERY WERE MISSING FROM THIS SCAN.
+
+    Faculty gained a `photoUrl` in Topic 6 and was never added here, so every
+    faculty photograph was reported as "unreferenced, nothing uses it" and a
+    faculty record pointing at a file that no longer exists could never be
+    reported as a BROKEN REFERENCE - which is the one state this script exists
+    to fail on. No data was lost, because `--clean` only removes orphan FILES
+    and never acts on the unreferenced list, but the safety net had a hole in it
+    exactly the size of one table.
+
+    Topic 8 would have added a second hole. Both are closed here.
+  */
+  prisma.faculty.findMany({
+    where: { photoUrl: { not: null } },
+    select: { id: true, photoUrl: true },
+  }),
+  /* Gallery's column is `imageUrl`; it is mapped to the shape this loop
+     reads rather than the loop growing a special case. */
+  prisma.galleryItem
+    .findMany({ select: { id: true, imageUrl: true } })
+    .then((rows) => rows.map((r) => ({ id: r.id, photoUrl: r.imageUrl }))),
 ]);
 
 const stored = new Set(files);
@@ -80,6 +102,8 @@ const referencedBy = new Map();
 for (const [kind, list] of [
   ['result', toppers],
   ['story', stories],
+  ['faculty', faculty],
+  ['gallery', gallery],
 ]) {
   for (const record of list) {
     const key = keyFromPath(record.photoUrl);

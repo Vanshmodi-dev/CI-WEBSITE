@@ -5,6 +5,10 @@ import { present, type DisplayNameModeValue } from '@/lib/student-display';
 import { logUnexpected } from '@/lib/log';
 import { isSafePhotoPath } from '@/lib/validation';
 import { facultyInitials } from '@/lib/faculty-display';
+import {
+  isGalleryItemPublic,
+  type GalleryCategoryValue,
+} from '@/lib/gallery';
 
 /**
  * Programme values, narrowed from untrusted query strings.
@@ -668,3 +672,109 @@ export async function getPublishedFaculty(limit?: number): Promise<PublicFaculty
   }
 }
 
+export type PublicGalleryItem = {
+  id: string;
+  imageUrl: string;
+  alt: string;
+  caption: string | null;
+  category: GalleryCategoryValue;
+};
+
+/**
+ * Gallery photographs, for /gallery and the homepage band.
+ *
+ * =============================================================================
+ * THE CONSENT FILTER IS IN THE QUERY, AND THEN AGAIN IN JAVASCRIPT
+ * =============================================================================
+ * `docs/design/STUDENT-DATA-POLICY.md` covers gallery photographs, so this is
+ * the read path for potentially sensitive images of minors. It is guarded
+ * twice, and the two guards catch different things.
+ *
+ * THE QUERY refuses to return an unpublished row, or a row that shows people
+ * without both a consent reference and photograph permission. A filter written
+ * in the WHERE clause cannot be forgotten by the next call site the way a
+ * `.filter()` after the query can - and it means the sensitive rows never leave
+ * Postgres at all.
+ *
+ * `isGalleryItemPublic` THEN RE-CHECKS EVERY ROW. That looks redundant and is
+ * not. The database CHECK constraint permits any path that starts with a slash
+ * and contains no traversal, which is strictly weaker than `isSafePhotoPath` -
+ * `/media/x.svg` satisfies the constraint and is not an image this site will
+ * ever render. A row written by a direct query, by a future import, or by a
+ * defect of the kind Topic 5 found in the stories action can therefore be
+ * published, constraint-valid, and still wrong. The predicate that decides what
+ * a visitor sees must be the same one the admin shows the teacher, so it is
+ * imported rather than re-expressed.
+ *
+ * A row that fails the second check is DROPPED, not rendered blank. In a
+ * gallery the photograph is the content; an entry without one is an empty box.
+ */
+export async function getPublishedGallery(
+  options: { limit?: number; category?: GalleryCategoryValue } = {},
+): Promise<PublicGalleryItem[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  try {
+    const rows = await getPrisma().galleryItem.findMany({
+      where: {
+        published: true,
+        ...(options.category ? { category: options.category } : {}),
+        /*
+          "Nobody identifiable in it" OR "consent is on file for the people in
+          it." Expressed as an OR rather than two queries so there is one
+          statement to read and one to get right.
+        */
+        OR: [
+          { showsPeople: false },
+          { AND: [{ consentPhoto: true }, { consentRef: { not: null } }] },
+        ],
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      ...(options.limit ? { take: options.limit } : {}),
+      select: {
+        id: true,
+        imageUrl: true,
+        alt: true,
+        caption: true,
+        category: true,
+        showsPeople: true,
+        consentRef: true,
+        consentPhoto: true,
+        published: true,
+      },
+    });
+
+    return rows
+      .filter((row) => isGalleryItemPublic(row))
+      .map((row) => ({
+        id: row.id,
+        imageUrl: row.imageUrl,
+        alt: row.alt,
+        caption: row.caption,
+        category: row.category as GalleryCategoryValue,
+      }));
+  } catch (error) {
+    logUnexpected('public.gallery.failed', error);
+    return [];
+  }
+}
+
+/**
+ * Which categories actually have a publishable photograph in them.
+ *
+ * The master directive says "only use categories that correspond to real
+ * content", so the public filter is built from what exists rather than from the
+ * enum. An empty category is not offered and cannot be reached by editing the
+ * URL, because the page narrows an unknown or unpopulated value to "all".
+ *
+ * Deliberately derived from `getPublishedGallery()` rather than from a separate
+ * `groupBy` query: a second query would be a second visibility rule, and the
+ * one thing this page must never do is advertise a category whose contents are
+ * not allowed to be shown.
+ */
+export async function getGalleryCategories(): Promise<GalleryCategoryValue[]> {
+  const items = await getPublishedGallery();
+  const seen = new Set<GalleryCategoryValue>();
+  for (const item of items) seen.add(item.category);
+  return [...seen];
+}

@@ -130,7 +130,18 @@ export default async function FacultyPage({
                       {member.subject ? ` · ${member.subject}` : ''}
                     </p>
                     {member.bio ? (
-                      <p className="measure mt-2 text-small text-text">{member.bio}</p>
+                      /*
+                        PRE-EXISTING, FOUND BY THE TOPIC 8 PROBE AND FIXED HERE.
+
+                        A flex child defaults to `min-width: auto`, so a long
+                        hyphen-free description made this page 3774px wide at a
+                        320px viewport, pushing Edit and Remove off-screen. The
+                        gallery list had the identical defect; leaving the one
+                        next door to it unfixed made no sense.
+                      */
+                      <p className="measure mt-2 text-small text-text [overflow-wrap:anywhere]">
+                        {member.bio}
+                      </p>
                     ) : null}
                     {member.priority > 0 ? (
                       <p className="mt-2 text-[13px] text-muted">

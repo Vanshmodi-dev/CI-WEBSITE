@@ -37,6 +37,10 @@ const PUBLIC_ROUTES = [
   // has content (HIDDEN_UNTIL_POPULATED in src/config/nav.ts), so it must meet
   // the same metadata, contrast, overflow and semantics standard as the rest.
   '/reviews',
+  // Phase 16, Topic 8. Same reason as /faculty and /reviews: the route is
+  // registered and in the sitemap even while its MENU entry is hidden until it
+  // has photographs, so it must meet the same standard as the rest.
+  '/gallery',
   '/results',
   '/stories',
   '/announcements',
