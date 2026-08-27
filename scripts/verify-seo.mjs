@@ -32,6 +32,11 @@ const PUBLIC_ROUTES = [
   // overflow, semantics and metadata coverage as every other public route -
   // a page nobody checks is a page that quietly stops meeting the standard.
   '/faculty',
+  // Phase 16, Topic 7. Listed for the same reason as /faculty: the route is
+  // registered and in the sitemap even while its MENU entry is hidden until it
+  // has content (HIDDEN_UNTIL_POPULATED in src/config/nav.ts), so it must meet
+  // the same metadata, contrast, overflow and semantics standard as the rest.
+  '/reviews',
   '/results',
   '/stories',
   '/announcements',

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute, publishedCourses } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getPublicReviews } from '@/lib/reviews/fetch';
 import { pageMetadata } from '@/lib/seo';
 import {
   getPublishedResults,
@@ -22,6 +23,7 @@ import {
   StoryCard,
   BatchList,
   FacultyCard,
+  ReviewCard,
 } from '@/components/domain/public-cards';
 
 export const metadata: Metadata = pageMetadata({
@@ -70,7 +72,7 @@ function MoreLink({ href, children }: { href: string; children: string }) {
  * different silhouettes.
  */
 export default async function HomePage() {
-  const [content, contact, announcement, courseBatches, results, stories, faculty] =
+  const [content, contact, announcement, courseBatches, results, stories, faculty, reviewPayload] =
     await Promise.all([
     getSiteContent(),
     getContactBlock(),
@@ -83,6 +85,7 @@ export default async function HomePage() {
     getPublishedStories(2),
     // Three is the homepage band; the full list is /faculty.
     getPublishedFaculty(3),
+    getPublicReviews(),
   ]);
 
   const batchCountFor = (slug: string) =>
@@ -284,9 +287,33 @@ export default async function HomePage() {
       ) : null}
 
       {/*
-        Reviews, videos and gallery bands are still absent. Each needs content
-        the institute has not supplied — an activated Review Engine, a channel
-        ID, photography. Master Plan §22.
+        Reviews — read from the Review Engine, never stored here.
+
+        Like every other band, it does not render without real data. Here that
+        rule does most of the work: with the engine inactive there is no
+        payload, so there is nothing to show and nothing is shown. A coaching
+        site with invented testimonials is the specific failure this rebuild
+        exists to correct.
+      */}
+      {reviewPayload && reviewPayload.reviews.length > 0 ? (
+        <Section tone="paper" labelledBy="home-reviews">
+          <SectionHeader
+            id="home-reviews"
+            eyebrow={`Reviews on ${reviewPayload.sourceLabel}`}
+            title="What people say"
+            action={<MoreLink href="/reviews">All reviews</MoreLink>}
+          />
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {reviewPayload.reviews.slice(0, 3).map((review) => (
+              <ReviewCard key={review.id} review={review} />
+            ))}
+          </div>
+        </Section>
+      ) : null}
+
+      {/*
+        Videos and gallery bands are still absent. Each needs content the
+        institute has not supplied — a channel ID, photography. Master Plan §22.
       */}
 
       {/*

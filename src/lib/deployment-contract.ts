@@ -194,6 +194,20 @@ export const PLATFORM_ENV: readonly EnvSpec[] = [
     purpose: 'Set by Cloudflare Pages. Same signal as VERCEL.',
     remediation: 'Never set this yourself. The platform sets it.',
   },
+  {
+    name: 'REVIEWS_PAYLOAD_URL',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose:
+      'HTTPS URL of the Review Engine published payload. Read SERVER-SIDE only; ' +
+      'without it the reviews band simply does not render.',
+    remediation:
+      'Set it to the published reviews.json URL once the engine is activated for ' +
+      'this client. It is public data and is NOT a secret - but it must never be ' +
+      'prefixed NEXT_PUBLIC_, because the visitor browser must never fetch it ' +
+      '(INV-01: the browser never contacts a review source).',
+  },
 ];
 
 export const ENV_NAMES: readonly string[] = [
@@ -800,6 +814,18 @@ export const ROUTES: readonly RouteSpec[] = [
   },
   { path: '/about', kind: 'public', requiresAuth: false, mutates: false, inSitemap: true, crawlable: true },
   {
+    path: '/reviews',
+    kind: 'public',
+    requiresAuth: false,
+    mutates: false,
+    inSitemap: true,
+    crawlable: true,
+    note:
+      'Reviews read from the Review Engine payload server-side. NO local ' +
+      'storage, NO Review/AggregateRating structured data, and the band is ' +
+      'hidden entirely when the payload is absent or refused.',
+  },
+  {
     path: '/faculty',
     kind: 'public',
     requiresAuth: false,
@@ -892,6 +918,18 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/enquiries', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/enquiries/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/faculty', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  {
+    path: '/admin/reviews',
+    kind: 'admin',
+    requiresAuth: true,
+    mutates: true,
+    inSitemap: false,
+    crawlable: false,
+    note:
+      'Read-only diagnostics for the Review Engine connection. Its one action ' +
+      'clears a cache entry; there is no create, edit, delete or moderation, ' +
+      'because the engine is the source of truth (Master Plan Decision 02).',
+  },
   { path: '/admin/faculty/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/faculty/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {

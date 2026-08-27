@@ -8,6 +8,7 @@ import type {
   PublicBatch,
   PublicFaculty,
 } from '@/lib/public-data';
+import type { SafeReview } from '@/lib/reviews/payload';
 
 /**
  * Public content cards.
@@ -390,6 +391,125 @@ export function FacultyCard({ member }: { member: PublicFaculty }) {
           <p className="mt-3 text-small leading-relaxed text-text">{member.bio}</p>
         ) : null}
       </div>
+    </article>
+  );
+}
+
+/* -------------------------------------------------------------- reviews -- */
+
+const REVIEW_DATE = new Intl.DateTimeFormat('en-GB', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'Asia/Kolkata',
+});
+
+/**
+ * A star rating with a text equivalent.
+ *
+ * `frontend/SAFETY.md` §6 is explicit about this: the stars themselves are
+ * `aria-hidden` and the group carries `role="img"` with a label, because five
+ * star characters read literally announce as "black star black star black
+ * star" and leave the listener counting.
+ *
+ * Drawn with characters rather than an icon font or an SVG sprite. An icon font
+ * would be a second request the institute never agreed to; the engine draws its
+ * own stars with `clip-path` for the same reason.
+ */
+export function StarRating({ rating }: { rating: number }) {
+  return (
+    <span
+      role="img"
+      aria-label={`Rated ${rating} out of 5`}
+      className="inline-flex items-center gap-0.5 text-[15px] leading-none text-accent"
+    >
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span key={star} aria-hidden="true" className={star <= rating ? '' : 'text-rule-strong'}>
+          ★
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/**
+ * One review from the Review Engine.
+ *
+ * ⚠ EVERY STRING HERE IS SOMEBODY ELSE'S KEYSTROKES, and they have travelled
+ * through a scraper. They are rendered as React children and nothing else:
+ * no `dangerouslySetInnerHTML`, no `innerHTML`, no attribute interpolation of
+ * review content. `frontend/SAFETY.md` §1 makes that its first rule and it is
+ * the right one.
+ *
+ * There is NO AVATAR, deliberately. INV-01 in that same document says the
+ * visitor's browser never contacts a review source, and §7 lists loading
+ * avatars from the source's CDN as the tempting thing that breaks it. The
+ * normaliser discards those URLs entirely; this renders initials.
+ */
+export function ReviewCard({ review }: { review: SafeReview }) {
+  return (
+    /*
+      `min-w-0` IS LOAD-BEARING, NOT TIDINESS.
+
+      A grid item defaults to `min-width: auto`, which means it refuses to
+      shrink below its widest unbreakable content. One reviewer writing a long
+      hyphen-free run of characters therefore widened the card, the grid, and
+      the whole document: /reviews and the homepage scrolled sideways at every
+      width up to 768px. Nothing in the payload is under our control, so the
+      layout has to survive text nobody would choose to write.
+    */
+    <article className="flex h-full min-w-0 flex-col rounded-md border border-rule bg-paper p-5">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-[15px] font-bold text-white"
+        >
+          {review.initials}
+        </span>
+        <div className="min-w-0">
+          {/*
+            A HEADING, so the cards are a list a screen-reader user can move
+            through by heading rather than by reading every quote in order. It
+            is styled as body text on purpose: the visual weight belongs to the
+            review, not to the stranger's name above it.
+
+            `h3` sits under the `h2` that titles whichever band holds the card,
+            on both /reviews and the homepage.
+          */}
+          <h3 className="truncate font-medium text-text">
+            {review.authorName ?? 'A Google reviewer'}
+          </h3>
+          {review.date ? (
+            <p className="text-[13px] text-muted">{REVIEW_DATE.format(new Date(review.date))}</p>
+          ) : null}
+        </div>
+      </div>
+
+      {review.rating !== null ? (
+        <div className="mt-3">
+          <StarRating rating={review.rating} />
+        </div>
+      ) : null}
+
+      {review.text ? (
+        /*
+          `overflow-wrap: anywhere` rather than `break-words`: the latter still
+          declines to break a word when the browser thinks it can avoid it, and
+          a single 70-character token is exactly the case where it cannot.
+        */
+        <p className="mt-3 text-small leading-relaxed text-text [overflow-wrap:anywhere]">
+          {review.text}
+          {review.textTruncated ? <span aria-hidden="true">…</span> : null}
+        </p>
+      ) : null}
+
+      {review.ownerReply ? (
+        <div className="mt-4 min-w-0 border-l-2 border-rule pl-3">
+          <p className="eyebrow text-accent-text">Our reply</p>
+          <p className="mt-1 text-small leading-relaxed text-muted [overflow-wrap:anywhere]">
+            {review.ownerReply.text}
+          </p>
+        </div>
+      ) : null}
     </article>
   );
 }

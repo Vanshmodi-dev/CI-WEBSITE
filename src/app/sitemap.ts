@@ -76,6 +76,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       honest one until faculty joins that function.
     */
     entry('/faculty'),
+    /*
+      Reviews carry no `lastModified` either. Their freshness belongs to the
+      Review Engine's harvest, not to anything this application publishes, and
+      `lastPublishedAt()` only knows about our own content.
+    */
+    entry('/reviews'),
     entry('/results', content.results),
     entry('/stories', content.stories),
     entry('/announcements', content.announcements),
