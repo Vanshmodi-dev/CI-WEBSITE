@@ -43,6 +43,17 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
     initial,
   );
   const [photoUrl, setPhotoUrl] = useState(values.photoUrl ?? '');
+
+  /**
+   * What a field should show right now.
+   *
+   * The values the action echoed back after a refusal win over the record's
+   * stored values, because React resets the form to `defaultValue` once the
+   * action settles - see the note on `FacultyFormState.values`. Without this
+   * the reset silently discards whatever the teacher had just typed.
+   */
+  const shown = (key: string, fallback: string | number | undefined) =>
+    state.values?.[key] ?? String(fallback ?? '');
   const editing = Boolean(values.id);
 
   return (
@@ -52,9 +63,30 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
           stale, which is what refuses a form that lost track of its version. */}
       <input type="hidden" name={EDIT_TOKEN_FIELD} value={values.editedAt ?? ''} />
 
-      {state.status === 'error' && state.message ? (
-        <Notice tone="danger">{state.message}</Notice>
-      ) : null}
+      {/*
+        ⚠ THIS SLOT IS ALWAYS RENDERED, AND THAT IS THE FIX.
+
+        It used to be `{error ? <Notice/> : null}`. Inserting a new element here
+        on a validation failure shifted every following sibling by one index,
+        and React reconciles children by position - so the Cards below were
+        unmounted and remounted, and every uncontrolled input in them reset to
+        its `defaultValue`.
+
+        The visible effect was that a teacher who filled in a long form and
+        missed one required field lost EVERYTHING they had typed, on a page that
+        was politely telling them to check the highlighted fields. Measured in
+        Topic 11: no navigation occurred, so this was the React path, not a full
+        page reload.
+
+        Keeping the wrapper mounted keeps every sibling at a stable index.
+        `aria-live` is the second half: the message is now announced rather than
+        only coloured.
+      */}
+      <div aria-live="polite">
+        {state.status === 'error' && state.message ? (
+          <Notice tone="danger">{state.message}</Notice>
+        ) : null}
+      </div>
 
       <Card>
         <h2 className="mb-5 font-display text-[18px] font-semibold text-heading">
@@ -68,7 +100,7 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
                 {...props}
                 type="text"
                 maxLength={120}
-                defaultValue={values.name ?? ''}
+                defaultValue={shown('name', values.name)}
                 className={inputClass(Boolean(state.errors?.name))}
               />
             )}
@@ -86,7 +118,7 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
                 {...props}
                 type="text"
                 maxLength={120}
-                defaultValue={values.designation ?? ''}
+                defaultValue={shown('designation', values.designation)}
                 className={inputClass(Boolean(state.errors?.designation))}
               />
             )}
@@ -103,7 +135,7 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
                 {...props}
                 type="text"
                 maxLength={120}
-                defaultValue={values.subject ?? ''}
+                defaultValue={shown('subject', values.subject)}
                 className={inputClass(Boolean(state.errors?.subject))}
               />
             )}
@@ -120,7 +152,7 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
                 {...props}
                 rows={4}
                 maxLength={600}
-                defaultValue={values.bio ?? ''}
+                defaultValue={shown('bio', values.bio)}
                 className={textareaClass(Boolean(state.errors?.bio))}
               />
             )}
@@ -176,7 +208,7 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
                 min={0}
                 max={1000}
                 step={1}
-                defaultValue={values.priority ?? 0}
+                defaultValue={shown('priority', values.priority ?? 0)}
                 className={inputClass(Boolean(state.errors?.priority))}
               />
             )}
@@ -187,7 +219,9 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
               id="f-published"
               name="published"
               type="checkbox"
-              defaultChecked={values.published ?? false}
+              defaultChecked={
+                state.values ? state.values.published === 'on' : (values.published ?? false)
+              }
               className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
             />
             <label htmlFor="f-published" className="text-small text-text">

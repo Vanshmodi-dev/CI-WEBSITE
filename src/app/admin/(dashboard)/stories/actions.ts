@@ -43,6 +43,16 @@ export type StoryFormState = {
       string
     >
   >;
+  /**
+   * What the teacher had typed when the save was refused.
+   *
+   * React resets a form once its action settles, so an uncontrolled input goes
+   * back to its `defaultValue` even when the action returned an error and the
+   * teacher is still looking at the form. Echoing the submitted values back
+   * means that reset restores what they typed rather than what the record held
+   * when the page opened. See the Topic 11 report, defect D-2.
+   */
+  values?: Record<string, string>;
 };
 
 const PROGRAMMES = ['CLASS_11', 'CLASS_12', 'CA_FOUNDATION', 'CA_INTERMEDIATE', 'CMA'] as const;
@@ -143,7 +153,12 @@ export async function saveStory(
   if (outcome.length < 10) errors.outcome = 'Describe how it turned out.';
 
   if (Object.keys(errors).length > 0) {
-    return { status: 'error', message: 'Please check the highlighted fields.', errors };
+    return {
+      status: 'error',
+      message: 'Please check the highlighted fields.',
+      errors,
+      values: { programme: programmeRaw, year: yearRaw, challenge, journey, outcome, quote },
+    };
   }
 
   const displayNameMode = NAME_MODES.includes(

@@ -73,6 +73,15 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
 
   const editing = Boolean(values.id);
 
+  /**
+   * What a field should show right now.
+   *
+   * Values echoed back by a refused save win over the record's stored values,
+   * because React resets the form to `defaultValue` once the action settles.
+   */
+  const shown = (key: string, fallback: string | number | undefined) =>
+    state.values?.[key] ?? String(fallback ?? '');
+
   const blockers = galleryBlockers({
     imageUrl: imageUrl.length > 0 ? imageUrl : null,
     showsPeople,
@@ -89,9 +98,30 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
           stale, which is what refuses a form that lost track of its version. */}
       <input type="hidden" name={EDIT_TOKEN_FIELD} value={values.editedAt ?? ''} />
 
-      {state.status === 'error' && state.message ? (
-        <Notice tone="danger">{state.message}</Notice>
-      ) : null}
+      {/*
+        ⚠ THIS SLOT IS ALWAYS RENDERED, AND THAT IS THE FIX.
+
+        It used to be `{error ? <Notice/> : null}`. Inserting a new element here
+        on a validation failure shifted every following sibling by one index,
+        and React reconciles children by position - so the Cards below were
+        unmounted and remounted, and every uncontrolled input in them reset to
+        its `defaultValue`.
+
+        The visible effect was that a teacher who filled in a long form and
+        missed one required field lost EVERYTHING they had typed, on a page that
+        was politely telling them to check the highlighted fields. Measured in
+        Topic 11: no navigation occurred, so this was the React path, not a full
+        page reload.
+
+        Keeping the wrapper mounted keeps every sibling at a stable index.
+        `aria-live` is the second half: the message is now announced rather than
+        only coloured.
+      */}
+      <div aria-live="polite">
+        {state.status === 'error' && state.message ? (
+          <Notice tone="danger">{state.message}</Notice>
+        ) : null}
+      </div>
 
       <Card>
         <h2 className="mb-1 font-display text-[18px] font-semibold text-heading">
@@ -133,7 +163,7 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
                 {...props}
                 type="text"
                 maxLength={200}
-                defaultValue={values.alt ?? ''}
+                defaultValue={shown('alt', values.alt)}
                 className={inputClass(Boolean(state.errors?.alt))}
               />
             )}
@@ -150,7 +180,7 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
                 {...props}
                 type="text"
                 maxLength={300}
-                defaultValue={values.caption ?? ''}
+                defaultValue={shown('caption', values.caption)}
                 className={inputClass(Boolean(state.errors?.caption))}
               />
             )}
@@ -165,7 +195,7 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
             {(props) => (
               <select
                 {...props}
-                defaultValue={values.category ?? ''}
+                defaultValue={shown('category', values.category)}
                 className={selectClass(Boolean(state.errors?.category))}
               >
                 <option value="">Choose one</option>
@@ -274,7 +304,7 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
                 min={0}
                 max={1000}
                 step={1}
-                defaultValue={values.priority ?? 0}
+                defaultValue={shown('priority', values.priority)}
                 className={inputClass(Boolean(state.errors?.priority))}
               />
             )}
@@ -306,7 +336,11 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
               id="g-published"
               name="published"
               type="checkbox"
-              defaultChecked={values.published ?? false}
+              defaultChecked={
+                state.values
+                  ? state.values.published === 'on'
+                  : (values.published ?? false)
+              }
               className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
             />
             <label htmlFor="g-published" className="text-small text-text">

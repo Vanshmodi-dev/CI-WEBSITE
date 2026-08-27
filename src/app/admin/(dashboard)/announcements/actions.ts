@@ -6,6 +6,13 @@ import { requireAdminOrNull, recordAudit } from '@/lib/auth';
 import { getPrisma } from '@/lib/db';
 import { isValidRecordId } from '@/lib/validation';
 import { logUnexpected } from '@/lib/log';
+import {
+  EDIT_TOKEN_FIELD,
+  STALE_EDIT_MESSAGE,
+  StaleEditError,
+  isStaleEditError,
+  parseEditToken,
+} from '@/lib/stale-edit';
 import { revalidateAnnouncements } from '@/lib/revalidate-public';
 
 /**
@@ -23,6 +30,16 @@ export type AnnouncementFormState = {
   status: 'idle' | 'error';
   message?: string;
   errors?: Partial<Record<'message' | 'startsAt' | 'endsAt' | 'href', string>>;
+  /**
+   * What the teacher had typed when the save was refused.
+   *
+   * React resets a form once its action settles, so an uncontrolled input goes
+   * back to its `defaultValue` even when the action returned an error and the
+   * teacher is still looking at the form. Echoing the submitted values back
+   * means that reset restores what they typed rather than what the record held
+   * when the page opened. See the Topic 11 report, defect D-2.
+   */
+  values?: Record<string, string>;
 };
 
 /** "YYYY-MM-DD" anchored to IST, so a date never slips a day in UTC. */
@@ -72,7 +89,12 @@ export async function saveAnnouncement(
   }
 
   if (Object.keys(errors).length > 0) {
-    return { status: 'error', message: 'Please check the highlighted fields.', errors };
+    return {
+      status: 'error',
+      message: 'Please check the highlighted fields.',
+      errors,
+      values: { message, href, startsAt: startsRaw, endsAt: endsRaw, published: published ? 'on' : '' },
+    };
   }
   if (!startsAt || !endsAt) {
     return { status: 'error', message: 'Those dates are not valid.' };
@@ -89,7 +111,32 @@ export async function saveAnnouncement(
   try {
     const prisma = getPrisma();
     if (id) {
-      await prisma.announcement.update({ where: { id }, data });
+      /*
+        LOST-UPDATE GUARD. The form carries the row's `updatedAt`; the update
+        requires it to still match. If the row moved underneath - a colleague
+        edited it, or unpublished it - the count comes back zero and the whole
+        transaction is abandoned rather than half-applied.
+
+        An ABSENT token is treated as stale: a form that cannot prove which
+        version it was looking at has no business overwriting one.
+
+        ADDED IN TOPIC 11. This surface had no guard at all: a second tab's
+        save silently overwrote the first, with no warning to either teacher.
+        Faculty, gallery, videos, stories, students and the website editor all
+        had it; these two were written before the guard existed and were never
+        brought forward.
+      */
+      const expectedUpdatedAt = parseEditToken(formData.get(EDIT_TOKEN_FIELD));
+
+      await prisma.$transaction(async (tx) => {
+        const applied = await tx.announcement.updateMany({
+          where: expectedUpdatedAt
+            ? { id, updatedAt: expectedUpdatedAt }
+            : { id, updatedAt: new Date(0) },
+          data,
+        });
+        if (applied.count === 0) throw new StaleEditError();
+      });
       await recordAudit(
         admin,
         published ? 'published' : 'updated',
@@ -104,6 +151,9 @@ export async function saveAnnouncement(
       await recordAudit(admin, 'created', 'Announcement', created.id);
     }
   } catch (error) {
+    if (isStaleEditError(error)) {
+      return { status: 'error', message: STALE_EDIT_MESSAGE };
+    }
     logUnexpected('admin.announcement.save_failed', error);
     return {
       status: 'error',

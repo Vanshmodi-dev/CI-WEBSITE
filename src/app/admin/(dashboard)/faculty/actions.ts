@@ -43,6 +43,24 @@ export type FacultyFormState = {
   errors?: Partial<
     Record<'name' | 'designation' | 'subject' | 'bio' | 'photoUrl' | 'priority', string>
   >;
+  /**
+   * What the teacher had typed when the save was refused.
+   *
+   * ⚠ REACT RESETS A FORM AFTER ITS ACTION COMPLETES.
+   *
+   * That is documented React 19 behaviour for `<form action={fn}>`, and it
+   * means an uncontrolled input goes back to its `defaultValue` even when the
+   * action returned an error and the teacher is still looking at the form.
+   *
+   * The visible effect was that somebody who filled in a long form and missed
+   * one required field lost EVERYTHING they had typed, while the page politely
+   * asked them to check the highlighted fields. Measured in Topic 11 with no
+   * page navigation, so this was not a reload - it was the reset.
+   *
+   * Echoing the submitted values back means the reset restores what they typed
+   * rather than what the record held when the page opened.
+   */
+  values?: Record<string, string>;
 };
 
 /**
@@ -108,7 +126,20 @@ export async function saveFaculty(
   }
 
   if (Object.keys(errors).length > 0) {
-    return { status: 'error', message: 'Please check the highlighted fields.', errors };
+    return {
+      status: 'error',
+      message: 'Please check the highlighted fields.',
+      errors,
+      values: {
+        name,
+        designation,
+        subject,
+        bio,
+        photoUrl,
+        priority: priorityRaw,
+        published: published ? 'on' : '',
+      },
+    };
   }
 
   const data = {

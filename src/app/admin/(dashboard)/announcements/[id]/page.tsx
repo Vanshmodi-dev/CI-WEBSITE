@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { getAnnouncement } from '@/lib/admin-data';
 import { PageHeader, Card } from '@/components/admin/ui';
+import { editToken } from '@/lib/stale-edit';
 import { AnnouncementForm } from '../announcement-form';
 import { toDateInput } from '@/lib/admin-format';
 import { deleteAnnouncement } from '../actions';
@@ -35,6 +36,7 @@ export default async function EditAnnouncementPage({
           startsAt: toDateInput(announcement.startsAt),
           endsAt: toDateInput(announcement.endsAt),
           published: announcement.published,
+          editedAt: editToken(announcement.updatedAt),
         }}
       />
 

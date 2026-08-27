@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { getBatch } from '@/lib/admin-data';
 import { PageHeader, Card } from '@/components/admin/ui';
+import { editToken } from '@/lib/stale-edit';
 import { BatchForm } from '../batch-form';
 import { toDateInput } from '@/lib/admin-format';
 import { deleteBatch } from '../actions';
@@ -35,6 +36,7 @@ export default async function EditBatchPage({
           mode: batch.mode,
           seatsNote: batch.seatsNote ?? '',
           published: batch.published,
+          editedAt: editToken(batch.updatedAt),
         }}
       />
 

@@ -41,6 +41,15 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
   );
   const editing = Boolean(values.id);
 
+  /**
+   * What a field should show right now.
+   *
+   * Values echoed back by a refused save win over the record's stored values,
+   * because React resets the form to `defaultValue` once the action settles.
+   */
+  const shown = (key: string, fallback: string | number | undefined) =>
+    state.values?.[key] ?? String(fallback ?? '');
+
   const [studentName, setStudentName] = useState(values.studentName ?? '');
   const [displayNameMode, setDisplayNameMode] = useState<DisplayNameModeValue>(
     values.displayNameMode ?? 'INITIALS',
@@ -75,19 +84,40 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
         <input type="hidden" name={EDIT_TOKEN_FIELD} value={values.editedAt ?? ''} />
       ) : null}
 
-      {state.status === 'error' && state.message ? (
-        <Notice tone="danger" title={state.message}>
-          {state.blockers && state.blockers.length > 0 ? (
-            <ul className="mt-1 list-disc pl-5">
-              {state.blockers.map((b) => (
-                <li key={b}>{b}</li>
-              ))}
-            </ul>
-          ) : (
-            'Please check the form and try again.'
-          )}
-        </Notice>
-      ) : null}
+      {/*
+        ⚠ THIS SLOT IS ALWAYS RENDERED, AND THAT IS THE FIX.
+
+        It used to be `{error ? <Notice/> : null}`. Inserting a new element here
+        on a validation failure shifted every following sibling by one index,
+        and React reconciles children by position - so the Cards below were
+        unmounted and remounted, and every uncontrolled input in them reset to
+        its `defaultValue`.
+
+        The visible effect was that a teacher who filled in a long form and
+        missed one required field lost EVERYTHING they had typed, on a page that
+        was politely telling them to check the highlighted fields. Measured in
+        Topic 11: no navigation occurred, so this was the React path, not a full
+        page reload.
+
+        Keeping the wrapper mounted keeps every sibling at a stable index.
+        `aria-live` is the second half: the message is now announced rather than
+        only coloured.
+      */}
+      <div aria-live="polite">
+        {state.status === 'error' && state.message ? (
+          <Notice tone="danger" title={state.message}>
+            {state.blockers && state.blockers.length > 0 ? (
+              <ul className="mt-1 list-disc pl-5">
+                {state.blockers.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            ) : (
+              'Please check the form and try again.'
+            )}
+          </Notice>
+        ) : null}
+      </div>
 
       <Card>
         <h2 className="mb-5 font-display text-[18px] font-semibold text-heading">
@@ -110,7 +140,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
             {(props) => (
               <select
                 {...props}
-                defaultValue={values.programme ?? ''}
+                defaultValue={shown('programme', values.programme)}
                 className={selectClass(Boolean(state.errors?.programme))}
               >
                 <option value="">Please choose…</option>
@@ -129,7 +159,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
                 type="number"
                 min={2000}
                 max={2100}
-                defaultValue={values.year ?? ''}
+                defaultValue={shown('year', values.year)}
                 className={inputClass(Boolean(state.errors?.year))}
               />
             )}
@@ -153,7 +183,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
                 {...props}
                 rows={3}
                 maxLength={2000}
-                defaultValue={values.challenge ?? ''}
+                defaultValue={shown('challenge', values.challenge)}
                 className={textareaClass(Boolean(state.errors?.challenge))}
               />
             )}
@@ -169,7 +199,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
                 {...props}
                 rows={5}
                 maxLength={4000}
-                defaultValue={values.journey ?? ''}
+                defaultValue={shown('journey', values.journey)}
                 className={textareaClass(Boolean(state.errors?.journey))}
               />
             )}
@@ -185,7 +215,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
                 {...props}
                 rows={3}
                 maxLength={2000}
-                defaultValue={values.outcome ?? ''}
+                defaultValue={shown('outcome', values.outcome)}
                 className={textareaClass(Boolean(state.errors?.outcome))}
               />
             )}
@@ -196,7 +226,7 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
                 {...props}
                 rows={2}
                 maxLength={600}
-                defaultValue={values.quote ?? ''}
+                defaultValue={shown('quote', values.quote)}
                 className={textareaClass(false)}
               />
             )}

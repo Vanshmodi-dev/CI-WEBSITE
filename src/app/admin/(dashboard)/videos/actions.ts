@@ -58,6 +58,16 @@ export type VideoFormState = {
   status: 'idle' | 'error';
   message?: string;
   errors?: Partial<Record<'youtubeUrl' | 'title' | 'description' | 'subject' | 'priority', string>>;
+  /**
+   * What the teacher had typed when the save was refused.
+   *
+   * React resets a form once its action settles, so an uncontrolled input goes
+   * back to its `defaultValue` even when the action returned an error and the
+   * teacher is still looking at the form. Echoing the submitted values back
+   * means that reset restores what they typed rather than what the record held
+   * when the page opened. See the Topic 11 report, defect D-2.
+   */
+  values?: Record<string, string>;
 };
 
 /** Trim, bound, and strip control characters. Matches the CHECK constraints. */
@@ -120,7 +130,12 @@ export async function saveVideo(
   }
 
   if (Object.keys(errors).length > 0 || !youtubeId) {
-    return { status: 'error', message: 'Please check the highlighted fields.', errors };
+    return {
+      status: 'error',
+      message: 'Please check the highlighted fields.',
+      errors,
+      values: { youtubeUrl: rawUrl, title, description, subject: subjectRaw, priority: priorityRaw, published: published ? 'on' : '' },
+    };
   }
 
   const data = {
