@@ -12,6 +12,7 @@ import {
   navKeyFor,
 } from '@/config/site-content';
 import { primaryNav, footerNav } from '@/config/nav';
+import { parseCoordinates, directionsUrl, type Coordinates } from '@/lib/location';
 
 /**
  * Reading editable website copy.
@@ -95,6 +96,22 @@ export type ContactBlock = {
   whatsappNumber: string;
   /** One entry per line the teacher typed. Empty when they typed nothing. */
   hours: readonly string[];
+  /**
+   * The verified map point, or null when nobody has supplied one.
+   *
+   * Null is the normal state today and it is what keeps the map hidden. A map
+   * pin is a claim about a doorway; the address is a claim about a sector.
+   */
+  coordinates: Coordinates | null;
+  /**
+   * "Get directions", always present.
+   *
+   * Built from the coordinates when they exist and from the address when they
+   * do not, so the link works before the institute has verified a point. Both
+   * forms are Google's documented Maps URLs API and both open the native maps
+   * app on a phone.
+   */
+  directionsHref: string;
 };
 
 /**
@@ -115,8 +132,28 @@ export async function getContactBlock(): Promise<ContactBlock> {
   const e164 = phoneE164(primary);
   const hoursRaw = (content['contact.hours'] ?? '').trim();
 
+  /*
+    PARSED, NOT TRUSTED.
+
+    The value went through `validateCoordinates` in the save action and through
+    a CHECK constraint on the settings table before it got here. It is parsed
+    AGAIN on the way out, for the same reason `present()` and
+    `getPublishedGallery()` re-check a photo path: the guards fail differently.
+    The write guard protects values arriving through the path everyone
+    remembers; this protects against a row that is ALREADY wrong — written by a
+    direct query, by an import somebody adds later, or by a defect of the kind
+    Topic 5 found in the stories action after months in production.
+
+    A value that fails here yields `null`, which hides the map. There is no
+    degraded way to show a pin whose coordinates we do not trust.
+  */
+  const coordinates = parseCoordinates(content['contact.coordinates'] ?? '');
+  const addressLine = addressLineFrom(content as Record<string, string>);
+
   return {
-    addressLine: addressLineFrom(content as Record<string, string>),
+    addressLine,
+    coordinates,
+    directionsHref: directionsUrl(addressLine, coordinates),
     phonePrimaryDisplay: primary,
     phonePrimaryE164: e164,
     phoneSecondaryDisplay: secondary === '' ? null : secondary,

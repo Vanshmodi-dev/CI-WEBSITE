@@ -391,7 +391,35 @@ section('1b. THE DATABASE REFUSES A BAD ID TOO');
 
 section('2. NO IFRAME EXISTS UNTIL A VISITOR ASKS FOR ONE');
 {
+  /*
+    ⚠ THIRD-PARTY CONTACT IS MEASURED WITH CDP, NOT `performance`.
+
+    `performance.getEntriesByType('resource')` reports resources of the TOP
+    document. A cross-origin iframe's own navigation is not reliably one of
+    them: this suite recorded youtube-nocookie once and then, on a later run,
+    recorded NO third-party origin at all while an iframe pointing at it sat in
+    the DOM. That direction of error is the dangerous one — it would have
+    reported "YouTube is never contacted", the most flattering possible wrong
+    answer, and Topic 10 hit exactly the same blind spot.
+
+    `page.requests` is fed by `Network.requestWillBeSent`, which the browser
+    emits for every request it makes, iframe navigations included.
+  */
+  const thirdPartyHosts = () => {
+    const hosts = new Set();
+    for (const r of page.requests) {
+      try {
+        const { hostname } = new URL(r.url);
+        if (hostname !== 'localhost' && hostname !== '127.0.0.1') hosts.add(hostname);
+      } catch {
+        /* data: and blob: URLs are not third-party contact. */
+      }
+    }
+    return [...hosts];
+  };
+
   await page.viewport(390, 844, { mobile: true });
+  page.requests.length = 0;
   await page.goto(`${BASE}/videos`);
   await new Promise((r) => setTimeout(r, 2500));
 
@@ -405,16 +433,17 @@ section('2. NO IFRAME EXISTS UNTIL A VISITOR ASKS FOR ONE');
         origins,
         iframes: document.querySelectorAll('iframe').length,
         players: document.querySelectorAll('button[aria-label^="Play video"]').length,
-        thirdParty: Object.keys(origins).filter((o) => !o.includes('localhost')),
+        thirdParty: [],
       });
     })()`),
   );
+  initial.thirdParty = thirdPartyHosts();
 
   check(initial.players > 0, 'control: there are video posters to press', `${initial.players}`);
   check(initial.iframes === 0, 'NO iframe is present on initial load', `${initial.iframes} iframe(s)`);
   check(
     initial.thirdParty.length === 0,
-    'and the browser contacts NO third-party origin at all before a click',
+    'and the browser contacts NO third-party host at all before a click',
     initial.thirdParty.join(', ') || 'zero third-party origins',
   );
   console.log(`  measured: ${initial.requests} requests on load, all same-origin`);
@@ -437,7 +466,7 @@ section('2. NO IFRAME EXISTS UNTIL A VISITOR ASKS FOR ONE');
       const frames = [...document.querySelectorAll('iframe')];
       return JSON.stringify({
         requests: res.length,
-        thirdParty: Object.keys(origins).filter((o) => !o.includes('localhost')),
+        thirdParty: [],
         iframes: frames.length,
         srcs: frames.map((f) => f.src),
         allows: frames.map((f) => f.getAttribute('allow') || ''),
@@ -447,6 +476,7 @@ section('2. NO IFRAME EXISTS UNTIL A VISITOR ASKS FOR ONE');
     })()`),
   );
 
+  after.thirdParty = thirdPartyHosts();
   check(after.iframes === 1, 'exactly ONE iframe is created — not one per video', `${after.iframes}`);
   check(
     after.srcs.every((s) => s.startsWith('https://www.youtube-nocookie.com/embed/')),
@@ -454,9 +484,10 @@ section('2. NO IFRAME EXISTS UNTIL A VISITOR ASKS FOR ONE');
     after.srcs[0],
   );
   check(
-    after.thirdParty.length === 1 && after.thirdParty[0].includes('youtube-nocookie.com'),
-    'the only third-party origin contacted is the nocookie one',
-    after.thirdParty.join(', '),
+    after.thirdParty.length > 0 &&
+      after.thirdParty.every((h) => h.endsWith('youtube-nocookie.com')),
+    'the only third-party host contacted is the nocookie one',
+    after.thirdParty.join(', ') || 'none recorded',
   );
   check(
     after.allows.every((a) => !/clipboard|gyroscope|accelerometer|web-share|camera|microphone|geolocation|payment|\*/.test(a)),

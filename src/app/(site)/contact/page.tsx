@@ -5,6 +5,7 @@ import { pageMetadata } from '@/lib/seo';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { Hidden } from '@/components/primitives/empty-state';
+import { MapPanel } from '@/components/domain/map-panel';
 
 export const metadata: Metadata = pageMetadata({
   title: `Contact — ${institute.locality}`,
@@ -24,8 +25,21 @@ export const metadata: Metadata = pageMetadata({
  * do not render rather than showing a placeholder (§42).
  */
 export default async function ContactPage() {
-  const hasMap = Boolean(institute.placeId || institute.coordinates);
   const contact = await getContactBlock();
+  /*
+    THE MAP IS GATED ON A VERIFIED POINT, THE DIRECTIONS LINK IS NOT.
+
+    This used to read `institute.placeId || institute.coordinates`, both of
+    which are null and neither of which a teacher could ever set. It now reads
+    the resolved value, so entering coordinates in Website text turns the map
+    on with no deploy.
+
+    Directions ship regardless: a directions link is a SEARCH handed to
+    Google, not a pin we placed, so it is honest before the address has been
+    checked against the Google Business Profile (checklist item C1, still
+    open).
+  */
+  const hasMap = contact.coordinates !== null;
 
   return (
     <>
@@ -54,6 +68,9 @@ export default async function ContactPage() {
             variant="secondary"
           >
             WhatsApp
+          </Button>
+          <Button href={contact.directionsHref} external size="lg" variant="secondary">
+            Get directions
           </Button>
           <Button href="/admissions" size="lg" variant="secondary">
             Send an enquiry
@@ -136,9 +153,30 @@ export default async function ContactPage() {
       {contact.hours.length === 0 ? (
         <Hidden reason="Opening hours — not entered yet (Admin → Website text → Contact details)" />
       ) : null}
-      {!hasMap ? (
-        <Hidden reason="Map and directions — needs Place ID or coordinates (Master Plan §15)" />
-      ) : null}
+      {hasMap && contact.coordinates ? (
+        <Section tone="paper" labelledBy="map-heading">
+          <h2
+            id="map-heading"
+            className="font-display text-h2 font-bold leading-[1.15] tracking-[-0.015em] text-heading"
+          >
+            Where to find us
+          </h2>
+          <p className="measure mt-3 text-[17px] leading-relaxed text-muted">
+            {institute.address.landmark
+              ? `${institute.address.landmark}. `
+              : ''}
+            Use the directions button above if you are on your way.
+          </p>
+          <div className="mt-8">
+            <MapPanel
+              coordinates={contact.coordinates}
+              label={`${institute.name}, ${contact.addressLine}`}
+            />
+          </div>
+        </Section>
+      ) : (
+        <Hidden reason="Map — no coordinates entered yet (Admin → Website text → Contact details → Map location)" />
+      )}
 
       <ClosingCta
         id="contact-cta"

@@ -1,5 +1,6 @@
 import { institute, addressFull, publishedCourses } from './institute.ts';
 import { primaryNav, footerNav, HIDDEN_UNTIL_POPULATED } from './nav.ts';
+import { validateCoordinates } from '../lib/location.ts';
 
 /**
  * THE EDITABLE-CONTENT REGISTRY.
@@ -265,6 +266,32 @@ const CONTACT_FIELDS: readonly EditableField[] = [
     maxLength: 300,
     fallback: '',
     blankable: true,
+  },
+  {
+    key: 'contact.coordinates',
+    renders: { route: '/contact', section: 'Map — contact page' },
+    group: 'contact',
+    label: 'Map location',
+    help: 'Optional. In Google Maps, right-click the institute’s front door and click the numbers at the top to copy them, then paste them here — for example 26.849123, 75.805456. Leave blank and no map is shown.',
+    kind: 'line',
+    /*
+      Forty is generous for two six-decimal numbers and a comma (about 22
+      characters). It matches nothing in particular except "far more than a
+      coordinate pair and far less than a URL", which is the point: a value that
+      needs more room than this is not a coordinate pair.
+    */
+    maxLength: 40,
+    /*
+      The fallback is the typed config value, which is `null` today. Rendering
+      an empty string means the map stays hidden until somebody supplies a
+      point — the same "nothing rather than a placeholder" rule every other
+      unsupplied fact on this site follows.
+    */
+    fallback: institute.coordinates
+      ? `${institute.coordinates.lat},${institute.coordinates.lng}`
+      : '',
+    blankable: true,
+    validate: validateCoordinates,
   },
 ];
 

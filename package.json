@@ -54,7 +54,8 @@
     "verify:faculty": "node scripts/verify-faculty.mjs",
     "verify:reviews": "node scripts/verify-reviews.mjs",
     "verify:gallery": "node scripts/verify-gallery.mjs",
-    "verify:videos": "node scripts/verify-videos.mjs"
+    "verify:videos": "node scripts/verify-videos.mjs",
+    "verify:map": "node scripts/verify-map.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

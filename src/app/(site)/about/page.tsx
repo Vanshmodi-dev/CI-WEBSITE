@@ -157,8 +157,14 @@ export default async function AboutPage() {
             <Button href="/admissions" size="lg">
               Send an enquiry
             </Button>
+            {/*
+              Kept pointing at /contact deliberately: from an About page the
+              useful next step is the full contact panel — phone, WhatsApp,
+              hours and the map — not a bare hand-off to Google. The label is
+              corrected so it stops promising directions it does not give.
+            */}
             <Button href="/contact" size="lg" variant="secondary">
-              Get directions
+              Find us
             </Button>
           </>
         }

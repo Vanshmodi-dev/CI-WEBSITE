@@ -79,6 +79,8 @@ export default async function SiteLayout({
               postalCode: content['contact.postalCode'] ?? '',
               phoneE164: contact.phonePrimaryE164,
               hours: contact.hours,
+              // The same resolved point the contact page renders a map for.
+              coordinates: contact.coordinates,
             }),
           ),
         }}

@@ -428,8 +428,17 @@ export default async function HomePage() {
               <Button href={contact.telHref}>
                 Call {contact.phonePrimaryDisplay}
               </Button>
-              <Button href="/contact" variant="secondary">
-                Contact &amp; directions
+              {/*
+                DIRECTIONS IS A DIRECTIONS LINK NOW.
+
+                This button said "Contact & directions" and went to /contact,
+                which had no directions on it — the site promised the thing in
+                two places and delivered it in none. It now hands the visitor
+                straight to Google's directions, which is what somebody reading
+                a location band wants.
+              */}
+              <Button href={contact.directionsHref} external variant="secondary">
+                Get directions
               </Button>
             </div>
           </div>

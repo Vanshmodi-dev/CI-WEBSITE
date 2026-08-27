@@ -130,6 +130,20 @@ export type JsonLdContact = {
   postalCode: string;
   phoneE164: string;
   hours: readonly string[];
+  /**
+   * The resolved map point, or null.
+   *
+   * ⚠ PASSED IN RATHER THAN READ FROM CONFIG, AND THAT IS THE WHOLE POINT.
+   *
+   * `geo` used to read `institute.coordinates` directly while the ADDRESS above
+   * came from the admin. That was fine only because both were unset. The moment
+   * Topic 10 let a teacher enter a map point, a config-read `geo` would have
+   * announced one location to a search engine while the page showed another —
+   * on the single field a local listing is matched on. Master Plan §17 designs
+   * NAP drift out structurally rather than watching for it, so the coordinates
+   * arrive here already resolved, from the same call the page uses.
+   */
+  coordinates?: { lat: number; lng: number } | null;
 };
 
 /**
@@ -181,11 +195,16 @@ export function instituteJsonLd(contact?: JsonLdContact) {
   if (institute.googleBusinessProfileUrl) {
     data.hasMap = institute.googleBusinessProfileUrl;
   }
-  if (institute.coordinates) {
+  /*
+    The resolved value when we were given one, the shipped config otherwise, so
+    a caller with no database access still degrades to the typed facts.
+  */
+  const geo = contact ? (contact.coordinates ?? null) : institute.coordinates;
+  if (geo) {
     data.geo = {
       '@type': 'GeoCoordinates',
-      latitude: institute.coordinates.lat,
-      longitude: institute.coordinates.lng,
+      latitude: geo.lat,
+      longitude: geo.lng,
     };
   }
 
