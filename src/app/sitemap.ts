@@ -88,6 +88,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       a gallery date there would let an UNPUBLISHED edit move a public date.
     */
     entry('/gallery'),
+    /*
+      Videos carry no `lastModified` either, for the reason faculty and
+      gallery do not: `lastPublishedAt()` is built on the public visibility
+      predicates, and adding a video date there would let an UNPUBLISHED
+      edit move a public date.
+    */
+    entry('/videos'),
     entry('/results', content.results),
     entry('/stories', content.stories),
     entry('/announcements', content.announcements),

@@ -6,7 +6,15 @@
 // NOT IN HERE, ON PURPOSE:
 //   - Reviews  → the TP Reviews Engine payload is the source of truth (§13).
 //                Copying reviews here would fork it and bypass its publish gate.
-//   - Videos   → YouTube is already the database (§14).
+//   - Videos   → REVERSED IN PHASE 16, TOPIC 9. This line used to read "YouTube
+//                is already the database (§14)", and that stopped being true
+//                when the institute needed to choose WHICH videos appear.
+//                A channel feed has no editorial gate: every upload would
+//                appear on the website automatically, which contradicts the
+//                rule that nothing is public until somebody publishes it. The
+//                `videos` table below stores a curated, validated YouTube ID
+//                per row - never embed HTML, never a raw URL. See
+//                docs/PHASE-16-TOPIC-9-VIDEOS-REPORT.md section 4.
 //   - Courses  → design-bearing long-form content; lives in the repo (§11).
 //   - Faculty  → same, and version control is the right audit trail for
 //                credential claims.
@@ -629,4 +637,112 @@ model GalleryItem {
   @@index([published, priority])
   @@index([published, category])
   @@map("gallery_items")
+}
+
+
+/// The subjects a video can be filed under.
+///
+/// Taken from `docs/brief/01-master-directive.md` section 20, which lists
+/// "Accounts, Economics, Business Studies, Exam Preparation" and then adds the
+/// rule that matters: "only create categories supported by actual content". So
+/// the enum is the closed set and the PUBLIC page renders a filter only for
+/// subjects that actually have published videos in them - the same treatment
+/// gallery categories get.
+///
+/// `OTHER` exists because a coaching institute posts things that are none of
+/// the four - an admissions explainer, a results announcement - and forcing
+/// those into "Exam preparation" would make the filter lie.
+enum VideoSubject {
+  ACCOUNTANCY
+  BUSINESS_STUDIES
+  ECONOMICS
+  EXAM_PREPARATION
+  OTHER
+}
+
+/// One YouTube video the institute has chosen to show on the website.
+///
+/// =============================================================================
+/// WHAT IS STORED IS AN IDENTIFIER, NOT AN EMBED
+/// =============================================================================
+/// `youtubeId` is eleven characters of YouTube's own alphabet and nothing else.
+/// It is not a URL, not an iframe, not embed HTML, and not a provider blob.
+///
+/// That is the whole security design. A teacher pastes a URL; the server parses
+/// it, extracts the id, and throws the rest away - including any tracking
+/// parameters, playlist references, timestamps and redirect chains that came
+/// with it. Everything the browser is later asked to load is built from that id
+/// by our own code, so there is no attacker-controlled URL anywhere in the
+/// rendering path and nothing for an attacker to point an iframe at.
+///
+/// =============================================================================
+/// NOTHING IS FETCHED FROM A SUBMITTED URL, SERVER-SIDE OR OTHERWISE
+/// =============================================================================
+/// The application never issues a request to a URL a teacher typed. Titles and
+/// descriptions are typed by the teacher, not scraped; the thumbnail is
+/// constructed from the id and fetched BY THE VISITOR'S BROWSER from
+/// `i.ytimg.com`, which the CSP already permits.
+///
+/// So there is no SSRF surface here at all - not a mitigated one, an absent
+/// one. That is a deliberate architectural choice and the main reason the
+/// YouTube Data API route was not taken.
+///
+/// =============================================================================
+/// CONSENT
+/// =============================================================================
+/// `docs/design/STUDENT-DATA-POLICY.md` scopes itself to "toppers, results,
+/// student stories, gallery photographs". Videos are not named, so no consent
+/// COLUMN is modelled here - inventing one would be inventing a policy, exactly
+/// as Topic 6 declined to invent one for staff.
+///
+/// What IS different from a gallery photograph, and worth stating: the
+/// institute has already published this video publicly on YouTube itself.
+/// Embedding it does not make it more public than the institute already made
+/// it. Whether a given video should have been published at all is a decision
+/// that happened on YouTube, before this table saw it.
+///
+/// That is recorded as a HUMAN DECISION in the Topic 9 report rather than
+/// settled here. What is guaranteed technically is the same guarantee
+/// everything else on this site has: `published` defaults to false and nothing
+/// appears until somebody deliberately publishes it.
+model Video {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Eleven characters of `[A-Za-z0-9_-]`. Unique, so the same video cannot be
+  /// added twice and quietly appear twice on the page.
+  youtubeId String @unique @db.VarChar(16)
+
+  /// The teacher's own title, not YouTube's.
+  ///
+  /// Deliberately OUR copy rather than a fetched one: a title on YouTube can be
+  /// edited by whoever runs the channel at any time, and a website that mirrors
+  /// it inherits that change without anybody deciding. Typing it also lets the
+  /// institute write for a website reader rather than for a YouTube thumbnail.
+  title String @db.VarChar(160)
+
+  /// One or two sentences under the title. Optional, and optional means the
+  /// save succeeds with it empty.
+  description String? @db.VarChar(400)
+
+  subject VideoSubject
+
+  /// Higher sorts first, matching faculty, gallery and announcements. Ties
+  /// break on `createdAt` descending, which for a curated list is "most
+  /// recently added first" - the Master Plan's "latest first".
+  ///
+  /// THERE IS DELIBERATELY NO PUBLICATION-DATE FIELD. The real date lives on
+  /// YouTube and is not available without the API; a hand-typed copy of it is a
+  /// number nobody maintains, which is precisely the failure Master Plan
+  /// section 00 names - a date hardcoded into a component that silently went
+  /// stale.
+  priority Int @default(0)
+
+  /// Nothing is public until somebody publishes it. Never defaults to true.
+  published Boolean @default(false)
+
+  @@index([published, priority])
+  @@index([published, subject])
+  @@map("videos")
 }

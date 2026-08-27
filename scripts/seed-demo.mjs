@@ -325,6 +325,85 @@ const prisma = new PrismaClient({
  * somebody cares about.
  */
 /**
+ * Videos.
+ *
+ * =============================================================================
+ * THE IDS ARE SYNTHETIC AND CANNOT BE A REAL VIDEO
+ * =============================================================================
+ * Every id here begins `ZZSHOW` and is padded to the eleven characters the
+ * format requires. They are structurally valid - they have to be, or the CHECK
+ * constraint and the parser would reject them and the demo would not exercise
+ * the real path - but no real YouTube video has an id starting with those six
+ * characters in this arrangement, so nothing here points at somebody's content.
+ *
+ * The consequence is visible and intentional: the thumbnails 404 at
+ * `i.ytimg.com` and the tiles show the placeholder background. That is the
+ * correct demo behaviour. A demo that embedded real videos would be putting
+ * somebody else's content on a page describing an institute that has not
+ * approved it - and a stray demo row reaching production would then be
+ * publishing a stranger's video under the institute's name.
+ *
+ * =============================================================================
+ * THE TITLE CARRIES THE CLEANUP PREFIX
+ * =============================================================================
+ * `title` is the prefixed, human-readable column, so it is what
+ * `seed:demo:clean` deletes by - and it is visible in the DOM, so a stray demo
+ * row announces itself on the page rather than hiding in a database.
+ *
+ * There are five rows across three subjects, which is deliberate: ECONOMICS has
+ * three so it earns a subject filter (Master Plan: "filtered by subject only
+ * once each filter has three or more videos"), and the other two do not, so the
+ * "fewer than three does not get a filter" rule is visible by eye.
+ */
+function videos() {
+  const id = (n) => `ZZSHOW${String(n).padStart(5, '0')}`;
+
+  return [
+    {
+      youtubeId: id(1),
+      title: `${P} Economics: demand curves, built from scratch`,
+      description: `${P} synthetic description. A worked example, start to finish.`,
+      subject: 'ECONOMICS',
+      priority: 100,
+      published: true,
+    },
+    {
+      youtubeId: id(2),
+      title: `${P} Economics: elasticity without the jargon`,
+      description: `${P} deliberately long synthetic description, written to run past a single line on a narrow screen so the card layout can be judged with realistic body copy rather than with three short words that would fit anywhere.`,
+      subject: 'ECONOMICS',
+      priority: 0,
+      published: true,
+    },
+    {
+      youtubeId: id(3),
+      title: `${P} Economics: a past-paper question, answered live`,
+      description: null,
+      subject: 'ECONOMICS',
+      priority: 0,
+      published: true,
+    },
+    {
+      youtubeId: id(4),
+      title: `${P} Business Studies: reading a case study under time pressure`,
+      description: `${P} synthetic description.`,
+      subject: 'BUSINESS_STUDIES',
+      priority: 0,
+      published: true,
+    },
+    {
+      // Draft: must never appear publicly. The demo's own negative control.
+      youtubeId: id(5),
+      title: `${P} Exam preparation: still a draft, must not be public`,
+      description: `${P} synthetic description for an unpublished row.`,
+      subject: 'EXAM_PREPARATION',
+      priority: 0,
+      published: false,
+    },
+  ];
+}
+
+/**
  * Gallery photographs.
  *
  * =============================================================================
@@ -480,6 +559,7 @@ async function clean({ quiet = false } = {}) {
     enquiries: (await prisma.enquiry.deleteMany({ where: { name: { startsWith: P } } })).count,
     faculty: (await prisma.faculty.deleteMany({ where: { name: { startsWith: P } } })).count,
     gallery: (await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: P } } })).count,
+    videos: (await prisma.video.deleteMany({ where: { title: { startsWith: P } } })).count,
   };
   if (!quiet) {
     console.log('\nRemoved ZZSHOW demo rows:');
@@ -518,12 +598,13 @@ async function seed() {
   for (const row of enquiries()) await prisma.enquiry.create({ data: row });
   for (const row of faculty()) await prisma.faculty.create({ data: row });
   for (const row of galleryItems()) await prisma.galleryItem.create({ data: row });
+  for (const row of videos()) await prisma.video.create({ data: row });
 
   return resultRows;
 }
 
 async function count() {
-  const [results_, subjects, stories_, batches_, announcements_, enquiries_, faculty_, gallery_] =
+  const [results_, subjects, stories_, batches_, announcements_, enquiries_, faculty_, gallery_, videos_] =
     await Promise.all([
     prisma.topper.count({ where: { studentName: { startsWith: P } } }),
     prisma.subjectScore.count({ where: { topper: { studentName: { startsWith: P } } } }),
@@ -533,6 +614,7 @@ async function count() {
     prisma.enquiry.count({ where: { name: { startsWith: P } } }),
     prisma.faculty.count({ where: { name: { startsWith: P } } }),
     prisma.galleryItem.count({ where: { alt: { startsWith: P } } }),
+    prisma.video.count({ where: { title: { startsWith: P } } }),
   ]);
 
   const publishedFaculty = await prisma.faculty.count({
@@ -545,6 +627,10 @@ async function count() {
     absent from the site, and a demo report that counted the flag would say
     twelve photographs are live when eight are.
   */
+  const publishedVideos = await prisma.video.count({
+    where: { title: { startsWith: P }, published: true },
+  });
+
   const publicGallery = await prisma.galleryItem.count({
     where: {
       alt: { startsWith: P },
@@ -576,6 +662,7 @@ async function count() {
   console.log(`  Enquiries           ${String(enquiries_).padStart(4)}`);
   console.log(`  Faculty             ${String(faculty_).padStart(4)}   (${publishedFaculty} published)`);
   console.log(`  Gallery             ${String(gallery_).padStart(4)}   (${publicGallery} on the website)`);
+  console.log(`  Videos              ${String(videos_).padStart(4)}   (${publishedVideos} on the website)`);
   console.log(`  Results with a photo${String(withPhoto).padStart(4)}`);
 
   // Anything NOT ours, so the operator can see this touched nothing else.
@@ -587,6 +674,7 @@ async function count() {
     enquiries: (await prisma.enquiry.count()) - enquiries_,
     faculty: (await prisma.faculty.count()) - faculty_,
     gallery: (await prisma.galleryItem.count()) - gallery_,
+    videos: (await prisma.video.count()) - videos_,
   };
   const foreignTotal = Object.values(foreign).reduce((a, b) => a + b, 0);
   console.log(`\n  Non-ZZSHOW content rows: ${foreignTotal}` + (foreignTotal ? `  ${JSON.stringify(foreign)}` : ' (nothing else in the database)'));

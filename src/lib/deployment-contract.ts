@@ -367,6 +367,7 @@ export const EXPECTED_TABLES: readonly string[] = [
   'student_stories',
   'subject_scores',
   'toppers',
+  'videos',
 ] as const;
 
 export const EXPECTED_ENUMS: readonly string[] = [
@@ -377,6 +378,8 @@ export const EXPECTED_ENUMS: readonly string[] = [
   // Phase 16, Topic 8. The closed set of gallery sections.
   'GalleryCategory',
   'Programme',
+  // Phase 16, Topic 9. The closed set of video subjects.
+  'VideoSubject',
 ] as const;
 
 /**
@@ -431,6 +434,13 @@ export const INTEGRITY_CONSTRAINTS: readonly string[] = [
   'gallery_items_alt_not_blank',
   'gallery_items_priority_sane',
   'gallery_items_text_printable',
+  // Phase 16, Topic 9. `videos_youtube_id_shape` is the one that matters:
+  // eleven characters of YouTube's alphabet and nothing else can be stored,
+  // so no teacher-supplied string can ever become an iframe src.
+  'videos_youtube_id_shape',
+  'videos_title_not_blank',
+  'videos_priority_sane',
+  'videos_text_printable',
   'media_assets_key_shape',
   'media_assets_content_type_known',
   'media_assets_dimensions_sane',
@@ -452,6 +462,8 @@ export const EXPECTED_CHECK_CONSTRAINTS: readonly string[] = [
 
 export const EXPECTED_UNIQUE_CONSTRAINTS: readonly string[] = [
   'admin_users_email_key',
+  // The same video cannot be added twice and quietly appear twice on the page.
+  'videos_youtubeId_key',
   'student_stories_slug_key',
   'toppers_importRef_key',
 ] as const;
@@ -503,6 +515,17 @@ export const OPERATIONAL_TABLES: readonly string[] = [
   // Empty until the institute edits any website copy. An empty table is the
   // normal, correct state: every field falls back to the text in code.
   'site_settings',
+  /*
+    Phase 16, Topic 9. OPERATIONAL rather than content, deliberately.
+
+    A row here holds a YouTube identifier and the institute's own title for it.
+    It carries no student data and no photograph - the video itself lives on
+    YouTube, where the institute already published it. That is the same
+    reasoning that puts `faculty` here and `gallery_items` in CONTENT_TABLES:
+    the policy in docs/design/STUDENT-DATA-POLICY.md names gallery photographs
+    and does not name videos.
+  */
+  'videos',
 ] as const;
 
 /* ====================================================== migrations ======== */
@@ -847,6 +870,14 @@ export const ROUTES: readonly RouteSpec[] = [
       'hidden entirely when the payload is absent or refused.',
   },
   {
+    path: '/videos',
+    kind: 'public',
+    requiresAuth: false,
+    mutates: false,
+    inSitemap: true,
+    crawlable: true,
+  },
+  {
     path: '/gallery',
     kind: 'public',
     requiresAuth: false,
@@ -948,6 +979,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/enquiries/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/faculty', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/gallery', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/videos', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {
     path: '/admin/reviews',
     kind: 'admin',
@@ -964,6 +996,8 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/admin/faculty/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/gallery/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   { path: '/admin/gallery/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/videos/new', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
+  { path: '/admin/videos/[id]', kind: 'admin', requiresAuth: true, mutates: true, inSitemap: false, crawlable: false },
   {
     path: '/admin/media',
     kind: 'admin',

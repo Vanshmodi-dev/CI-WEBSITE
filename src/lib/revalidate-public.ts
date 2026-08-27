@@ -103,3 +103,20 @@ export function revalidateGallery(): void {
   revalidatePath('/gallery');
   revalidateSitemap();
 }
+
+/**
+ * Videos appear on their own page and in the homepage band.
+ *
+ * Both are cleared on every change, including a visibility change. A teacher
+ * who has just unpublished a video needs it gone now, not when an ISR window
+ * happens to expire - and a video is the one kind of content on this site that
+ * somebody may be actively asking to have taken down.
+ *
+ * The subject filter pages are query-string states of /videos rather than
+ * routes of their own, so clearing /videos clears all of them.
+ */
+export function revalidateVideos(): void {
+  revalidatePath('/');
+  revalidatePath('/videos');
+  revalidateSitemap();
+}

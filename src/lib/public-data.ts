@@ -9,6 +9,7 @@ import {
   isGalleryItemPublic,
   type GalleryCategoryValue,
 } from '@/lib/gallery';
+import { isYouTubeId, type VideoSubjectValue } from '@/lib/video';
 
 /**
  * Programme values, narrowed from untrusted query strings.
@@ -777,4 +778,92 @@ export async function getGalleryCategories(): Promise<GalleryCategoryValue[]> {
   const seen = new Set<GalleryCategoryValue>();
   for (const item of items) seen.add(item.category);
   return [...seen];
+}
+
+export type PublicVideo = {
+  id: string;
+  youtubeId: string;
+  title: string;
+  description: string | null;
+  subject: VideoSubjectValue;
+};
+
+/**
+ * Published videos, for /videos and the homepage band.
+ *
+ * =============================================================================
+ * THE ID IS RE-CHECKED ON THE WAY OUT
+ * =============================================================================
+ * `isYouTubeId` runs again here, even though the save action validates and a
+ * CHECK constraint backs it up. That is the same two-guard pattern `present()`
+ * and `getPublishedGallery()` use, and it exists because the guards fail
+ * differently: the write guard protects data arriving through the path everyone
+ * remembers, and this protects against a row that is ALREADY wrong - written by
+ * a direct query, by an import somebody adds later, or by a defect of the kind
+ * Topic 5 found in the stories action after months in production.
+ *
+ * The stakes are higher here than for a photo path. This value becomes the
+ * `src` of an IFRAME. A row that failed to be eleven safe characters is dropped
+ * rather than rendered, because there is no degraded way to show a video whose
+ * identifier we do not trust.
+ */
+export async function getPublishedVideos(
+  options: { limit?: number; subject?: VideoSubjectValue } = {},
+): Promise<PublicVideo[]> {
+  if (!isDatabaseConfigured()) return [];
+
+  try {
+    const rows = await getPrisma().video.findMany({
+      where: {
+        published: true,
+        ...(options.subject ? { subject: options.subject } : {}),
+      },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
+      ...(options.limit ? { take: options.limit } : {}),
+      select: {
+        id: true,
+        youtubeId: true,
+        title: true,
+        description: true,
+        subject: true,
+      },
+    });
+
+    return rows
+      .filter((row) => isYouTubeId(row.youtubeId))
+      .map((row) => ({
+        id: row.id,
+        youtubeId: row.youtubeId,
+        title: row.title,
+        description: row.description,
+        subject: row.subject as VideoSubjectValue,
+      }));
+  } catch (error) {
+    logUnexpected('public.videos.failed', error);
+    return [];
+  }
+}
+
+/**
+ * Which subjects have enough published videos to be worth filtering by.
+ *
+ * Master Plan: "filtered by subject only once each filter has three or more
+ * videos." That is a stricter rule than the gallery's "only categories with
+ * content", and it is a good one: a filter that returns a single video is a
+ * control that costs a reader a click to learn nothing.
+ *
+ * Derived from `getPublishedVideos()` rather than from a separate `groupBy`,
+ * so there is one visibility rule rather than two that can disagree.
+ */
+export const SUBJECT_FILTER_MINIMUM = 3;
+
+export async function getVideoSubjects(): Promise<VideoSubjectValue[]> {
+  const videos = await getPublishedVideos();
+  const counts = new Map<VideoSubjectValue, number>();
+  for (const video of videos) {
+    counts.set(video.subject, (counts.get(video.subject) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, n]) => n >= SUBJECT_FILTER_MINIMUM)
+    .map(([subject]) => subject);
 }

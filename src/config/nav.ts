@@ -22,7 +22,11 @@ export type NavLink = {
  *   /reviews  — BUILT IN PHASE 16, TOPIC 7. The page exists and degrades
  *               honestly with no payload, so by the rule above it belongs
  *               here. HIDDEN BY DEFAULT until the engine is activated.
- *   /videos   — needs the YouTube channel ID (not supplied)
+ *   /videos   — BUILT IN PHASE 16, TOPIC 9. The page exists and has a real
+ *               empty state, so by the rule above it belongs here. HIDDEN
+ *               BY DEFAULT until the institute adds videos.
+ *               (It no longer needs a channel ID: the videos are curated
+ *               rather than fetched. See the Topic 9 report, section 4.)
  *   /gallery  — BUILT IN PHASE 16, TOPIC 8. The page exists and has a real
  *               empty state, so by the rule above it belongs here. HIDDEN BY
  *               DEFAULT until the institute adds photographs.
@@ -42,6 +46,7 @@ export const primaryNav: ReadonlyArray<NavLink> = [
   },
   { href: '/faculty', label: 'Teachers' },
   { href: '/reviews', label: 'Reviews' },
+  { href: '/videos', label: 'Videos' },
   { href: '/gallery', label: 'Gallery' },
   { href: '/results', label: 'Results' },
   { href: '/stories', label: 'Stories' },
@@ -68,6 +73,7 @@ export const HIDDEN_UNTIL_POPULATED: readonly string[] = [
   '/faculty',
   '/reviews',
   '/gallery',
+  '/videos',
 ];
 
 /** Footer groups. Same rule: only routes that exist. */

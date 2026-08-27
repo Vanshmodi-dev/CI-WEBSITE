@@ -36,6 +36,13 @@ export const ROUTES = [
   // overflow, semantics and metadata coverage as every other public route -
   // a page nobody checks is a page that quietly stops meeting the standard.
   '/faculty',
+  // Phase 16, Topics 7-9. /reviews, /gallery and /videos were each added to
+  // verify-seo when they were built and NOT to this list, so none of them was
+  // contrast-, overflow- or console-checked. The comment above says why that
+  // matters; all three are added here rather than leaving a third gap.
+  '/reviews',
+  '/gallery',
+  '/videos',
   '/results',
   '/stories',
   '/announcements',

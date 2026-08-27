@@ -41,6 +41,10 @@ const PUBLIC_ROUTES = [
   // registered and in the sitemap even while its MENU entry is hidden until it
   // has photographs, so it must meet the same standard as the rest.
   '/gallery',
+  // Phase 16, Topic 9. Same reason as the three above: the route is
+  // registered and in the sitemap even while its MENU entry is hidden until
+  // it has videos, so it must meet the same standard as the rest.
+  '/videos',
   '/results',
   '/stories',
   '/announcements',

@@ -11,6 +11,7 @@ import {
   getTopAnnouncement,
   getPublishedFaculty,
   getPublishedGallery,
+  getPublishedVideos,
 } from '@/lib/public-data';
 import {
   Container,
@@ -27,6 +28,7 @@ import {
   ReviewCard,
 } from '@/components/domain/public-cards';
 import { GalleryStrip } from '@/components/domain/gallery-strip';
+import { VideoStrip } from '@/components/domain/video-strip';
 
 export const metadata: Metadata = pageMetadata({
   title: `Commerce coaching in ${institute.locality}`,
@@ -84,6 +86,7 @@ export default async function HomePage() {
     faculty,
     reviewPayload,
     gallery,
+    videos,
   ] = await Promise.all([
     getSiteContent(),
     getContactBlock(),
@@ -111,6 +114,17 @@ export default async function HomePage() {
       separately at 60.
     */
     getPublishedGallery({ limit: 4 }),
+    /*
+      THREE, AND THE BAND HIDES ITSELF BELOW THREE.
+
+      Master Plan band 10: "3 latest videos, thumbnail + title. Band hidden if
+      the channel has fewer than 3 videos." Four videos would be a fourth
+      request for no editorial gain, and one or two videos in a three-column
+      grid reads as a section that failed to load rather than as a taste of a
+      library. Asking for four and showing three is how the band knows whether
+      it has enough.
+    */
+    getPublishedVideos({ limit: 4 }),
   ]);
 
   const batchCountFor = (slug: string) =>
@@ -337,7 +351,34 @@ export default async function HomePage() {
       ) : null}
 
       {/*
-        11 · Gallery.
+        11 · Videos.
+
+        Master Plan section 04 moved this band above student stories, on the
+        argument that video is the one piece of proof a visitor can judge
+        directly, in seconds, without trusting anybody's word. It sits before
+        the gallery, matching the master directive's homepage flow.
+
+        The band hides itself below three videos, per band 10 — the same rule as
+        every other band on this page, which renders nothing rather than
+        something thin.
+
+        No iframe and no player JavaScript here: three posters that link to
+        /videos. See `video-strip.tsx`.
+      */}
+      {videos.length >= 3 ? (
+        <Section tone="paper" labelledBy="home-videos">
+          <SectionHeader
+            id="home-videos"
+            eyebrow="Videos"
+            title="Learn beyond the classroom"
+            action={<MoreLink href="/videos">All videos</MoreLink>}
+          />
+          <VideoStrip videos={videos.slice(0, 3)} />
+        </Section>
+      ) : null}
+
+      {/*
+        12 · Gallery.
 
         The master directive's homepage flow puts the gallery between the videos
         and the location, and that is where it sits. Like every other band it

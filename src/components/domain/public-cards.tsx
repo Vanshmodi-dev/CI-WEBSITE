@@ -298,9 +298,23 @@ export function AnnouncementCard({
   href: string | null;
   startsAt: Date;
 }) {
+  /*
+    `overflow-wrap: anywhere` — the third time this project has needed it.
+
+    An announcement is free text typed by a teacher, so it can contain a long
+    URL, a reference code, or anything else with no space in it. Without this a
+    single unbreakable run widens the card and the whole document: /announcements
+    measured 353px against a 320px viewport, which pushed the floating WhatsApp
+    button off the right edge.
+
+    The same fix was made for review cards in Topic 7 and for the gallery and
+    faculty admin lists in Topic 8. This is the public-page instance of it.
+  */
   const body = (
     <>
-      <p className="text-[17px] leading-relaxed text-text">{message}</p>
+      <p className="text-[17px] leading-relaxed text-text [overflow-wrap:anywhere]">
+        {message}
+      </p>
       <p className="mt-2 text-[13px] text-muted">{IST_DATE.format(startsAt)}</p>
     </>
   );
