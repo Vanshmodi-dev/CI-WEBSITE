@@ -92,6 +92,13 @@ npm run dev
 | `npm run verify:production` | Read-only smoke test against a deployed URL |
 | `npm run retention:dry` | Reports what the data-retention policy would remove |
 | `npm run verify:budget` | Performance budgets against a production build |
+| `npm run verify:media` | The whole photograph lifecycle, attacked |
+| `npm run verify:admin` | Every registry field, saved and read back as a visitor |
+| `npm run verify:admin-ux` | Every admin route, five widths, including the edit pages |
+| `npm run verify:consent` | "Please take my child's photograph down", end to end |
+| `npm run seed:demo` | Fill a local database with the ZZSHOW demonstration dataset |
+| `npm run seed:demo:count` | What demonstration data is currently there |
+| `npm run seed:demo:clean` | Remove it, and nothing else |
 
 > **Assertion counts deliberately are not listed here.** They changed in almost
 > every phase, and a number in a table is the first thing to rot - Phase 14

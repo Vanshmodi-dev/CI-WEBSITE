@@ -423,9 +423,21 @@ section('9b. A BAND THE INSTITUTE HAS NOT FILLED IN DOES NOT EXIST');
     render nothing at all — because a half-filled credibility strip is how an
     unverified number reaches a visitor.
   */
+  /*
+    ⚠ EVERY KEY IN BOTH BANDS, NOT ONLY THE ONES THIS SECTION WRITES.
+
+    A first version cleared five keys and set the why-us heading, expecting no
+    band. The band appeared anyway: the demo dataset had filled points 2 and 3,
+    which this section never touched, so "a heading with no points" was not the
+    state being tested at all.
+
+    A suite must decide its own starting state. Clearing all fifteen makes this
+    independent of whatever the demo seed has put there.
+  */
   const KEYS = [
-    'home.trust.1.value', 'home.trust.1.label',
-    'home.why.heading', 'home.why.1.title', 'home.why.1.body',
+    ...[1, 2, 3, 4].flatMap((n) => [`home.trust.${n}.value`, `home.trust.${n}.label`]),
+    'home.why.heading',
+    ...[1, 2, 3].flatMap((n) => [`home.why.${n}.title`, `home.why.${n}.body`]),
   ];
   /*
     This suite talks HTTP and a browser, never the database. That is fine here:

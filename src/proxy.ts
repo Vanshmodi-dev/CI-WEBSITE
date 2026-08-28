@@ -97,7 +97,25 @@ function adminCsp(nonce: string): string {
     "default-src 'self'",
     `script-src 'self' 'unsafe-inline' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    /*
+      ⚠ i.ytimg.com IS DELIBERATE, AND ITS ABSENCE WAS A BUG.
+
+      The public CSP in `next.config.ts` has allowed YouTube's poster host since
+      Topic 9. The admin's did not — and the admin renders those posters in two
+      places that exist precisely to be looked at: the video list, so a teacher
+      can tell one video from another, and the form's live preview, whose own
+      comment says it "proves the link resolved to the video the teacher meant".
+
+      Both were blocked by this line. The preview proved nothing, and every
+      thumbnail in the admin was a broken image. Found in Phase 21 by reading
+      the console on each admin route rather than by looking at the pages.
+
+      This admits ONE external image host, the same one the public site already
+      uses. Images do not execute; `script-src`, `object-src` and `frame-src`
+      are untouched, and `frame-src 'none'` still means no YouTube player can
+      ever load inside the admin.
+    */
+    "img-src 'self' data: blob: https://i.ytimg.com",
     "font-src 'self'",
     "connect-src 'self'",
     "frame-src 'none'",

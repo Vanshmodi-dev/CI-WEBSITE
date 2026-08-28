@@ -541,6 +541,80 @@ function faculty() {
   ];
 }
 
+/* ------------------------------------------------------- website copy ---- */
+
+/**
+ * The stamp every demo-seeded settings row carries.
+ *
+ * ⚠ CLEANUP DELETES BY THIS, NOT BY KEY.
+ *
+ * `site_settings` is the one table the demo shares with real content: in
+ * production the institute types its own words into these very keys. Deleting
+ * by key would therefore delete the institute's work if this ever ran against a
+ * populated database. Deleting by `updatedBy` removes only rows this seeder
+ * wrote and leaves anything a person typed alone.
+ *
+ * It is also visible: the website editor shows "Last changed ... by ZZSHOW demo
+ * seed" against each one, so a reviewer can see at a glance which copy is
+ * demonstration and which is theirs.
+ */
+const SETTINGS_AUTHOR = `${P} demo seed`;
+
+/**
+ * Website copy the demo supplies, and why only these fields.
+ *
+ * Almost every editable field already renders good, reviewed brand copy from
+ * its registry fallback, so seeding it would only overwrite the real design
+ * with the same thing. Three groups are different — they render NOTHING until
+ * somebody fills them in, which means an owner reviewing the site has no way to
+ * see that they exist at all:
+ *
+ *   the trust bar     ships empty by design (Phase 20) — no invented figures
+ *   the why-us band   ships empty by design (Phase 20) — no invented claims
+ *   the map point     hidden until a coordinate is supplied (Topic 10)
+ *
+ * The values below are demonstration, not facts. Every label carries the ZZSHOW
+ * marker so nothing here can be mistaken for something the institute confirmed,
+ * and the coordinate is the same synthetic Pratap Nagar point the map suite
+ * uses — plausible, and nobody's doorway.
+ */
+function siteContent() {
+  return [
+    ['home.trust.1.value', '500+'],
+    ['home.trust.1.label', `${P} students taught`],
+    ['home.trust.2.value', '12'],
+    ['home.trust.2.label', `${P} years teaching`],
+    ['home.trust.3.value', '30+'],
+    ['home.trust.3.label', `${P} board toppers`],
+    ['home.trust.4.value', '4.8'],
+    ['home.trust.4.label', `${P} average rating`],
+
+    ['home.why.heading', `${P} Why this institute`],
+    ['home.why.1.title', `${P} Concept first`],
+    [
+      'home.why.1.body',
+      `${P} demonstration text. Students are taught to understand the reasoning rather than memorise a method.`,
+    ],
+    ['home.why.2.title', `${P} Commerce only`],
+    [
+      'home.why.2.body',
+      `${P} demonstration text. Every programme shares the same foundation, so a student can stay from Class XI through CA Intermediate.`,
+    ],
+    ['home.why.3.title', `${P} Small batches`],
+    [
+      'home.why.3.body',
+      `${P} demonstration text. A short paragraph, long enough to show how the card wraps on a narrow phone.`,
+    ],
+
+    /*
+      The map panel is hidden entirely without a coordinate, so an owner
+      reviewing the contact page would never see the feature. This is the same
+      synthetic point verify-map uses.
+    */
+    ['contact.coordinates', '26.849123,75.805456'],
+  ];
+}
+
 async function clean({ quiet = false } = {}) {
   const removed = {
     subjectScores: (
@@ -560,6 +634,9 @@ async function clean({ quiet = false } = {}) {
     faculty: (await prisma.faculty.deleteMany({ where: { name: { startsWith: P } } })).count,
     gallery: (await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: P } } })).count,
     videos: (await prisma.video.deleteMany({ where: { title: { startsWith: P } } })).count,
+    websiteCopy: (
+      await prisma.siteSetting.deleteMany({ where: { updatedBy: SETTINGS_AUTHOR } })
+    ).count,
   };
   if (!quiet) {
     console.log('\nRemoved ZZSHOW demo rows:');
@@ -599,6 +676,19 @@ async function seed() {
   for (const row of faculty()) await prisma.faculty.create({ data: row });
   for (const row of galleryItems()) await prisma.galleryItem.create({ data: row });
   for (const row of videos()) await prisma.video.create({ data: row });
+
+  /*
+    Upsert rather than create: these keys may already hold something a person
+    typed, and the demo overwrites it for the duration of the demonstration.
+    `clean` puts it back to "no row", which resolves to the shipped fallback.
+  */
+  for (const [key, value] of siteContent()) {
+    await prisma.siteSetting.upsert({
+      where: { key },
+      create: { key, value, updatedBy: SETTINGS_AUTHOR },
+      update: { value, updatedBy: SETTINGS_AUTHOR },
+    });
+  }
 
   return resultRows;
 }
@@ -648,6 +738,7 @@ async function count() {
   const publishedStories = await prisma.studentStory.count({
     where: { studentName: { startsWith: P }, published: true },
   });
+  const websiteCopy = await prisma.siteSetting.count({ where: { updatedBy: SETTINGS_AUTHOR } });
   const withPhoto = await prisma.topper.count({
     where: { studentName: { startsWith: P }, photoUrl: { not: null } },
   });
@@ -664,6 +755,7 @@ async function count() {
   console.log(`  Gallery             ${String(gallery_).padStart(4)}   (${publicGallery} on the website)`);
   console.log(`  Videos              ${String(videos_).padStart(4)}   (${publishedVideos} on the website)`);
   console.log(`  Results with a photo${String(withPhoto).padStart(4)}`);
+  console.log(`  Website copy fields ${String(websiteCopy).padStart(4)}   (trust bar, why-us band, map point)`);
 
   // Anything NOT ours, so the operator can see this touched nothing else.
   const foreign = {

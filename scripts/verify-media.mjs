@@ -722,6 +722,50 @@ const cardProbe = (path, name) => String.raw`(() => {
   });
 })()`;
 
+/**
+ * Click the REAL Delete control for one photo and report what happened.
+ *
+ * =============================================================================
+ * WHY THIS IS NOT A CRAFTED HTTP REPLAY
+ * =============================================================================
+ * `deleteMedia(previousState, formData)` is called directly from the button
+ * rather than through a form action, so it travels in React's own call
+ * encoding rather than as form fields. A first version of this hand-built a
+ * multipart body and every replay came back 500 with a serialised
+ * thrown-error envelope: Next could not deserialise the call, so the action
+ * never ran. "The row survived" was then true for a reason that had nothing
+ * to do with the guard, and four "the SERVER refuses this" assertions were
+ * passing on a request that never reached it.
+ *
+ * Guessing harder at the wire format would test the guess. What actually
+ * needs proving is that the SERVER refuses even when the BUTTON is offered —
+ * and there is a real, reachable state where exactly that happens: the
+ * library is rendered while a photo is unreferenced, a record starts using it
+ * a moment later, and the teacher clicks the Delete button their stale page is
+ * still showing. That is a race a real administrator can hit, it exercises
+ * the true client path, and it needs no wire format at all.
+ */
+const clickDeleteFor = async (name) => {
+  const script = String.raw`(async () => {
+    const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
+    const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === wanted);
+    if (!btn) return JSON.stringify({ offered: false });
+    btn.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Delete').pop();
+    if (!confirm) return JSON.stringify({ offered: true, confirmed: false });
+    confirm.click();
+    await new Promise((r) => setTimeout(r, 3000));
+    const alert = document.querySelector('[role=alert]');
+    return JSON.stringify({
+      offered: true,
+      confirmed: true,
+      message: alert ? alert.textContent.trim() : null,
+    });
+  })()`;
+  return JSON.parse(await page.eval(script, true));
+};
+
 section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
 {
   /*
@@ -780,50 +824,6 @@ section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
     'control: an unreferenced photo really is deleted when asked',
   );
 
-
-  /**
-   * Click the REAL Delete control for one photo and report what happened.
-   *
-   * =============================================================================
-   * WHY THIS IS NOT A CRAFTED HTTP REPLAY
-   * =============================================================================
-   * `deleteMedia(previousState, formData)` is called directly from the button
-   * rather than through a form action, so it travels in React's own call
-   * encoding rather than as form fields. A first version of this hand-built a
-   * multipart body and every replay came back 500 with a serialised
-   * thrown-error envelope: Next could not deserialise the call, so the action
-   * never ran. "The row survived" was then true for a reason that had nothing
-   * to do with the guard, and four "the SERVER refuses this" assertions were
-   * passing on a request that never reached it.
-   *
-   * Guessing harder at the wire format would test the guess. What actually
-   * needs proving is that the SERVER refuses even when the BUTTON is offered —
-   * and there is a real, reachable state where exactly that happens: the
-   * library is rendered while a photo is unreferenced, a record starts using it
-   * a moment later, and the teacher clicks the Delete button their stale page is
-   * still showing. That is a race a real administrator can hit, it exercises
-   * the true client path, and it needs no wire format at all.
-   */
-  const clickDeleteFor = async (name) => {
-    const script = String.raw`(async () => {
-      const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
-      const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === wanted);
-      if (!btn) return JSON.stringify({ offered: false });
-      btn.click();
-      await new Promise((r) => setTimeout(r, 400));
-      const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Delete').pop();
-      if (!confirm) return JSON.stringify({ offered: true, confirmed: false });
-      confirm.click();
-      await new Promise((r) => setTimeout(r, 3000));
-      const alert = document.querySelector('[role=alert]');
-      return JSON.stringify({
-        offered: true,
-        confirmed: true,
-        message: alert ? alert.textContent.trim() : null,
-      });
-    })()`;
-    return JSON.parse(await page.eval(script, true));
-  };
 
   /*
     A FIXTURE OF ITS OWN. Keys are content-addressed, so re-using `F.jpeg` here
