@@ -6,6 +6,8 @@ import { PageHeader, Card, Notice, EmptyPanel } from '@/components/admin/ui';
 import { formatDateTime } from '@/lib/admin-format';
 import { mediaPath } from '@/lib/media/format';
 import { getMediaStore, describeMediaStorage } from '@/lib/media/store';
+import { countMediaReferences } from '@/lib/media/references';
+import { describeUsage } from '@/lib/media/consumers';
 import { DeleteMediaButton } from './delete-button';
 
 export const metadata: Metadata = { title: 'Photos' };
@@ -20,6 +22,11 @@ export const dynamic = 'force-dynamic';
  * using it. The "in use" count is the reason this page exists rather than a
  * bare grid: deletion is refused while a record still points at a file, and a
  * teacher needs to see WHY before they are told no.
+ *
+ * That count comes from `countMediaReferences`, never from queries written
+ * here. When this page owned its own pair of queries it fell two consumers
+ * behind the schema and started offering to delete photographs the gallery was
+ * publishing.
  */
 export default async function MediaLibraryPage() {
   await requireAdmin();
@@ -42,29 +49,19 @@ export default async function MediaLibraryPage() {
   });
 
   /*
-    Usage is counted per asset in ONE pair of queries rather than two per row.
-    A library of a few hundred photographs with two queries each is the kind of
-    thing that is fine on a laptop and slow on the institute's connection.
-  */
-  const paths = assets.map((a) => mediaPath(a.key));
-  const [topperUses, storyUses] = await Promise.all([
-    prisma.topper.groupBy({
-      by: ['photoUrl'],
-      where: { photoUrl: { in: paths } },
-      _count: { _all: true },
-    }),
-    prisma.studentStory.groupBy({
-      by: ['photoUrl'],
-      where: { photoUrl: { in: paths } },
-      _count: { _all: true },
-    }),
-  ]);
+    Usage is counted through `countMediaReferences`, which is the ONE list of
+    places a photograph can be referenced from.
 
-  const useCount = new Map<string, number>();
-  for (const row of [...topperUses, ...storyUses]) {
-    if (!row.photoUrl) continue;
-    useCount.set(row.photoUrl, (useCount.get(row.photoUrl) ?? 0) + row._count._all);
-  }
+    ⚠ THIS PAGE USED TO HAND-WRITE THE QUERIES, AND LOOKED IN HALF THE PLACES.
+
+    It grouped `topper.photoUrl` and `studentStory.photoUrl` — the two consumers
+    that existed when Topic 5 wrote it — and never learned about the teacher
+    photographs Topic 6 added or the gallery images Topic 8 added. So a
+    photograph on the live gallery reported "Not used anywhere", was offered a
+    Delete button, and was destroyed on request. See the reproduction in
+    `src/lib/media/references.ts`.
+  */
+  const usage = await countMediaReferences(assets.map((a) => mediaPath(a.key)));
 
   // Reported, not inferred: what storage actually holds versus what is recorded.
   const storage = describeMediaStorage();
@@ -74,7 +71,7 @@ export default async function MediaLibraryPage() {
     <>
       <PageHeader
         title="Photos"
-        description="Every photo uploaded to this website. Photos are attached to a student or story from that record's own page."
+        description="Every photo uploaded to this website. A photo is attached to a record — a student result, a story, a teacher or a gallery entry — from that record's own page."
       />
 
       {/*
@@ -112,13 +109,13 @@ export default async function MediaLibraryPage() {
       {assets.length === 0 ? (
         <EmptyPanel
           title="No photos yet"
-          description="Photos appear here once you add one to a student result or a story."
+          description="Photos appear here once you add one to a student result, a story, a teacher or the gallery."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {assets.map((asset) => {
             const path = mediaPath(asset.key);
-            const uses = useCount.get(path) ?? 0;
+            const used = usage.get(path);
             const present = storedKeys.has(asset.key);
 
             return (
@@ -161,14 +158,12 @@ export default async function MediaLibraryPage() {
 
                 <div className="flex items-center justify-between gap-3 border-t border-rule pt-3">
                   <p className="text-[13px] text-muted">
-                    {uses === 0
-                      ? 'Not used anywhere'
-                      : `Used by ${uses} ${uses === 1 ? 'record' : 'records'}`}
+                    {used ? `Used by ${describeUsage(used)}` : 'Not used anywhere'}
                   </p>
                   <DeleteMediaButton
                     mediaKey={asset.key}
                     name={asset.originalName}
-                    inUse={uses > 0}
+                    inUse={Boolean(used)}
                   />
                 </div>
               </Card>

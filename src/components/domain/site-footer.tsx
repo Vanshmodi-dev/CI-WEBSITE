@@ -1,6 +1,11 @@
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { getFooterNav, getContactBlock, whatsappLink } from '@/lib/site-content';
+import {
+  getFooterNav,
+  getContactBlock,
+  getSiteContent,
+  whatsappLink,
+} from '@/lib/site-content';
 import { LogoWordmark } from '@/components/domain/logo';
 
 /**
@@ -13,12 +18,21 @@ import { LogoWordmark } from '@/components/domain/logo';
  * Every block below renders only if the underlying fact exists. Email, social
  * links and hours are currently null in the config, so they are absent rather
  * than shown as placeholders — the same rule that governs the rest of the site.
+ *
+ * ALL EIGHT COLUMN HEADINGS ARE EDITABLE (Phase 18). Four of them were, and
+ * four were not, purely because they sat in different JSX blocks — a teacher
+ * could rename "Programmes" but not "Opening hours". Nothing justified the
+ * split, so there is no longer one.
  */
 export async function SiteFooter() {
   const year = new Date().getFullYear();
   // Server component, so it reads the edited content directly. `cache()` in
   // site-content.ts means this shares one query with the header above it.
-  const [footerNav, contact] = await Promise.all([getFooterNav(), getContactBlock()]);
+  const [footerNav, contact, content] = await Promise.all([
+    getFooterNav(),
+    getContactBlock(),
+    getSiteContent(),
+  ]);
 
   /*
     EMAIL AND SOCIAL COME FROM THE ADMIN NOW, not from `institute.ts`.
@@ -39,9 +53,17 @@ export async function SiteFooter() {
           {/* Identity */}
           <div>
             <LogoWordmark onBand showTagline />
+            {/*
+              ⚠ THIS SENTENCE USED TO BE HARD-CODED HERE.
+
+              It names the exact list of programmes the institute runs, on every
+              page of the site, and changing it needed a developer. Phase 18's
+              content audit found it in no registry and no code-owned list — it
+              was simply missed. It is `footer.description` now, and the
+              fallback is the sentence that shipped.
+            */}
             <p className="mt-5 max-w-xs text-small leading-relaxed text-band-muted">
-              Commerce coaching in {institute.locality} for Class XI and XII,
-              CA Foundation, CA Intermediate and CMA.
+              {content['footer.description']}
             </p>
           </div>
 
@@ -73,14 +95,14 @@ export async function SiteFooter() {
         {/* Contact — the NAP block. Single source: src/config/institute.ts */}
         <div className="mt-14 grid grid-cols-1 gap-8 border-t border-white/15 pt-10 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <h2 className="eyebrow font-sans text-accent">Visit</h2>
+            <h2 className="eyebrow font-sans text-accent">{content['footer.visit.heading']}</h2>
             <address className="mt-3 text-small leading-relaxed text-band-muted not-italic">
               {contact.addressLine}
             </address>
           </div>
 
           <div>
-            <h2 className="eyebrow font-sans text-accent">Talk to us</h2>
+            <h2 className="eyebrow font-sans text-accent">{content['footer.talk.heading']}</h2>
             <ul className="mt-3 flex flex-col gap-2 text-small">
               <li>
                 <a
@@ -120,7 +142,7 @@ export async function SiteFooter() {
               somebody to a locked door. */}
           {contact.hours.length > 0 ? (
             <div>
-              <h2 className="eyebrow font-sans text-accent">Opening hours</h2>
+              <h2 className="eyebrow font-sans text-accent">{content['footer.hours.heading']}</h2>
               <ul className="mt-3 flex flex-col gap-2 text-small text-band-muted">
                 {contact.hours.map((line) => (
                   <li key={line}>{line}</li>
@@ -132,7 +154,7 @@ export async function SiteFooter() {
           {/* Social block renders only when an account actually exists (§32) */}
           {hasSocial ? (
             <div>
-              <h2 className="eyebrow font-sans text-accent">Follow</h2>
+              <h2 className="eyebrow font-sans text-accent">{content['footer.follow.heading']}</h2>
               <ul className="mt-3 flex flex-col gap-2 text-small">
                 {contact.social.youtube ? (
                   <li>

@@ -11,6 +11,7 @@ export default async function NewFacultyPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/faculty', label: 'Back to faculty' }}
         title="Add a teacher"
         description="Nothing appears on the website until you tick “Show this teacher on the website”."
       />

@@ -36,7 +36,10 @@ export default async function EditGalleryItemPage({
 
   return (
     <>
-      <PageHeader title="Edit photograph" description={visibility.summary} />
+      <PageHeader
+        back={{ href: '/admin/gallery', label: 'Back to gallery' }}
+        title="Edit photograph" description={visibility.summary}
+      />
       <GalleryForm
         values={{
           id: record.id,

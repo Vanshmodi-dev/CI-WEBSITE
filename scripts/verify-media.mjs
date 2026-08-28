@@ -41,6 +41,7 @@ import sharp from 'sharp';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
 import { launch } from './browser.mjs';
+import { MEDIA_CONSUMERS } from '../src/lib/media/consumers.ts';
 
 const BASE = env.BASE_URL ?? 'http://localhost:3170';
 const EMAIL = env.ADMIN_EMAIL ?? 'admin@localhost.invalid';
@@ -676,6 +677,243 @@ section('8. DELETION');
 
   await prisma.topper.delete({ where: { id: topper.id } });
   check((await countAssets()) === beforeDelete, 'the guard did not delete anything');
+}
+
+section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
+{
+  /*
+    =========================================================================
+    WHY THIS SECTION EXISTS
+    =========================================================================
+    Section 8 above proves the guard works. It proves it with a TOPPER, which
+    is one of the two consumers that existed when Topic 5 wrote it.
+
+    Topic 6 gave teachers a photograph and Topic 8 gave gallery entries one.
+    Neither was counted, by the library page or by the delete action, and
+    nothing failed — a `count()` aimed at the wrong tables returns zero, and
+    zero is a perfectly good-looking answer. Phase 18 reproduced the result in
+    a browser from a clean database:
+
+        a photo used by a PUBLISHED gallery entry and a PUBLISHED teacher
+        -> the library said "Not used anywhere"
+        -> it offered Delete
+        -> the server accepted
+        -> both records still pointed at it
+        -> a visitor asking for that photograph got 404
+
+    A gallery entry's `imageUrl` is NOT NULL, so that record cannot even be
+    repaired by clearing the field.
+
+    So this section runs the SAME assertion once per consumer. It is written
+    from `MEDIA_CONSUMERS`, the list the application itself reads, so a fifth
+    consumer added later is tested here automatically rather than being
+    forgotten in the same way.
+  */
+  /*
+    A photo we are willing to lose, deleted FOR REAL. That does two jobs at
+    once: it proves an unreferenced photo genuinely can be deleted, and it
+    captures the real `Next-Action` request so the refusals below can be
+    replayed against the SERVER rather than only against a hidden button.
+  */
+  await page.goto(BASE + NEW_STUDENT);
+  const throwaway = await upload(F.second);
+  check(throwaway.ok, 'uploaded a throwaway photo', throwaway.message);
+  const gonePath = await currentPath();
+  const goneKey = gonePath.replace('/media/', '');
+
+  await page.goto(`${BASE}/admin/media`);
+  await page.eval(`(async () => {
+    const del = [...document.querySelectorAll('button')].find((b) => b.textContent.trim().startsWith('Delete'));
+    if (!del) return 'none';
+    del.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Delete').pop();
+    if (confirm) confirm.click();
+    await new Promise((r) => setTimeout(r, 3000));
+    return 'done';
+  })()`, true);
+  check(
+    !(await prisma.mediaAsset.findUnique({ where: { key: goneKey } })),
+    'control: an unreferenced photo really is deleted when asked',
+  );
+
+  const deleteRequest = [...page.requests]
+    .reverse()
+    .find((r) => r.method === 'POST' && Object.keys(r.headers).some((h) => h.toLowerCase() === 'next-action'));
+  const deleteActionId = deleteRequest
+    ? Object.entries(deleteRequest.headers).find(([h]) => h.toLowerCase() === 'next-action')?.[1]
+    : null;
+  check(Boolean(deleteActionId), 'captured the real delete action from the browser');
+  const adminCookie = await page.cookieHeader(BASE);
+
+  /** The delete action, called directly with a valid session — no button. */
+  const replayDelete = async (key) => {
+    if (!deleteActionId) return { status: 0 };
+    const boundary = '----zzref' + Math.random().toString(16).slice(2);
+    const CRLF = String.fromCharCode(13, 10);
+    const body =
+      `--${boundary}${CRLF}` +
+      `Content-Disposition: form-data; name="1_key"${CRLF}${CRLF}${key}${CRLF}` +
+      `--${boundary}--${CRLF}`;
+    const res = await fetch(deleteRequest.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        'Next-Action': deleteActionId,
+        Origin: BASE,
+        Cookie: adminCookie,
+      },
+      body,
+      redirect: 'manual',
+    });
+    await res.text().catch(() => '');
+    return res;
+  };
+
+  /*
+    A FIXTURE OF ITS OWN. Keys are content-addressed, so re-using `F.jpeg` here
+    would land on a key other sections have already attached records to — and
+    the closing control ("with every holder removed, Delete is offered once
+    more") would then fail for a reason that has nothing to do with the guard.
+    Unique bytes, unique key, no interference.
+
+    ⚠ AND UNIQUE DIMENSIONS, NOT JUST A UNIQUE COLOUR. A first attempt used
+    `hue: 77`, which is exactly the hue of the `xssName` fixture — identical
+    bytes, identical key, so it DEDUPLICATED into that row and the card read
+    below belonged to a different photograph entirely. The suite already warns
+    about this trap in the fixture block above; it caught this section too.
+  */
+  const refFixture = await makeImage('zzref-guard.jpg', {
+    format: 'jpeg', width: 401, height: 299, hue: 133,
+  });
+  await page.goto(BASE + NEW_STUDENT);
+  const uploaded = await upload(refFixture);
+  check(uploaded.ok, 'uploaded a photo for the reference tests', uploaded.message);
+  const refPath = await currentPath();
+  const refKey = refPath.replace('/media/', '');
+
+  /** One throwaway record per consumer, each pointing at the same photo. */
+  const make = {
+    topper: () => prisma.topper.create({ data: {
+      studentName: 'ZZMEDIA Ref Topper', programme: 'CLASS_12', year: 2026,
+      score: 90, scoreUnit: 'percent', photoUrl: refPath,
+      displayNameMode: 'INITIALS', published: false } , select: { id: true } }),
+    studentStory: () => prisma.studentStory.create({ data: {
+      slug: 'zzmedia-ref-story-' + Date.now(), studentName: 'ZZMEDIA Ref Story',
+      programme: 'CLASS_12', year: 2026,
+      challenge: 'ZZMEDIA reference holder.', journey: 'ZZMEDIA reference holder.',
+      outcome: 'ZZMEDIA reference holder.',
+      photoUrl: refPath, displayNameMode: 'INITIALS', published: false },
+      select: { id: true } }),
+    faculty: () => prisma.faculty.create({ data: {
+      name: 'ZZMEDIA Ref Teacher', designation: 'Faculty',
+      photoUrl: refPath, published: false, priority: 0 }, select: { id: true } }),
+    galleryItem: () => prisma.galleryItem.create({ data: {
+      imageUrl: refPath, alt: 'ZZMEDIA reference holder tile',
+      category: 'CLASSROOMS', showsPeople: false, published: false, priority: 0 },
+      select: { id: true } }),
+  };
+
+  /*
+    CONTROL FIRST. With nothing referencing it the library must OFFER the
+    delete — otherwise every assertion below passes against a photo that could
+    never be deleted by anybody, and the section proves nothing at all.
+  */
+  /*
+    ⚠ EVERY READING BELOW IS SCOPED TO THIS PHOTO'S OWN CARD.
+
+    A first version asked "is there a Delete button on the page", and failed
+    against a library holding eight other photographs, every one of them
+    correctly deletable. A page-wide question cannot answer a per-row one.
+  */
+  /**
+   * Read ONE photograph's row in the library.
+   *
+   * ⚠ BOUNDED, AND BOUND BY CONSTRUCTION.
+   *
+   * Two earlier versions of this got it wrong in the same direction. The first
+   * asked "is there a Delete button on the page", which is a page-wide question
+   * that cannot answer a per-row one — it failed against a library holding
+   * eight other, correctly deletable photographs. The second walked up from the
+   * image until it found a row, which is right until it is not: any condition
+   * that stops the card matching sends the walk on up into the grid, where it
+   * finds every OTHER card's Delete button and reports it as this one's.
+   *
+   * So the walk now stops at the last ancestor still holding exactly ONE image
+   * — the definition of "this photograph's card" — and the result carries
+   * `imgs`, which the assertions check. A probe that overshoots now says so
+   * instead of quietly answering about the wrong photograph.
+   *
+   * The delete button is matched by its ACCESSIBLE NAME. Each one renders
+   * "Delete" plus the filename in an sr-only span, so "Delete zzref-guard.jpg"
+   * identifies one control exactly, with no DOM walking involved at all.
+   */
+  const cardProbe = (path, name) => String.raw`(() => {
+    const img = [...document.querySelectorAll('img')].find((i) => i.getAttribute('src') === ` + JSON.stringify(path) + String.raw`);
+    if (!img) return JSON.stringify({ found: false });
+
+    let card = img.parentElement;
+    while (card.parentElement && card.parentElement.querySelectorAll('img').length === 1) {
+      card = card.parentElement;
+    }
+    const text = (card.innerText || '').replace(/\s+/g, ' ');
+    const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
+
+    return JSON.stringify({
+      found: true,
+      imgs: card.querySelectorAll('img').length,
+      refused: text.includes('Remove it from those records first'),
+      offered: [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === wanted),
+      says: (text.match(/Used by [^·]*/) || [null])[0],
+      text: text.slice(0, 160),
+    });
+  })()`;
+
+  await page.goto(`${BASE}/admin/media`);
+  const free = JSON.parse(await page.eval(cardProbe(refPath, 'zzref-guard.jpg')));
+  check(free.found === true, "control: found this photo's own card in the library");
+  check(free.offered === true, 'control: with nothing using it, its card DOES offer Delete', free.text);
+
+  for (const consumer of MEDIA_CONSUMERS) {
+    const created = await make[consumer.model]();
+
+    await page.goto(`${BASE}/admin/media`);
+    const seen = JSON.parse(await page.eval(cardProbe(refPath, 'zzref-guard.jpg')));
+
+    check(seen.imgs === 1, `control: read exactly one card for a ${consumer.noun}`, `${seen.imgs} images inside it`);
+    check(seen.refused === true, `a photo used by a ${consumer.noun} is marked as in use`, JSON.stringify(seen.says));
+    check(seen.offered === false, `and the library offers NO delete button for it`);
+    check(
+      typeof seen.says === 'string' && seen.says.includes(consumer.noun),
+      `and it names what is using it, in words`,
+      `expected "${consumer.noun}" in: ${seen.says}`,
+    );
+
+    /*
+      AND THE SERVER REFUSES IT TOO. A hidden button is a courtesy, not a
+      control: the action is a public endpoint and must refuse on its own.
+    */
+    const before = await countAssets();
+    const replay = await replayDelete(refKey);
+    const after = await countAssets();
+    check(after === before, `the SERVER refuses the deletion for a ${consumer.noun}`, `status ${replay.status}, ${before} -> ${after} assets`);
+    check(
+      Boolean(await prisma.mediaAsset.findUnique({ where: { key: refKey } })),
+      `and the row survives a direct action call for a ${consumer.noun}`,
+    );
+
+    await prisma[consumer.model].delete({ where: { id: created.id } });
+  }
+
+  // With every holder gone the photo is deletable again — which proves the
+  // refusals above were caused by the references and not by something else.
+  await page.goto(`${BASE}/admin/media`);
+  const freeAgain = JSON.parse(await page.eval(cardProbe(refPath, 'zzref-guard.jpg')));
+  check(
+    freeAgain.offered === true,
+    'control: with every holder removed, Delete is offered once more',
+    freeAgain.text,
+  );
 }
 
 section('9. CONSENT IS NOT TOUCHED BY UPLOADING');

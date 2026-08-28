@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { requireAdmin } from '@/lib/auth';
 import { getEnquiry } from '@/lib/admin-data';
@@ -23,11 +22,8 @@ export default async function EnquiryDetailPage({
 
   return (
     <>
-      <Link href="/admin/enquiries" className="mb-4 inline-block text-small text-link">
-        ← Back to enquiries
-      </Link>
-
       <PageHeader
+        back={{ href: '/admin/enquiries', label: 'Back to enquiries' }}
         title={enquiry.name}
         description={`Received ${formatDateTime(enquiry.createdAt)}`}
         action={

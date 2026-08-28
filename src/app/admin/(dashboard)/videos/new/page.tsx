@@ -11,6 +11,7 @@ export default async function NewVideoPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/videos', label: 'Back to videos' }}
         title="Add a video"
         description="Nothing appears on the website until you tick “Show this video on the website”."
       />

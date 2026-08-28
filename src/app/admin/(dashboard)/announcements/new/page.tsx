@@ -9,6 +9,7 @@ export default async function NewAnnouncementPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/announcements', label: 'Back to announcements' }}
         title="New announcement"
         description="It stays a draft until you tick the visibility box."
       />

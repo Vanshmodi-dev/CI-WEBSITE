@@ -24,6 +24,7 @@ export default async function EditStoryPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/stories', label: 'Back to student stories' }}
         title="Edit story"
         description="Changes appear on the website within the hour."
       />

@@ -9,6 +9,7 @@ export default async function NewStudentPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/students', label: 'Back to students & results' }}
         title="Add a result"
         description="Nothing here appears on the website until you confirm the permissions."
       />

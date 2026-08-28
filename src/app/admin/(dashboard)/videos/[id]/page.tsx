@@ -29,6 +29,7 @@ export default async function EditVideoPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/videos', label: 'Back to videos' }}
         title="Edit video"
         description={
           record.published

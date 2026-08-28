@@ -9,6 +9,7 @@ export default async function NewBatchPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/batches', label: 'Back to batches' }}
         title="Add a batch"
         description="It stays a draft until you tick the visibility box."
       />

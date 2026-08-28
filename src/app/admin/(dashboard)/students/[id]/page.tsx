@@ -24,6 +24,7 @@ export default async function EditStudentPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/students', label: 'Back to students & results' }}
         title="Edit result"
         description="Changes appear on the website within the hour."
       />

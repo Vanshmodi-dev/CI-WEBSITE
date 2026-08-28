@@ -16,18 +16,56 @@ import { cn } from '@/lib/cn';
 
 /* ---------------------------------------------------------------- page ---- */
 
+/**
+ * `back` — the way out of a page you opened from a list.
+ *
+ * =============================================================================
+ * WHY THIS IS A SLOT HERE RATHER THAN A LINK ON EACH PAGE
+ * =============================================================================
+ * Phase 18 measured every admin route, including the `[id]` edit pages that no
+ * suite had ever looked at, and found that of the fifteen pages reached FROM a
+ * list, exactly one offered a way back to it. That one — the enquiry detail
+ * page — had hand-rolled `mb-4 inline-block text-small text-link`, which
+ * measures 126x23 and is under the 24x24 minimum this project asserts on every
+ * public page.
+ *
+ * The other fourteen relied on Cancel at the BOTTOM of the form, or on the
+ * sidebar. On a phone the sidebar is behind a drawer and the bottom of a
+ * student form is a long scroll away, so "go back to the list" — the single
+ * most common thing a teacher does after looking at a record — was the
+ * hardest movement in the admin on the device most likely to be used.
+ *
+ * One slot, so the fifteenth page cannot be different again.
+ */
 export function PageHeader({
   title,
   description,
   action,
+  back,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  /** Where this page was opened from. Rendered above the title. */
+  back?: { href: string; label: string };
 }) {
   return (
     <header className="mb-8 flex flex-col gap-4 border-b border-rule pb-6 sm:flex-row sm:items-start sm:justify-between">
       <div>
+        {back ? (
+          /*
+            44px tall, matching every other standalone control in this admin.
+            The arrow is `aria-hidden`: a screen reader announcing "left arrow
+            Back to enquiries" reads a decoration as a word.
+          */
+          <Link
+            href={back.href}
+            className="mb-2 -ml-1 inline-flex min-h-11 items-center gap-1.5 rounded-sm px-1 text-small font-medium text-muted transition-colors hover:text-heading"
+          >
+            <span aria-hidden="true">&larr;</span>
+            {back.label}
+          </Link>
+        ) : null}
         <h1 className="font-display text-[26px] font-bold leading-tight text-heading">
           {title}
         </h1>

@@ -162,7 +162,10 @@ export function VideoForm({ values = {} }: { values?: VideoValues }) {
                   href={watchUrl(previewId)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-block text-[13px] text-link underline"
+                  /* 44px tall. It was 118x21 — a standalone link under the
+                     24x24 minimum, with no inline-in-a-sentence exemption to
+                     claim, because it sits alone in a <div>. */
+                  className="-ml-1 mt-0.5 inline-flex min-h-11 items-center rounded-sm px-1 text-[13px] text-link underline"
                 >
                   Check it on YouTube
                   <span className="sr-only"> (opens in a new tab)</span>

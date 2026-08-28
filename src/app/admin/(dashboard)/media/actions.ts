@@ -9,6 +9,8 @@ import { displayFilename } from '@/lib/import/run';
 import { ingestImage } from '@/lib/media/ingest';
 import { getMediaStore } from '@/lib/media/store';
 import { isMediaKey, mediaPath, MEDIA_LIMITS } from '@/lib/media/format';
+import { mediaUsageFor } from '@/lib/media/references';
+import { describeUsage } from '@/lib/media/consumers';
 
 /**
  * Media mutations.
@@ -190,7 +192,8 @@ export type MediaDeleteState = {
  * row goes first, deliberately, and the reconciliation script exists because of
  * it rather than for appearances.
  *
- * A photo still used by a student or story is REFUSED outright. Deleting it
+ * A photo still used by ANY record — a result, a story, a teacher or a gallery
+ * entry — is REFUSED outright. Deleting it
  * would break a live page, and the teacher's actual intention in that case is
  * to change the record, not to destroy the file underneath it.
  */
@@ -217,16 +220,24 @@ export async function deleteMedia(
   const prisma = getPrisma();
 
   try {
-    const [byTopper, byStory] = await Promise.all([
-      prisma.topper.count({ where: { photoUrl: path } }),
-      prisma.studentStory.count({ where: { photoUrl: path } }),
-    ]);
-    const uses = byTopper + byStory;
-    if (uses > 0) {
+    /*
+      ⚠ THIS GUARD USED TO COUNT TWO OF THE FOUR PLACES A PHOTO CAN BE USED.
+
+      It looked at toppers and stories — correct when Topic 5 wrote it, and
+      still passing every test two topics later, by which time teachers and
+      gallery entries also carried photographs and neither was counted. A
+      photograph on the live gallery was deleted on request, leaving a NOT NULL
+      `imageUrl` pointing at nothing and a 404 for every visitor.
+
+      `mediaUsageFor` reads the single declared consumer list, so this cannot
+      fall behind the schema again without a test failing first.
+    */
+    const usage = await mediaUsageFor(path);
+    if (usage.total > 0) {
       return {
         status: 'error',
         message:
-          `This photo is still used by ${uses} ${uses === 1 ? 'record' : 'records'}. ` +
+          `This photo is still used by ${describeUsage(usage)}. ` +
           'Remove it from those first, then delete it here.',
       };
     }
@@ -249,4 +260,80 @@ export async function deleteMedia(
   revalidatePath('/admin/media');
 
   return { status: 'deleted', message: 'Photo removed.' };
+}
+
+/* ------------------------------------------------- choosing an existing -- */
+
+export type LibraryPhoto = {
+  /** `/media/<key>.<ext>` — what the form field is set to. */
+  path: string;
+  /** The uploader's own filename. A LABEL: it never addressed the file. */
+  name: string;
+  width: number;
+  height: number;
+};
+
+export type LibraryState =
+  | { status: 'ok'; photos: LibraryPhoto[] }
+  | { status: 'error'; message: string };
+
+/** How many the picker shows. Enough to find a photo, small enough to scan. */
+const LIBRARY_LIMIT = 60;
+
+/**
+ * The photographs already uploaded, for the "choose an existing photo" picker.
+ *
+ * =============================================================================
+ * WHY THIS EXISTS — IT IS THE REASON THE MEDIA TABLE DOES
+ * =============================================================================
+ * `prisma/schema.prisma` justifies the `MediaAsset` table with three
+ * requirements, and the first is: "CHOOSING AN EXISTING IMAGE. The admin must
+ * be able to pick a photo already uploaded rather than re-uploading it."
+ *
+ * That was written in Topic 5 and never built. Until Phase 18 the only way to
+ * attach a photograph was to upload a file, so a teacher who wanted the same
+ * portrait on a teacher record and a gallery entry had to still have the
+ * original file, on the device they happened to be using. On a phone, weeks
+ * later, they very often do not.
+ *
+ * =============================================================================
+ * WHAT THIS DELIBERATELY DOES NOT DO
+ * =============================================================================
+ * It returns METADATA ONLY, for photographs this administrator can already see
+ * in full at /admin/media. It cannot be used to enumerate storage, because it
+ * reads the manifest table rather than the bucket, and it cannot be used to
+ * discover a key that was never uploaded through this admin.
+ *
+ * ⚠ AND IT GRANTS NO PERMISSION. Choosing an existing photograph sets a path on
+ * a form, exactly as uploading one does. Every consent gate a record has —
+ * `consentPhoto` on a student, `showsPeople` plus a recorded permission on a
+ * gallery entry — is enforced in that record's own save action and by the CHECK
+ * constraints behind it, and none of them is reachable from here. Reusing a
+ * photograph that a student consented to on a gallery entry that has no
+ * permission recorded is refused at save, exactly as uploading the same file
+ * again would be.
+ */
+export async function listUploadedPhotos(): Promise<LibraryState> {
+  const admin = await requireAdminOrNull();
+  if (!admin) return { status: 'error', message: 'Please sign in again.' };
+
+  try {
+    const rows = await getPrisma().mediaAsset.findMany({
+      orderBy: { uploadedAt: 'desc' },
+      take: LIBRARY_LIMIT,
+      select: { key: true, originalName: true, width: true, height: true },
+    });
+    return {
+      status: 'ok',
+      photos: rows.map((row) => ({
+        path: mediaPath(row.key),
+        name: row.originalName,
+        width: row.width,
+        height: row.height,
+      })),
+    };
+  } catch (error) {
+    logUnexpected('media.list_failed', error);
+    return { status: 'error', message: 'The photo list could not be loaded.' };
+  }
 }

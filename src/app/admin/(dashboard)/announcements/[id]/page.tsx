@@ -24,6 +24,7 @@ export default async function EditAnnouncementPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/announcements', label: 'Back to announcements' }}
         title="Edit announcement"
         description="Changes appear on the website within the hour."
       />

@@ -11,6 +11,7 @@ export default async function NewGalleryItemPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/gallery', label: 'Back to gallery' }}
         title="Add a photograph"
         description="Nothing appears on the website until you tick “Show this photograph on the website”, and a photograph of a person also needs its permission recorded."
       />

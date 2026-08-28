@@ -10,6 +10,7 @@ import {
   addressLineFrom,
   phoneE164,
   navKeyFor,
+  fieldFor,
 } from '@/config/site-content';
 import { primaryNav, footerNav } from '@/config/nav';
 import { parseCoordinates, directionsUrl, type Coordinates } from '@/lib/location';
@@ -291,21 +292,63 @@ export type ResolvedFooterGroup = {
  * half-measure, and the teacher who hid it did not ask for that.
  *
  * A column left with no links renders nothing rather than an empty heading.
+ *
+ * =============================================================================
+ * AND A RENAMED MENU ENTRY IS RENAMED HERE TOO — IT USED NOT TO BE
+ * =============================================================================
+ * Phase 18 reproduced this on a live page: renaming the Results menu entry
+ * changed the header and left the footer saying "Results", so one page offered
+ * the same destination under two different names. The visibility toggle was
+ * already honoured here; the label simply was not read, and nothing noticed
+ * because both halves independently looked correct.
+ *
+ * The override only applies when one has actually been TYPED. With nothing
+ * customised, a footer link keeps its own wording — which is why "All courses"
+ * is still "All courses" down here while the menu says "Courses". Those are two
+ * deliberate phrasings for the same page, not a mistake to normalise away; what
+ * a teacher types, though, is a decision, and it belongs in both places.
+ *
+ * ⚠ "HAS IT BEEN TYPED" IS NOT "IS THERE A VALUE".
+ *
+ * `getSiteContent()` returns a COMPLETE set: every key resolved, with the
+ * registry fallback filled in where nothing is stored. So `content[navKey]` is
+ * never empty, and a first version of this — `content[navKey] || link.label` —
+ * silently replaced "All courses" with "Courses" on an untouched site. The
+ * suite's own control caught it, which is the entire reason that control asks
+ * about the one link whose two labels deliberately differ.
+ *
+ * Comparing against the declared fallback answers the real question without a
+ * second query. A teacher who types the fallback back in has chosen the
+ * default, and getting the default is the right outcome.
  */
 export async function getFooterNav(): Promise<ResolvedFooterGroup[]> {
   const content = await getSiteContent();
+
+  /** Only links that HAVE a menu entry are governed by its toggle and label. */
+  const inMenu = (href: string) => primaryNav.some((n) => n.href === href);
+
+  /** The menu label, but only if somebody changed it from the shipped one. */
+  const customisedLabel = (href: string): string | null => {
+    const key = navKeyFor(href, 'label');
+    const resolved = content[key];
+    if (!resolved) return null;
+    const fallback = fieldFor(key)?.fallback;
+    return fallback !== undefined && resolved.trim() === fallback.trim() ? null : resolved;
+  };
 
   return footerNav
     .map((group) => ({
       heading:
         content[`footer.${group.heading.toLowerCase()}.heading`] || group.heading,
-      links: group.links.filter((link) =>
-        // Only links that HAVE a menu toggle are governed by it; /admissions
-        // has no menu entry and is always shown.
-        primaryNav.some((n) => n.href === link.href)
-          ? isVisible(content, navKeyFor(link.href, 'visible'))
-          : true,
-      ),
+      links: group.links
+        // `/admissions` has no menu entry and is always shown.
+        .filter((link) =>
+          inMenu(link.href) ? isVisible(content, navKeyFor(link.href, 'visible')) : true,
+        )
+        .map((link) => ({
+          href: link.href,
+          label: (inMenu(link.href) ? customisedLabel(link.href) : null) ?? link.label,
+        })),
     }))
     .filter((group) => group.links.length > 0);
 }

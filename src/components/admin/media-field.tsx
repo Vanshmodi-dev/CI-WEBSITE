@@ -1,8 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useId, useRef, useState, useSyncExternalStore, useTransition } from 'react';
-import { uploadMedia } from '@/app/admin/(dashboard)/media/actions';
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, useTransition } from 'react';
+import {
+  uploadMedia,
+  listUploadedPhotos,
+  type LibraryPhoto,
+} from '@/app/admin/(dashboard)/media/actions';
 import { MEDIA_LIMITS, checkSize } from '@/lib/media/format';
 
 /**
@@ -38,6 +42,23 @@ import { MEDIA_LIMITS, checkSize } from '@/lib/media/format';
  * regression test saves a record with no photograph to keep it that way — the
  * project has already shipped one field whose help text said "optional" while
  * validation refused it empty.
+ *
+ * =============================================================================
+ * AND YOU CAN CHOOSE ONE YOU HAVE ALREADY UPLOADED (PHASE 18)
+ * =============================================================================
+ * `prisma/schema.prisma` gives "the admin must be able to pick a photo already
+ * uploaded rather than re-uploading it" as the FIRST of three reasons the
+ * media table exists at all. It was never built, so for three phases the only
+ * way to attach a photograph was to still have the file — which, on the phone
+ * the institute owner actually uses, weeks after the photo was taken, they
+ * usually do not.
+ *
+ * The list is fetched when the picker OPENS rather than passed in as a prop.
+ * That keeps every form that never opens it free of the query, and it means a
+ * photo uploaded a moment ago in the same session is already in the list.
+ *
+ * Choosing a photograph sets a path. It grants nothing: every consent gate
+ * lives in the record's own save action and none of them is reachable here.
  */
 export function MediaField({
   name,
@@ -167,6 +188,63 @@ export function MediaField({
     });
   }
 
+  /*
+    THE LIBRARY IS LOADED IN THE CLICK, NOT IN AN EFFECT.
+
+    The obvious build watches `picking` in a `useEffect` and calls the action
+    when it turns true. React's lint rule refuses a setState scheduled from an
+    effect, and it is right to for the same reason it is right about the upload
+    a few lines above: the update lands after paint, so the dialog renders its
+    empty state for a frame, and any unrelated re-render races it.
+
+    A Server Action is an async function. Calling it from the handler that
+    opens the dialog puts every state update in the CONTINUATION OF AN EVENT,
+    which is where they belong, and re-reads the list on each opening — so a
+    photograph uploaded a moment ago is already there.
+  */
+  const [picking, setPicking] = useState(false);
+  const [library, setLibrary] = useState<LibraryPhoto[] | null>(null);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [loadingLibrary, startLibrary] = useTransition();
+  const pickerRef = useRef<HTMLDialogElement>(null);
+  const pickerTitleId = useId();
+
+  function openPicker() {
+    setPicking(true);
+    setLibrary(null);
+    setLibraryError(null);
+    startLibrary(async () => {
+      try {
+        const result = await listUploadedPhotos();
+        if (result.status === 'ok') setLibrary(result.photos);
+        else setLibraryError(result.message);
+      } catch {
+        // The action never ran — a dropped connection, or a refused request.
+        // Silence here would leave "Loading photos…" on screen for good.
+        setLibraryError('The photo list could not be loaded. Please try again.');
+      }
+    });
+  }
+
+  function choose(chosen: string) {
+    setNote(null);
+    setUploadError(null);
+    onChange?.(chosen);
+    setPicking(false);
+  }
+
+  /*
+    `showModal()`, never the `open` attribute — the same reason the website
+    editor's dialog gives: only the modal method grants the top layer, the
+    backdrop, the inert background and Escape.
+  */
+  useEffect(() => {
+    const dialog = pickerRef.current;
+    if (!dialog) return;
+    if (picking && !dialog.open) dialog.showModal();
+    if (!picking && dialog.open) dialog.close();
+  }, [picking]);
+
   function clear() {
     setNote(null);
     setUploadError(null);
@@ -247,6 +325,15 @@ export function MediaField({
               </button>
             ) : null}
 
+            <button
+              type="button"
+              onClick={openPicker}
+              disabled={busy}
+              className="inline-flex min-h-11 items-center rounded-sm border border-rule px-3 text-small font-medium text-text transition-colors hover:border-navy-600/50 hover:bg-selected disabled:opacity-50"
+            >
+              Choose an uploaded photo
+            </button>
+
             {path ? (
               <button
                 type="button"
@@ -280,6 +367,100 @@ export function MediaField({
           ) : null}
         </div>
       </div>
+
+      <dialog
+        ref={pickerRef}
+        aria-labelledby={pickerTitleId}
+        onClose={() => setPicking(false)}
+        /* A click that lands on the backdrop reports the dialog itself as its
+           target, because the backdrop is not a node of its own. */
+        onClick={(event) => {
+          if (event.target === pickerRef.current) setPicking(false);
+        }}
+        className="w-[min(94vw,620px)] rounded-lg border border-rule bg-paper p-0 text-text shadow-e3 backdrop:bg-navy-950/50"
+      >
+        <div className="flex flex-col gap-4 p-5">
+          <div>
+            <h2
+              id={pickerTitleId}
+              className="font-display text-[19px] font-semibold text-heading"
+            >
+              Photos you have already uploaded
+            </h2>
+            <p className="mt-1 text-[13px] text-muted">
+              Choosing one here attaches it to this record. It changes no
+              permission — the boxes on this page still decide what is shown.
+            </p>
+          </div>
+
+          {libraryError ? (
+            <p role="alert" className="rounded-md border border-danger/40 bg-danger-bg px-3 py-2 text-small">
+              {libraryError}
+            </p>
+          ) : loadingLibrary || library === null ? (
+            <p role="status" className="text-small text-muted">
+              Loading photos…
+            </p>
+          ) : library.length === 0 ? (
+            <p className="text-small text-muted">
+              Nothing has been uploaded yet. Use <strong>Choose photo</strong> to
+              add the first one.
+            </p>
+          ) : (
+            /*
+              A LIST of buttons, not a grid of clickable divs. Each photograph
+              is a real control with an accessible name, so this is operable
+              from the keyboard and announces something useful.
+            */
+            <ul className="grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto sm:grid-cols-3">
+              {library.map((photo) => {
+                const current = photo.path === path;
+                return (
+                  <li key={photo.path}>
+                    <button
+                      type="button"
+                      onClick={() => choose(photo.path)}
+                      aria-current={current ? 'true' : undefined}
+                      className={
+                        'flex w-full flex-col gap-1.5 rounded-md border p-2 text-left transition-colors ' +
+                        (current
+                          ? 'border-navy-600 bg-selected'
+                          : 'border-rule hover:border-navy-600/50 hover:bg-surface')
+                      }
+                    >
+                      <Image
+                        src={photo.path}
+                        alt=""
+                        width={160}
+                        height={120}
+                        className="h-24 w-full rounded-sm object-cover"
+                        unoptimized
+                      />
+                      <span className="truncate text-[12px] text-text">
+                        {photo.name}
+                      </span>
+                      <span className="text-[11px] text-muted">
+                        {photo.width}&times;{photo.height}
+                        {current ? ' · in use here' : ''}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          <div className="flex justify-end border-t border-rule pt-3">
+            <button
+              type="button"
+              onClick={() => setPicking(false)}
+              className="inline-flex min-h-11 items-center rounded-sm px-3 text-small font-medium text-muted hover:text-heading"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </dialog>
 
       {/*
         Two inputs rather than one whose `capture` is toggled: changing the

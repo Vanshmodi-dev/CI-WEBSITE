@@ -552,6 +552,86 @@ const FOOTER_FIELDS: readonly EditableField[] = footerNav.map((group) => ({
   fallback: group.heading,
 }));
 
+/**
+ * The rest of the footer — the four contact headings, and the sentence.
+ *
+ * =============================================================================
+ * WHY PHASE 18 ADDED THESE
+ * =============================================================================
+ * The footer carries EIGHT column headings at the same size, in the same
+ * colour, doing the same job. Four of them — the link columns above — became
+ * editable in Phase 15. The other four did not, for no reason anybody wrote
+ * down: they were simply in a different JSX block. A teacher opening the
+ * website editor could rename "Programmes" and not "Opening hours", which reads
+ * as a bug rather than a decision, because it is one.
+ *
+ * The SENTENCE is the more serious of the two. "Commerce coaching in Pratap
+ * Nagar for Class XI and XII, CA Foundation, CA Intermediate and CMA" sat
+ * hard-coded in `site-footer.tsx`, on every page of the site, naming the exact
+ * list of programmes the institute offers. The day that list changes — a course
+ * dropped, a course added — the footer is wrong sitewide and correcting it
+ * needs a developer. That is precisely the dependency this CMS exists to
+ * remove, and a content audit is how it was found: it appears in no registry,
+ * in no CODE_OWNED entry, and in no report.
+ *
+ * `{locality}` was interpolated from `institute.ts`. The fallback below spells
+ * the locality out, because a template placeholder in a text box a teacher can
+ * edit is a trap — they would either delete it or type it wrongly, and the
+ * value it interpolates is one they can already change under Contact details.
+ */
+const FOOTER_EXTRA_FIELDS: readonly EditableField[] = [
+  {
+    key: 'footer.description',
+    group: 'navigation',
+    renders: { route: '*', section: 'Footer — about this institute' },
+    label: 'Sentence under the logo',
+    help: 'Appears in the footer of every page. Say what you teach and where.',
+    kind: 'paragraph',
+    maxLength: 200,
+    fallback: `Commerce coaching in ${institute.locality} for Class XI and XII, CA Foundation, CA Intermediate and CMA.`,
+  },
+  {
+    key: 'footer.visit.heading',
+    group: 'navigation',
+    renders: { route: '*', section: 'Footer columns' },
+    label: 'Footer column: Visit',
+    help: 'The heading above the address.',
+    kind: 'line',
+    maxLength: 24,
+    fallback: 'Visit',
+  },
+  {
+    key: 'footer.talk.heading',
+    group: 'navigation',
+    renders: { route: '*', section: 'Footer columns' },
+    label: 'Footer column: Talk to us',
+    help: 'The heading above the phone number and WhatsApp link.',
+    kind: 'line',
+    maxLength: 24,
+    fallback: 'Talk to us',
+  },
+  {
+    key: 'footer.hours.heading',
+    group: 'navigation',
+    renders: { route: '*', section: 'Footer columns' },
+    label: 'Footer column: Opening hours',
+    help: 'Only appears once you have entered opening hours.',
+    kind: 'line',
+    maxLength: 24,
+    fallback: 'Opening hours',
+  },
+  {
+    key: 'footer.follow.heading',
+    group: 'navigation',
+    renders: { route: '*', section: 'Footer columns' },
+    label: 'Footer column: Follow',
+    help: 'Only appears once you have added a YouTube or Instagram link.',
+    kind: 'line',
+    maxLength: 24,
+    fallback: 'Follow',
+  },
+];
+
 
 /**
  * The heading and standfirst at the top of each page.
@@ -869,6 +949,7 @@ export const EDITABLE_FIELDS: readonly EditableField[] = [
   ...CLOSING_FIELDS,
   ...NAV_FIELDS,
   ...FOOTER_FIELDS,
+  ...FOOTER_EXTRA_FIELDS,
 ];
 
 const BY_KEY = new Map(EDITABLE_FIELDS.map((f) => [f.key, f]));

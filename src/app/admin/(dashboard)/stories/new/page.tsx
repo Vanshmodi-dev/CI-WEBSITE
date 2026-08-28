@@ -9,6 +9,7 @@ export default async function NewStoryPage() {
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/stories', label: 'Back to student stories' }}
         title="Add a story"
         description="Nothing here appears on the website until you confirm the permissions."
       />

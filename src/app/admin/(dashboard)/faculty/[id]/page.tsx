@@ -28,6 +28,7 @@ export default async function EditFacultyPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/faculty', label: 'Back to faculty' }}
         title="Edit teacher"
         description={record.published
           ? 'This teacher is currently shown on the website.'

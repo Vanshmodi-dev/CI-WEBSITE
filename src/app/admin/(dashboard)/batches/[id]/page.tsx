@@ -24,6 +24,7 @@ export default async function EditBatchPage({
   return (
     <>
       <PageHeader
+        back={{ href: '/admin/batches', label: 'Back to batches' }}
         title="Edit batch"
         description="Changes appear on the website within the hour."
       />

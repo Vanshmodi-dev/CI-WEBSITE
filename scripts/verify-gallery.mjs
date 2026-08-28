@@ -47,6 +47,18 @@ const PASSWORD = env.ADMIN_PASSWORD ?? '';
 
 /** Unmistakably synthetic, and the only rows this suite ever touches. */
 const P = 'ZZGAL';
+
+/**
+ * When this run began.
+ *
+ * ⚠ SECTION 9 USED TO READ THE WHOLE AUDIT TABLE, AND THAT IS HOW IT PASSED
+ * WITHOUT TESTING ANYTHING. Two of the five actions it asserts had never been
+ * produced by this suite; they were residue from earlier runs, and the check
+ * only failed when Phase 18 rebuilt the database and the residue was gone.
+ *
+ * Anything claiming "this run recorded X" is measured from here.
+ */
+const SUITE_STARTED = new Date();
 const REF = 'ZZGAL-CONSENT-0001';
 
 let pass = 0;
@@ -992,6 +1004,107 @@ section('8. DELETION');
 
 /* =========================================================== 9. AUDIT LOG = */
 
+section('8c. THE TWO AUDIT BRANCHES NOTHING HAD EVER EXERCISED');
+{
+  /*
+    =========================================================================
+    WHY THIS SECTION EXISTS — A TEST THAT PASSED ON RESIDUE
+    =========================================================================
+    Section 9 below asserts that all five audit actions have been recorded for
+    GalleryItem. It reads the 200 most recent rows, whenever they were written,
+    and for three phases it passed.
+
+    Phase 18 rebuilt the database — the embedded Postgres data directory was
+    lost — and section 9 failed for the first time, reporting only:
+
+        created, unpublished, deleted
+
+    Not because anything had broken. Because `published` and `updated` had
+    NEVER been produced by this suite. They were left over in the audit table
+    from runs whose history nobody had cleared, and the assertion was reading
+    them. Two branches of `saveGalleryItem` had no test at all, and the test
+    that appeared to cover them was reading someone else's homework.
+
+    `published` is recorded only when an EDIT turns publication on — creating an
+    item already published records `created`. `updated` is recorded only when an
+    edit leaves an unpublished item unpublished. The suite did neither.
+
+    So this section does both, on one item, and asserts the audit rows for THAT
+    ITEM ID rather than against a global set that history can satisfy.
+  */
+  const before = await prisma.auditLog.count({ where: { entity: 'GalleryItem' } });
+
+  await page.goto(`${BASE}/admin/gallery/new`);
+  const up = await attachPhoto(photoA);
+  check(up.ok, 'uploaded a photo for the audit-branch test', up.message);
+  await fillGallery({
+    alt: `${P} audit branch subject, a room with nobody in it.`,
+    caption: 'first caption',
+    showsPeople: false,
+    publish: false,
+  });
+  await page.submitForm('[name="alt"]', 4000);
+
+  const item = await prisma.galleryItem.findFirst({
+    where: { alt: { contains: 'audit branch subject' } },
+    select: { id: true, published: true },
+  });
+  check(Boolean(item), 'the draft was created');
+
+  if (item) {
+    const actionsFor = async () =>
+      (await prisma.auditLog.findMany({
+        where: { entity: 'GalleryItem', entityId: item.id },
+        select: { action: true },
+      })).map((r) => r.action);
+
+    check((await actionsFor()).includes('created'), 'creating it recorded "created"');
+
+    /* --- BRANCH ONE: an edit that publishes nothing ------------------- */
+    await page.goto(`${BASE}/admin/gallery/${item.id}`);
+    await page.eval(setField('[name="caption"]', 'second caption'));
+    await page.submitForm('[name="alt"]', 4000);
+
+    const afterEdit = await prisma.galleryItem.findUnique({ where: { id: item.id } });
+    check(afterEdit?.caption === 'second caption', 'the edit was saved', String(afterEdit?.caption));
+    check(afterEdit?.published === false, 'and it is still a draft');
+    check(
+      (await actionsFor()).includes('updated'),
+      'an edit that changes no publication state records "updated"',
+      (await actionsFor()).join(', '),
+    );
+
+    /* --- BRANCH TWO: an edit that publishes it ------------------------ */
+    await page.goto(`${BASE}/admin/gallery/${item.id}`);
+    await page.eval(setCheckbox('g-published', true));
+    await page.submitForm('[name="alt"]', 4000);
+
+    const afterPublish = await prisma.galleryItem.findUnique({ where: { id: item.id } });
+    check(afterPublish?.published === true, 'publishing it worked', String(afterPublish?.published));
+    check(
+      (await actionsFor()).includes('published'),
+      'an edit that turns publication ON records "published"',
+      (await actionsFor()).join(', '),
+    );
+
+    // And the summary is the one a person would want to read.
+    const summaries = (await prisma.auditLog.findMany({
+      where: { entity: 'GalleryItem', entityId: item.id, action: 'published' },
+      select: { summary: true },
+    })).map((r) => r.summary);
+    check(
+      summaries.some((x) => /shown on the website/i.test(x ?? '')),
+      'and the row says what happened in words',
+      summaries.join(' | '),
+    );
+
+    await prisma.galleryItem.delete({ where: { id: item.id } }).catch(() => {});
+  }
+
+  const after = await prisma.auditLog.count({ where: { entity: 'GalleryItem' } });
+  check(after > before, 'control: this section really did write audit rows', `${before} -> ${after}`);
+}
+
 section('9. EVERY MUTATION IS AUDITED');
 {
   /*
@@ -1017,9 +1130,26 @@ section('9. EVERY MUTATION IS AUDITED');
   });
 
   check(rows.length > 0, 'audit rows exist for GalleryItem', `${rows.length} row(s)`);
-  const actions = new Set(rows.map((r) => r.action));
+
+  /*
+    ⚠ ONLY THIS RUN'S ROWS COUNT.
+
+    Reading the whole table lets a previous run's history satisfy an assertion
+    about behaviour this run never exercised — which is exactly what happened
+    here for three phases with `published` and `updated`. Filtering on
+    SUITE_STARTED means every action below was produced by the mutations above,
+    or the check fails.
+  */
+  const mine = rows.filter((r) => r.at >= SUITE_STARTED);
+  check(
+    mine.length > 0,
+    'control: this run wrote audit rows of its own',
+    `${mine.length} of ${rows.length} rows are from this run`,
+  );
+
+  const actions = new Set(mine.map((r) => r.action));
   for (const wanted of ['created', 'published', 'updated', 'unpublished', 'deleted']) {
-    check(actions.has(wanted), `"${wanted}" was recorded`, [...actions].join(', '));
+    check(actions.has(wanted), `"${wanted}" was recorded BY THIS RUN`, [...actions].join(', '));
   }
   check(
     rows.every((r) => typeof r.entityId === 'string' && r.entityId.length > 0),
@@ -1028,7 +1158,7 @@ section('9. EVERY MUTATION IS AUDITED');
 
   // A consent withdrawal is distinguishable from an ordinary edit.
   check(
-    rows.some((r) => r.action === 'unpublished' && /permission withdrawn/i.test(r.summary ?? '')),
+    mine.some((r) => r.action === 'unpublished' && /permission withdrawn/i.test(r.summary ?? '')),
     'a consent withdrawal is audited as a withdrawal, not as an edit',
   );
 
