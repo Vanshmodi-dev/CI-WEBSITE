@@ -221,6 +221,22 @@ check(
  * provides for exactly this, and it means this suite can never damage a field
  * it is not testing.
  */
+/**
+ * The single-field editor payload for ANY registry key.
+ *
+ * `contactForm()` below is this with `KEY` baked in. Section 2b needs the same
+ * machinery for `contact.email` and `social.youtube`, and copying it would be
+ * a second place for the token note to go stale.
+ */
+async function fieldForm(key) {
+  const markup = await (
+    await fetch(`${BASE}/admin/preview`, { headers: { Cookie: adminCookie } })
+  ).text();
+  const fields = fieldsOf(markup, `value="${key}"`);
+  fields.only = key;
+  return fields;
+}
+
 async function contactForm() {
   /*
     ⚠ THE FORM COMES FROM /admin/preview, NOT /admin/website. THIS MATTERS.
@@ -385,6 +401,136 @@ section('2. A TEACHER ENTERS COORDINATES AND THE MAP APPEARS');
   check(
     seen.html.includes('26.849123') && seen.html.includes('75.805456'),
     'and it is the SAME point the page shows, not a config value',
+  );
+}
+
+/* ============ 2b. THE OTHER TWO CONTACT FACTS THE JSON-LD FORGOT ========== */
+
+section('2b. AN EDITED EMAIL AND SOCIAL LINK REACH THE STRUCTURED DATA');
+{
+  /*
+    =========================================================================
+    WHY THIS SECTION EXISTS
+    =========================================================================
+    Section 2 above proves an edited COORDINATE reaches the JSON-LD. It was
+    written in Topic 10 because `geo` had been reading `institute.coordinates`
+    while the address came from the admin, and NAP drift on a local listing is
+    expensive.
+
+    Phase 19 asked the obvious follow-up — which OTHER contact facts are
+    editable — and found two more with the same defect, neither of them tested:
+
+      `email`   `instituteJsonLd` read `institute.email`, pinned to null in
+                config since Phase 3. `JsonLdContact` had no email field at all.
+
+      `sameAs`  `instituteJsonLd` had read a RESOLVED `social` since Topic 12,
+                with a comment explaining exactly why it must. Nothing ever
+                passed one. The only caller — the site layout — supplied
+                `coordinates` and stopped there, so it fell through to the
+                config constants, both null, and `sameAs` was never emitted
+                however many channels the institute added.
+
+    The second is the more instructive: the fix existed, was documented, and
+    was dead code because its only caller was never updated. A function is not
+    fixed until something feeds it.
+
+    Reproduced against a live page before fixing: the footer rendered
+    `zzqa-office@example.invalid` and a YouTube link, and the JSON-LD had
+    neither an `email` key nor a `sameAs` array.
+  */
+  const EMAIL_KEY = 'contact.email';
+  const SOCIAL_KEY = 'social.youtube';
+  const EMAIL = 'zzmap-office@example.invalid';
+  const CHANNEL = 'https://www.youtube.com/@zzmapchannel';
+
+  const emailBefore = await prisma.siteSetting.findUnique({ where: { key: EMAIL_KEY } });
+  const socialBefore = await prisma.siteSetting.findUnique({ where: { key: SOCIAL_KEY } });
+
+  const org = (html) => {
+    const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+    for (const [, raw] of blocks) {
+      try {
+        const parsed = JSON.parse(raw);
+        const graph = parsed['@graph'] ?? [parsed];
+        const node = graph.find((n) => n['@type'] === 'EducationalOrganization');
+        if (node) return node;
+      } catch {
+        /* a block that is not ours */
+      }
+    }
+    return null;
+  };
+
+  /* --- CONTROL: with nothing stored, neither key is claimed -------------- */
+  await prisma.siteSetting.deleteMany({ where: { key: { in: [EMAIL_KEY, SOCIAL_KEY] } } });
+  const blank = await waitForPublic('/about', () => true, 1);
+  const blankOrg = org(blank.html);
+  check(Boolean(blankOrg), 'control: the organisation node is in the page to begin with');
+  check(blankOrg?.email === undefined, 'control: with no email stored, none is claimed', String(blankOrg?.email));
+  check(blankOrg?.sameAs === undefined, 'control: with no channel stored, sameAs is absent', JSON.stringify(blankOrg?.sameAs));
+
+  /* --- save both through the real single-field editor -------------------- */
+  const emailFields = await fieldForm(EMAIL_KEY);
+  emailFields[EMAIL_KEY] = EMAIL;
+  const r1 = await postAction(EDITOR, emailFields, { cookie: adminCookie });
+  check(r1.status < 400 || r1.status === 303, 'the email save was accepted', `status ${r1.status}`);
+
+  const socialFields = await fieldForm(SOCIAL_KEY);
+  socialFields[SOCIAL_KEY] = CHANNEL;
+  const r2 = await postAction(EDITOR, socialFields, { cookie: adminCookie });
+  check(r2.status < 400 || r2.status === 303, 'the channel save was accepted', `status ${r2.status}`);
+
+  check(
+    (await prisma.siteSetting.findUnique({ where: { key: EMAIL_KEY } }))?.value === EMAIL,
+    'the email reached the database',
+  );
+  check(
+    (await prisma.siteSetting.findUnique({ where: { key: SOCIAL_KEY } }))?.value === CHANNEL,
+    'the channel reached the database',
+  );
+
+  /* --- and out to an ANONYMOUS visitor ----------------------------------- */
+  const seen = await waitForPublic('/about', (h) => h.includes(EMAIL));
+  check(seen.ok, 'a logged-out visitor sees the email on the page', `after ${seen.attempt} request(s)`);
+  const orgNode = org(seen.html);
+
+  check(orgNode?.email === EMAIL, 'AND THE STRUCTURED DATA CARRIES THE SAME EMAIL', String(orgNode?.email));
+  check(
+    Array.isArray(orgNode?.sameAs) && orgNode.sameAs.includes(CHANNEL),
+    'AND sameAs CARRIES THE CHANNEL THE FOOTER LINKS TO',
+    JSON.stringify(orgNode?.sameAs),
+  );
+  check(
+    seen.html.includes(CHANNEL),
+    'control: the page itself really is linking that channel, so the two agree',
+  );
+
+  /* --- teardown, through the editor so the cached pages are correct ------ */
+  const clearEmail = await fieldForm(EMAIL_KEY);
+  clearEmail[EMAIL_KEY] = '';
+  await postAction(EDITOR, clearEmail, { cookie: adminCookie });
+  const clearSocial = await fieldForm(SOCIAL_KEY);
+  clearSocial[SOCIAL_KEY] = '';
+  await postAction(EDITOR, clearSocial, { cookie: adminCookie });
+
+  const after = await waitForPublic('/about', (h) => !h.includes(EMAIL));
+  check(after.ok, 'teardown: clearing them takes both off the page');
+  const afterOrg = org(after.html);
+  check(afterOrg?.email === undefined, 'teardown: and out of the structured data', String(afterOrg?.email));
+
+  // Put back exactly what was there, row for row.
+  await prisma.siteSetting.deleteMany({ where: { key: { in: [EMAIL_KEY, SOCIAL_KEY] } } });
+  for (const row of [emailBefore, socialBefore]) {
+    if (row) {
+      await prisma.siteSetting.create({
+        data: { key: row.key, value: row.value, updatedBy: row.updatedBy },
+      });
+    }
+  }
+  check(
+    (await prisma.siteSetting.findUnique({ where: { key: EMAIL_KEY } }))?.value === (emailBefore?.value ?? undefined) ||
+      (emailBefore === null && (await prisma.siteSetting.findUnique({ where: { key: EMAIL_KEY } })) === null),
+    'teardown: the settings table is back as it was',
   );
 }
 

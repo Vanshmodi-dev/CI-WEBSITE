@@ -643,12 +643,28 @@ try {
     check(small.length === 0, `${route} all touch targets meet 24x24 (WCAG 2.5.8)`, small.join(' | '));
   }
 
-  /* ================================================== 8. DARK MODE ===== */
-  section('8. DARK MODE — text must remain readable');
+  /* ============================================ 8. COLOUR CONTRAST ===== */
+  section('8. TEXT CONTRAST — in BOTH colour schemes');
 
-  await page.emulateColorScheme('dark');
+  /*
+    ⚠ THIS USED TO TEST DARK MODE ONLY, AND DARK MODE IS THE MINORITY CASE.
+
+    The section was headed "DARK MODE - text must remain readable" and set
+    `emulateColorScheme('dark')` before measuring. Nothing measured the LIGHT
+    palette, which is the default for most visitors and the one the design was
+    actually drawn in.
+
+    That it passes is luck rather than evidence: Phase 19 measured both and
+    found zero violations in either, so nothing needed fixing — but a change to
+    the light tokens could have dropped text below AA and no suite would have
+    said a word. Headless Chrome happens to default to DARK, which is also why
+    this went unnoticed: every other check in this file has been measuring the
+    dark palette without saying so.
+  */
   await page.viewport(390, 844, { mobile: true });
 
+  for (const scheme of ['light', 'dark']) {
+  await page.emulateColorScheme(scheme);
   for (const route of PUBLIC_ROUTES) {
     await page.goto(`${BASE}${route}`);
     const contrast = await page.eval(`(() => {
@@ -700,7 +716,12 @@ try {
       }
       return bad.slice(0, 5);
     })()`);
-    check(contrast.length === 0, `${route} dark-mode text meets AA contrast`, contrast.join(' | '));
+    check(
+      contrast.length === 0,
+      `${route} ${scheme}-mode text meets AA contrast`,
+      contrast.join(' | '),
+    );
+  }
   }
   await page.emulateColorScheme('light');
 

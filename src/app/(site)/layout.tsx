@@ -81,6 +81,20 @@ export default async function SiteLayout({
               hours: contact.hours,
               // The same resolved point the contact page renders a map for.
               coordinates: contact.coordinates,
+              /*
+                ⚠ THESE TWO WERE HANDLED IN `seo.ts` AND NEVER PASSED FROM HERE.
+
+                `instituteJsonLd` has read a resolved `social` since Topic 12
+                and carries a comment explaining why. Nothing supplied one, so
+                it fell through to the config constants — both null — and
+                `sameAs` was never emitted however many channels the institute
+                added. `email` had the same shape of bug one field along.
+
+                A fix inside a function that its only caller does not feed is
+                not a fix. Phase 19 reproduced both against a live page.
+              */
+              social: contact.social,
+              email: contact.email,
             }),
           ),
         }}

@@ -50,8 +50,21 @@ const BUDGET = {
   htmlUncompressed: 150 * KB,
   /** Measured max 299.9 KB. */
   totalWire: 320 * KB,
-  /** Measured 14–15. */
+  /**
+   * Measured 15–16 on a POPULATED site.
+   *
+   * This counts the document, its render-blocking assets and the images a
+   * browser fetches on load. It deliberately excludes `loading="lazy"` images:
+   * see the note in `referencedAssets`.
+   */
   requests: 20,
+  /**
+   * The logo, and nothing else.
+   *
+   * It is the LCP element on every route, so it SHOULD be eager. A second
+   * eager image means something below the fold stopped being deferred.
+   */
+  eagerImages: 1,
 };
 
 /**
@@ -140,7 +153,39 @@ for (const route of ROUTES) {
     `${route} total transfer within budget`,
     `${kb(m.totalWire)} > ${kb(BUDGET.totalWire)}`,
   );
-  assert(m.requests <= BUDGET.requests, `${route} request count within budget`, `${m.requests} > ${BUDGET.requests}`);
+  assert(
+    m.requests <= BUDGET.requests,
+    `${route} load-critical request count within budget`,
+    `${m.requests} > ${BUDGET.requests}`,
+  );
+
+  /*
+    ⚠ THE COUNT ABOVE IS ONLY HONEST WHILE THE IMAGES ARE ACTUALLY LAZY.
+
+    `requests` counts the images a browser fetches on load, which is the right
+    thing to measure — and it would be trivially satisfiable by marking
+    everything eager, or by having no images at all. These two assertions close
+    that door: exactly one image may load eagerly (the logo, which is the LCP
+    element and should be eager), and a page carrying a gallery or a set of
+    portraits must be deferring them.
+
+    Before Phase 19 this budget counted every `<img>` in the document and had
+    been failing on three routes since the database first had content in it —
+    reported as "pre-existing" three phases running. It was measuring an
+    experience no visitor has.
+  */
+  assert(
+    m.eagerImageCount <= BUDGET.eagerImages,
+    `${route} loads at most ${BUDGET.eagerImages} image eagerly`,
+    `${m.eagerImageCount} eager`,
+  );
+  if (m.lazyImageCount + m.eagerImageCount > 3) {
+    assert(
+      m.lazyImageCount > 0,
+      `${route} defers its below-the-fold images`,
+      `${m.eagerImageCount} eager, ${m.lazyImageCount} lazy`,
+    );
+  }
 }
 
 console.log(

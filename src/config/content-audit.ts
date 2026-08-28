@@ -106,6 +106,34 @@ export type CodeOwnedString = {
  * would record it eight times and let seven of them go stale.
  */
 export const CODE_OWNED_COPY: readonly CodeOwnedString[] = [
+  /*
+    ⚠ THE BLOCK BELOW ARRIVED WITH PHASE 19's PROP SCAN.
+
+    Everything down to the next comment was invisible until the scanner learned
+    to read `title=`, `aria-label=` and friends. None of it turned out to be a
+    defect — they are eyebrows, form labels and accessible region names — but
+    nobody had ever decided that, because nothing had ever shown them the list.
+    The three genuine defects in the same blind spot are recorded in
+    tests/content-coverage.test.ts.
+  */
+  { text: 'Admissions open', why: 'section' },
+  { text: 'Anything you would like to ask?', why: 'form' },
+  { text: 'Breadcrumb', why: 'a11y' },
+  { text: 'Commerce only', why: 'section' },
+  { text: 'Filter photographs', why: 'a11y' },
+  { text: 'Filter videos by subject', why: 'a11y' },
+  { text: 'Meet your mentors', why: 'section' },
+  { text: 'Mobile', why: 'a11y' },
+  { text: 'Our teachers', why: 'section' },
+  { text: 'Phone number', why: 'form' },
+  { text: 'Photograph viewer', why: 'a11y' },
+  { text: 'Primary', why: 'a11y' },
+  { text: 'Result pages', why: 'a11y' },
+  { text: 'Site menu', why: 'a11y' },
+  { text: 'Story pages', why: 'a11y' },
+  { text: 'Student stories', why: 'section' },
+  { text: 'Which class or course?', why: 'form' },
+  { text: 'Your name', why: 'form' },
   { text: '(opens in a new tab)', why: 'a11y' },
   { text: '← Previous', why: 'control' },
   { text: 'Address', why: 'label' },

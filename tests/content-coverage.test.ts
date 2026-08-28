@@ -30,10 +30,19 @@
  * expression. That is the overwhelming majority of prose on this site, and it
  * is a shape a regex can find reliably without adding a parser dependency.
  *
- * It does NOT see text passed as a prop (`title="Programmes"`), text built by
- * concatenation, or text inside a component's own default value. Those are
- * covered by `site-content.test.ts` from the other direction for registry keys,
- * and by review otherwise. Claiming this scan is exhaustive would be the exact
+ * PHASE 19 ADDED PROPS. The first version read text nodes only and said so.
+ * Topic 1 of Phase 19 went looking in the declared blind spot and found three
+ * defects there in an afternoon: two section headings on /about that were
+ * hard-coded while their paragraphs were editable, and the institute name
+ * spelled out in a floating button's accessible label instead of being read
+ * from the one place that owns it. A declared blind spot is still a blind spot.
+ *
+ * So the scan now also reads the props that carry visible text — `title`,
+ * `eyebrow`, `label`, `standfirst`, `alt`, `placeholder`, `aria-label` and
+ * friends. `name=` is excluded: it is a form field's wire name, not prose.
+ *
+ * It still does NOT see text built by concatenation, or a component's own
+ * default parameter value. Claiming this scan is exhaustive would be the exact
  * failure the project keeps finding in its own suites, so it is stated plainly
  * here instead: this is a floor, not a ceiling.
  *
@@ -76,6 +85,17 @@ const decode = (s: string) => s.replace(/&(\w+);/g, (m, n: string) => ENTITIES[n
  */
 const LOOKS_LIKE_CODE = /=>|\bconst\b|\breturn\b|\buse[A-Z]\w+\b|===|\?\?|\)\.|\bslug\b/;
 
+/**
+ * Props whose value a visitor — or a screen reader — actually reads.
+ *
+ * `name=` is deliberately absent: it is a form field's wire name, never prose.
+ * The regex is rebuilt per file rather than shared, because a `/g` regex
+ * carries `lastIndex` between calls and a shared one silently skips matches in
+ * every file after the first.
+ */
+const visibleProps = () =>
+  /(?:^|\s)(title|eyebrow|heading|label|standfirst|description|blurb|alt|placeholder|aria-label|caption|summary)\s*=\s*["']([^"']{2,})["']/g;
+
 type Found = { text: string; files: Set<string> };
 
 function walk(dir: string, out: string[] = []): string[] {
@@ -105,15 +125,21 @@ function scan(): Map<string, Found> {
     const raw = readFileSync(file, 'utf8');
     // Comments are not rendered, and this codebase has a great many of them.
     const src = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    for (const m of src.matchAll(/>([^<>{}]+)</g)) {
-      const text = decode(m[1] ?? '').replace(/\s+/g, ' ').trim();
-      if (text.length < 3) continue;
-      if (!/[A-Za-z]{2}/.test(text)) continue;
-      if (LOOKS_LIKE_CODE.test(text)) continue;
+    const record = (raw: string) => {
+      const text = decode(raw).replace(/\s+/g, ' ').trim();
+      if (text.length < 3) return;
+      if (!/[A-Za-z]{2}/.test(text)) return;
+      if (LOOKS_LIKE_CODE.test(text)) return;
       const existing = found.get(text);
       if (existing) existing.files.add(file);
       else found.set(text, { text, files: new Set([file]) });
-    }
+    };
+
+    // JSX text nodes.
+    for (const m of src.matchAll(/>([^<>{}]+)</g)) record(m[1] ?? '');
+    // Visible text passed as a prop. `name=` is deliberately absent: it is a
+    // form field's wire name, never something a visitor reads.
+    for (const m of src.matchAll(visibleProps())) record(m[2] ?? '');
   }
   return found;
 }

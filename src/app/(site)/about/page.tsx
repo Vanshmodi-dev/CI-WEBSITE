@@ -73,7 +73,7 @@ export default async function AboutPage() {
             <SectionHeader
               id="what-heading"
               eyebrow="Commerce only"
-              title="What we teach"
+              title={content['about.whatWeTeachHeading']}
               className="mb-6"
             />
             <p className="measure text-[17px] leading-relaxed text-text">
@@ -120,7 +120,7 @@ export default async function AboutPage() {
           <SectionHeader
             id="story-heading"
             eyebrow={storyWritten ? 'The institute' : 'Being written'}
-            title="Our story"
+            title={content['about.storyHeading']}
             className="mb-5"
           />
           <p

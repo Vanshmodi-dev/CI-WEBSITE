@@ -1,3 +1,4 @@
+import { institute } from '@/config/institute';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
@@ -48,7 +49,7 @@ export default async function AdminReviewsPage() {
           <Notice tone="warn" title="Reviews are not connected yet">
             <p>
               Nothing is broken. The Review Engine has not been switched on for
-              Commerce Insight, so the website simply does not show a reviews
+              {institute.name}, so the website simply does not show a reviews
               section. It will appear on its own once the connection is made.
             </p>
             <p className="mt-2">

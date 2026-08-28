@@ -142,7 +142,8 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
 
         <MediaField
           name="imageUrl"
-          label="Photograph (required)"
+          label="Photograph"
+          required
           hint="JPG, PNG, WebP or AVIF. Taken on a phone is fine."
           value={imageUrl}
           error={state.errors?.imageUrl}

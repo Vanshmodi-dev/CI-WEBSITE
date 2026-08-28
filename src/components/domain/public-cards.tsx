@@ -1,3 +1,4 @@
+import { institute } from '@/config/institute';
 import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/cn';
@@ -70,9 +71,17 @@ function Portrait({
 /* -------------------------------------------------------------- results -- */
 
 export function ResultCard({ result }: { result: PublicResult }) {
-  // No name permission means no name — the card leads with the achievement
-  // instead, which is the part that was actually authorised.
-  const heading = result.name ?? 'Commerce Insight student';
+  /*
+    No name permission means no name — the card leads with the achievement
+    instead, which is the part that was actually authorised.
+
+    ⚠ THE INSTITUTE NAME IS READ, NOT SPELLED OUT. This label said "Commerce
+    Insight student" as a literal, and the story card below said it again. The
+    name is deliberately code-owned — it is matched to the Google Business
+    Profile — but code-owned means one place, and these were two more copies of
+    it on the most-viewed cards on the site.
+  */
+  const heading = result.name ?? `${institute.name} student`;
 
   return (
     <article className="flex flex-col rounded-md border border-rule bg-paper p-5 transition-shadow hover:shadow-e2">
@@ -145,7 +154,7 @@ export function StoryCard({ story }: { story: PublicStory }) {
         />
         <div className="min-w-0">
           <p className="font-display text-[18px] font-semibold text-heading">
-            {story.name ?? 'A Commerce Insight student'}
+            {story.name ?? `A ${institute.name} student`}
           </p>
           <p className="text-small text-muted">
             {PROGRAMME_LABELS[story.programme] ?? story.programme} · {story.year}

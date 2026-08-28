@@ -51,14 +51,41 @@ export function DeleteMediaButton({
   }
 
   if (!confirming) {
+    /*
+      ⚠ THE REFUSAL IS SHOWN HERE, AND IT USED NOT TO BE.
+
+      A refused deletion did two things at once: `setError(...)` and
+      `setConfirming(false)`. The error message only existed in the CONFIRMING
+      branch below, so the second update threw away the first — the control
+      snapped back to a plain "Delete" button and the teacher was told nothing
+      at all. Clicking Delete, confirming, and watching the button return to
+      normal is indistinguishable from the click not registering.
+
+      That mattered most for the one refusal that actually happens: a photo
+      still used by a record. The server said which records were holding it,
+      in words, and nobody ever saw the sentence.
+
+      Found in Phase 19 by asserting the teacher is TOLD, rather than only that
+      the row survived.
+    */
     return (
-      <button
-        type="button"
-        onClick={() => setConfirming(true)}
-        className="inline-flex min-h-11 items-center rounded-sm px-2 text-small font-medium text-muted transition-colors hover:text-danger"
-      >
-        Delete<span className="sr-only"> {name}</span>
-      </button>
+      <div className="flex flex-col items-end gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setConfirming(true);
+          }}
+          className="inline-flex min-h-11 items-center rounded-sm px-2 text-small font-medium text-muted transition-colors hover:text-danger"
+        >
+          Delete<span className="sr-only"> {name}</span>
+        </button>
+        {error ? (
+          <p role="alert" className="measure text-[13px] font-medium text-danger">
+            {error}
+          </p>
+        ) : null}
+      </div>
     );
   }
 

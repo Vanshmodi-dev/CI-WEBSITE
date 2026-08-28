@@ -603,6 +603,143 @@ section('4. THE PHOTO PICKER');
   check(value === '', 'cancelling the picker leaves the field empty', JSON.stringify(value));
 }
 
+/* ============== 2c. EVERY RECORD CAN BE DELETED FROM ITS OWN PAGE ========= */
+
+/**
+ * Phase 16 Topic 11 unified what Delete DOES. It never asked where it LIVES.
+ *
+ * The answer was split by whichever phase built the page: results, stories,
+ * batches and announcements offered Delete on the edit page; faculty, gallery
+ * and videos only in a row on the list. Nothing recorded a reason — the same
+ * shape as the confirmation split that topic did fix, surviving the phase whose
+ * job was consistency.
+ *
+ * Found by walking the admin as an owner would: open a gallery entry, look for
+ * a way to remove it, and there is none on the page you are looking at.
+ */
+section('2c. DELETE IS ON EVERY RECORD PAGE, AND ALWAYS ASKS FIRST');
+{
+  const missing = [];
+  const noConfirm = [];
+
+  await page.viewport(1280, 900);
+  for (const route of detailRoutes) {
+    // Enquiries are not deletable by hand — they are personal data on a
+    // retention policy, which is a deliberate exception and stated as one.
+    if (route.startsWith('/admin/enquiries/')) continue;
+
+    await page.goto(BASE + route);
+    const state = await page.eval(String.raw`(async () => {
+      const del = [...document.querySelectorAll('button')]
+        .filter((b) => b.getClientRects().length > 0)
+        .find((b) => /^delete\b/i.test(b.textContent.trim()));
+      if (!del) return JSON.stringify({ present: false });
+
+      del.click();
+      await new Promise((r) => setTimeout(r, 400));
+      const buttons = [...document.querySelectorAll('button')]
+        .filter((b) => b.getClientRects().length > 0)
+        .map((b) => b.textContent.trim());
+      // A second step must have appeared: something to confirm AND something
+      // to back out with. One-click destruction is the defect Topic 11 fixed.
+      return JSON.stringify({
+        present: true,
+        confirms: buttons.some((t) => /^(yes|delete)/i.test(t)),
+        cancels: buttons.some((t) => /keep|cancel|no/i.test(t)),
+        buttons: buttons.slice(0, 6),
+      });
+    })()`, true);
+    const r = JSON.parse(state);
+
+    if (!r.present) { missing.push(route); continue; }
+    if (!(r.confirms && r.cancels)) noConfirm.push(`${route}: ${r.buttons.join(' | ')}`);
+  }
+
+  check(
+    missing.length === 0,
+    'every record page offers a way to delete that record',
+    missing.join(', '),
+  );
+  check(
+    noConfirm.length === 0,
+    'and every one of them asks before destroying anything',
+    noConfirm.join(' || '),
+  );
+}
+
+/* ======================== 4b. THE PHOTO FIELD TELLS THE TRUTH ============= */
+
+/**
+ * A field labelled optional that validation refuses is the defect this project
+ * has now shipped twice.
+ *
+ * `MediaField` appended "(optional)" unconditionally. A gallery entry's
+ * `imageUrl` is NOT NULL and its action refuses an empty one, so the gallery
+ * form had worked around it by passing `label="Photograph (required)"`. The
+ * rendered result, in one line, was:
+ *
+ *     Photograph (required)(optional)
+ *
+ * Both the component's own header comment and the schema comment on
+ * `GalleryItem.imageUrl` warn against exactly this. Neither was being followed,
+ * and nothing checked.
+ */
+section('4b. EVERY PHOTO FIELD SAYS WHETHER IT IS REQUIRED, AND MEANS IT');
+{
+  const SURFACES = [
+    { route: '/admin/gallery/new', field: 'imageUrl', required: true },
+    { route: '/admin/faculty/new', field: 'photoUrl', required: false },
+    { route: '/admin/students/new', field: 'photoUrl', required: false },
+    { route: '/admin/stories/new', field: 'photoUrl', required: false },
+  ];
+
+  await page.viewport(1280, 900);
+  for (const surface of SURFACES) {
+    await page.goto(BASE + surface.route);
+    const seen = await page.eval(`(() => {
+      const input = document.querySelector('input[name="' + ${JSON.stringify(surface.field)} + '"]');
+      if (!input) return JSON.stringify({ found: false });
+      // The visible label is the <span> wrapping the field's name and marker.
+      let box = input.parentElement;
+      while (box && !/\(required\)|\(optional\)/.test(box.innerText || '')) box = box.parentElement;
+      const text = box ? (box.innerText || '').replace(/\s+/g, ' ') : '';
+      return JSON.stringify({
+        found: true,
+        required: /\(required\)/.test(text),
+        optional: /\(optional\)/.test(text),
+        picker: [...(box ? box.querySelectorAll('button') : [])].some((b) => /choose an uploaded photo/i.test(b.textContent)),
+        text: text.slice(0, 90),
+      });
+    })()`);
+    const r = JSON.parse(seen);
+
+    check(r.found === true, `${surface.route} has its photo field`, surface.field);
+    check(
+      !(r.required && r.optional),
+      `${surface.route} does not say BOTH required and optional`,
+      r.text,
+    );
+    check(
+      surface.required ? r.required : r.optional,
+      `${surface.route} is marked ${surface.required ? 'required' : 'optional'}`,
+      r.text,
+    );
+    // Topic 2: the picker must be reachable from every photo-backed surface.
+    check(r.picker === true, `${surface.route} offers the existing-photo picker`);
+  }
+
+  /*
+    AND THE LABEL MATCHES THE SERVER. Saying "required" is only true if the
+    action actually refuses an empty value — otherwise this section just checks
+    that two strings agree with each other.
+  */
+  await page.goto(`${BASE}/admin/gallery/new`);
+  await page.type('input[name=alt]', 'ZZUX truthfulness probe, an empty room.');
+  await page.submitForm('input[name=alt]', 3500);
+  const refused = await page.eval(`document.body.innerText.includes('needs one') || document.body.innerText.includes('Choose a photograph')`);
+  check(refused === true, 'control: and the gallery action really does refuse a missing photograph');
+}
+
 /* =================================================== 5. THE LISTING ACTION */
 
 /**

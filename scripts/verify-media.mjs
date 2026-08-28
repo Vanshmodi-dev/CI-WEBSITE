@@ -679,6 +679,49 @@ section('8. DELETION');
   check((await countAssets()) === beforeDelete, 'the guard did not delete anything');
 }
 
+/**
+ * Read ONE photograph's row in the library.
+ *
+ * ⚠ BOUNDED, AND BOUND BY CONSTRUCTION.
+ *
+ * Two earlier versions of this got it wrong in the same direction. The first
+ * asked "is there a Delete button on the page", which is a page-wide question
+ * that cannot answer a per-row one — it failed against a library holding
+ * eight other, correctly deletable photographs. The second walked up from the
+ * image until it found a row, which is right until it is not: any condition
+ * that stops the card matching sends the walk on up into the grid, where it
+ * finds every OTHER card's Delete button and reports it as this one's.
+ *
+ * So the walk now stops at the last ancestor still holding exactly ONE image
+ * — the definition of "this photograph's card" — and the result carries
+ * `imgs`, which the assertions check. A probe that overshoots now says so
+ * instead of quietly answering about the wrong photograph.
+ *
+ * The delete button is matched by its ACCESSIBLE NAME. Each one renders
+ * "Delete" plus the filename in an sr-only span, so "Delete zzref-guard.jpg"
+ * identifies one control exactly, with no DOM walking involved at all.
+ */
+const cardProbe = (path, name) => String.raw`(() => {
+  const img = [...document.querySelectorAll('img')].find((i) => i.getAttribute('src') === ` + JSON.stringify(path) + String.raw`);
+  if (!img) return JSON.stringify({ found: false });
+
+  let card = img.parentElement;
+  while (card.parentElement && card.parentElement.querySelectorAll('img').length === 1) {
+    card = card.parentElement;
+  }
+  const text = (card.innerText || '').replace(/\s+/g, ' ');
+  const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
+
+  return JSON.stringify({
+    found: true,
+    imgs: card.querySelectorAll('img').length,
+    refused: text.includes('Remove it from those records first'),
+    offered: [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === wanted),
+    says: (text.match(/Used by [^·]*/) || [null])[0],
+    text: text.slice(0, 160),
+  });
+})()`;
+
 section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
 {
   /*
@@ -737,37 +780,49 @@ section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
     'control: an unreferenced photo really is deleted when asked',
   );
 
-  const deleteRequest = [...page.requests]
-    .reverse()
-    .find((r) => r.method === 'POST' && Object.keys(r.headers).some((h) => h.toLowerCase() === 'next-action'));
-  const deleteActionId = deleteRequest
-    ? Object.entries(deleteRequest.headers).find(([h]) => h.toLowerCase() === 'next-action')?.[1]
-    : null;
-  check(Boolean(deleteActionId), 'captured the real delete action from the browser');
-  const adminCookie = await page.cookieHeader(BASE);
 
-  /** The delete action, called directly with a valid session — no button. */
-  const replayDelete = async (key) => {
-    if (!deleteActionId) return { status: 0 };
-    const boundary = '----zzref' + Math.random().toString(16).slice(2);
-    const CRLF = String.fromCharCode(13, 10);
-    const body =
-      `--${boundary}${CRLF}` +
-      `Content-Disposition: form-data; name="1_key"${CRLF}${CRLF}${key}${CRLF}` +
-      `--${boundary}--${CRLF}`;
-    const res = await fetch(deleteRequest.url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Next-Action': deleteActionId,
-        Origin: BASE,
-        Cookie: adminCookie,
-      },
-      body,
-      redirect: 'manual',
-    });
-    await res.text().catch(() => '');
-    return res;
+  /**
+   * Click the REAL Delete control for one photo and report what happened.
+   *
+   * =============================================================================
+   * WHY THIS IS NOT A CRAFTED HTTP REPLAY
+   * =============================================================================
+   * `deleteMedia(previousState, formData)` is called directly from the button
+   * rather than through a form action, so it travels in React's own call
+   * encoding rather than as form fields. A first version of this hand-built a
+   * multipart body and every replay came back 500 with a serialised
+   * thrown-error envelope: Next could not deserialise the call, so the action
+   * never ran. "The row survived" was then true for a reason that had nothing
+   * to do with the guard, and four "the SERVER refuses this" assertions were
+   * passing on a request that never reached it.
+   *
+   * Guessing harder at the wire format would test the guess. What actually
+   * needs proving is that the SERVER refuses even when the BUTTON is offered —
+   * and there is a real, reachable state where exactly that happens: the
+   * library is rendered while a photo is unreferenced, a record starts using it
+   * a moment later, and the teacher clicks the Delete button their stale page is
+   * still showing. That is a race a real administrator can hit, it exercises
+   * the true client path, and it needs no wire format at all.
+   */
+  const clickDeleteFor = async (name) => {
+    const script = String.raw`(async () => {
+      const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
+      const btn = [...document.querySelectorAll('button')].find((b) => b.textContent.trim() === wanted);
+      if (!btn) return JSON.stringify({ offered: false });
+      btn.click();
+      await new Promise((r) => setTimeout(r, 400));
+      const confirm = [...document.querySelectorAll('button')].filter((b) => b.textContent.trim() === 'Delete').pop();
+      if (!confirm) return JSON.stringify({ offered: true, confirmed: false });
+      confirm.click();
+      await new Promise((r) => setTimeout(r, 3000));
+      const alert = document.querySelector('[role=alert]');
+      return JSON.stringify({
+        offered: true,
+        confirmed: true,
+        message: alert ? alert.textContent.trim() : null,
+      });
+    })()`;
+    return JSON.parse(await page.eval(script, true));
   };
 
   /*
@@ -826,49 +881,6 @@ section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
     against a library holding eight other photographs, every one of them
     correctly deletable. A page-wide question cannot answer a per-row one.
   */
-  /**
-   * Read ONE photograph's row in the library.
-   *
-   * ⚠ BOUNDED, AND BOUND BY CONSTRUCTION.
-   *
-   * Two earlier versions of this got it wrong in the same direction. The first
-   * asked "is there a Delete button on the page", which is a page-wide question
-   * that cannot answer a per-row one — it failed against a library holding
-   * eight other, correctly deletable photographs. The second walked up from the
-   * image until it found a row, which is right until it is not: any condition
-   * that stops the card matching sends the walk on up into the grid, where it
-   * finds every OTHER card's Delete button and reports it as this one's.
-   *
-   * So the walk now stops at the last ancestor still holding exactly ONE image
-   * — the definition of "this photograph's card" — and the result carries
-   * `imgs`, which the assertions check. A probe that overshoots now says so
-   * instead of quietly answering about the wrong photograph.
-   *
-   * The delete button is matched by its ACCESSIBLE NAME. Each one renders
-   * "Delete" plus the filename in an sr-only span, so "Delete zzref-guard.jpg"
-   * identifies one control exactly, with no DOM walking involved at all.
-   */
-  const cardProbe = (path, name) => String.raw`(() => {
-    const img = [...document.querySelectorAll('img')].find((i) => i.getAttribute('src') === ` + JSON.stringify(path) + String.raw`);
-    if (!img) return JSON.stringify({ found: false });
-
-    let card = img.parentElement;
-    while (card.parentElement && card.parentElement.querySelectorAll('img').length === 1) {
-      card = card.parentElement;
-    }
-    const text = (card.innerText || '').replace(/\s+/g, ' ');
-    const wanted = 'Delete ' + ` + JSON.stringify(name) + String.raw`;
-
-    return JSON.stringify({
-      found: true,
-      imgs: card.querySelectorAll('img').length,
-      refused: text.includes('Remove it from those records first'),
-      offered: [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === wanted),
-      says: (text.match(/Used by [^·]*/) || [null])[0],
-      text: text.slice(0, 160),
-    });
-  })()`;
-
   await page.goto(`${BASE}/admin/media`);
   const free = JSON.parse(await page.eval(cardProbe(refPath, 'zzref-guard.jpg')));
   check(free.found === true, "control: found this photo's own card in the library");
@@ -890,19 +902,38 @@ section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
     );
 
     /*
-      AND THE SERVER REFUSES IT TOO. A hidden button is a courtesy, not a
-      control: the action is a public endpoint and must refuse on its own.
+      AND THE SERVER REFUSES IT TOO — PROVED WITH THE BUTTON IN FRONT OF US.
+
+      A hidden button is a courtesy, not a control. So: delete the holder, load
+      the library (Delete is now offered), put the holder BACK without
+      reloading, and click the button the stale page is still showing. The
+      server must refuse, and the teacher must be told why.
     */
+    await prisma[consumer.model].delete({ where: { id: created.id } });
+    await page.goto(`${BASE}/admin/media`);
+    const freeNow = JSON.parse(await page.eval(cardProbe(refPath, 'zzref-guard.jpg')));
+    check(freeNow.offered === true, `control: with the ${consumer.noun} gone, the page offers Delete again`);
+
+    const again = await make[consumer.model]();
     const before = await countAssets();
-    const replay = await replayDelete(refKey);
+    const outcome = await clickDeleteFor('zzref-guard.jpg');
     const after = await countAssets();
-    check(after === before, `the SERVER refuses the deletion for a ${consumer.noun}`, `status ${replay.status}, ${before} -> ${after} assets`);
+
+    check(outcome.offered === true, `control: the stale page really did still show the button`);
     check(
-      Boolean(await prisma.mediaAsset.findUnique({ where: { key: refKey } })),
-      `and the row survives a direct action call for a ${consumer.noun}`,
+      after === before && Boolean(await prisma.mediaAsset.findUnique({ where: { key: refKey } })),
+      `the SERVER refuses it for a ${consumer.noun} even when the button is clicked`,
+      `${before} -> ${after} assets`,
+    );
+    check(
+      /still used by/i.test(outcome.message ?? ''),
+      `and the teacher is told which records are holding it`,
+      String(outcome.message),
     );
 
-    await prisma[consumer.model].delete({ where: { id: created.id } });
+    await prisma[consumer.model].delete({ where: { id: again.id } }).catch(() => {});
+    created.id = null;
+
   }
 
   // With every holder gone the photo is deletable again — which proves the
@@ -913,6 +944,123 @@ section('8b. THE DELETE GUARD KNOWS ABOUT EVERY KIND OF RECORD');
     freeAgain.offered === true,
     'control: with every holder removed, Delete is offered once more',
     freeAgain.text,
+  );
+}
+
+section('8d. THE CASES A SINGLE REFERENCE DOES NOT COVER');
+{
+  /*
+    Section 8b proves the guard sees all four kinds of record. It creates ONE
+    holder at a time, and each is a draft. Three questions it does not answer,
+    all of which a real library will meet:
+
+      - two records share a photo, and one of them is deleted
+      - the holder is PUBLISHED rather than a draft
+      - a record's photo is REPLACED, leaving the old one unreferenced
+
+    The third is the one that decides whether a library ever becomes
+    deletable at all: if replacing a photo did not release the old one, every
+    photograph the institute ever replaced would be permanently undeletable.
+  */
+  /*
+    ⚠ CLEAR WRECKAGE FIRST.
+
+    This section creates holder records and deletes them at the end. A run that
+    throws in between leaves them behind, and the NEXT run then counts them —
+    "Used by 2 teachers and 2 gallery photos" when it created one of each. The
+    assertions are about exact counts, so a polluted baseline does not fail
+    loudly, it fails confusingly. `verify-admin.mjs` learned this the same way
+    and says so at the top of its snapshot guard.
+  */
+  await prisma.faculty.deleteMany({ where: { name: { startsWith: 'ZZMEDIA Shared' } } });
+  await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: 'ZZMEDIA shared' } } });
+
+  const fixture = await makeImage('zzref-multi.jpg', { format: 'jpeg', width: 402, height: 298, hue: 199 });
+  await page.goto(BASE + NEW_STUDENT);
+  const up = await upload(fixture);
+  check(up.ok, 'uploaded a photo for the multi-reference tests', up.message);
+  const sharedPath = await currentPath();
+  const sharedKey = sharedPath.replace('/media/', '');
+
+  const card = (extra = '') => cardProbe(sharedPath, 'zzref-multi.jpg') + extra;
+
+  /* --- TWO HOLDERS, ONE PUBLISHED ------------------------------------- */
+  const a = await prisma.faculty.create({ data: {
+    name: 'ZZMEDIA Shared A', designation: 'Faculty',
+    photoUrl: sharedPath, published: true, priority: 0 }, select: { id: true } });
+  const b = await prisma.galleryItem.create({ data: {
+    imageUrl: sharedPath, alt: 'ZZMEDIA shared holder B', category: 'CLASSROOMS',
+    showsPeople: false, published: false, priority: 0 }, select: { id: true } });
+
+  await page.goto(`${BASE}/admin/media`);
+  let seen = JSON.parse(await page.eval(card()));
+  check(seen.imgs === 1, 'control: read exactly one card', `${seen.imgs} images`);
+  check(seen.refused === true, 'a photo used TWICE is refused');
+  check(
+    /1 teacher/.test(seen.says ?? '') && /1 gallery photo/.test(seen.says ?? ''),
+    'and the refusal names BOTH holders',
+    String(seen.says),
+  );
+  check(seen.offered === false, 'no delete button while two records hold it');
+
+  /* --- REMOVE ONE HOLDER: STILL PROTECTED ------------------------------ */
+  await prisma.galleryItem.delete({ where: { id: b.id } });
+  await page.goto(`${BASE}/admin/media`);
+  seen = JSON.parse(await page.eval(card()));
+  check(seen.refused === true, 'deleting ONE holder leaves it protected by the other');
+  check(/1 teacher/.test(seen.says ?? ''), 'and the count drops to the one that remains', String(seen.says));
+  const blocked = await clickDeleteFor('zzref-multi.jpg');
+  check(
+    blocked.offered === false,
+    'the page does not even offer Delete with one published holder left',
+    JSON.stringify(blocked),
+  );
+  check(
+    Boolean(await prisma.mediaAsset.findUnique({ where: { key: sharedKey } })),
+    'and the photo is still there',
+  );
+
+  /* --- REPLACE THE PHOTO: THE OLD ONE MUST BE RELEASED ----------------- */
+  const replacement = await makeImage('zzref-replacement.jpg', { format: 'jpeg', width: 403, height: 297, hue: 21 });
+  await page.goto(BASE + NEW_STUDENT);
+  const up2 = await upload(replacement);
+  check(up2.ok, 'uploaded a replacement photo', up2.message);
+  const newPath = await currentPath();
+  check(newPath !== sharedPath, 'control: the replacement is a different object', `${newPath} vs ${sharedPath}`);
+
+  await prisma.faculty.update({ where: { id: a.id }, data: { photoUrl: newPath } });
+  await page.goto(`${BASE}/admin/media`);
+  seen = JSON.parse(await page.eval(card()));
+  check(
+    seen.refused === false && seen.offered === true,
+    'REPLACING a record\'s photo releases the old one for deletion',
+    seen.text,
+  );
+
+  const removed = await clickDeleteFor('zzref-multi.jpg');
+  check(
+    removed.offered === true && removed.confirmed === true,
+    'the released photo can now be deleted through the real control',
+    JSON.stringify(removed),
+  );
+  check(
+    !(await prisma.mediaAsset.findUnique({ where: { key: sharedKey } })),
+    'AND IT REALLY GOES — the positive control for every refusal above',
+  );
+
+  /* --- AND THE REPLACEMENT IS PROTECTED IN ITS PLACE ------------------- */
+  const newCard = JSON.parse(await page.eval(cardProbe(newPath, 'zzref-replacement.jpg')));
+  check(
+    newCard.refused === true,
+    'control: the replacement is protected in its turn — the guard moved with the reference',
+    newCard.text,
+  );
+
+  await prisma.faculty.deleteMany({ where: { name: { startsWith: 'ZZMEDIA Shared' } } });
+  await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: 'ZZMEDIA shared' } } });
+  check(
+    (await prisma.faculty.count({ where: { name: { startsWith: 'ZZMEDIA Shared' } } })) === 0,
+    'teardown: this section left no holder records behind',
   );
 }
 

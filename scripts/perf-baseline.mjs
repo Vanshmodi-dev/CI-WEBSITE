@@ -133,12 +133,39 @@ export function referencedAssets(html) {
   // next/font puts @font-face in the stylesheet, so a font that is NOT
   // preloaded still costs bytes once the CSS parses. Count both, separately.
   const cssFonts = [...html.matchAll(/\/_next\/static\/media\/[^"' )]+\.woff2?/g)].map((m) => m[0]);
-  const images = [
-    ...[...html.matchAll(/<img[^>]+src="([^"]+)"/g)].map((m) => m[1]),
-    ...[...html.matchAll(/<link[^>]+rel="preload"[^>]*as="image"[^>]*href="([^"]+)"/g)].map(
-      (m) => m[1],
-    ),
-  ].filter((s) => s && !s.startsWith('data:'));
+  /*
+    ⚠ EAGER AND LAZY ARE COUNTED SEPARATELY, AND THAT IS THE WHOLE POINT.
+
+    `requests` used to include every `<img>` in the document. A browser does not
+    request a `loading="lazy"` image below the fold, so on any populated page
+    the number described something no visitor experiences — and the budget of
+    20 was measured, in the comment's own words, at "14-15", which was the size
+    of this site when the database was EMPTY.
+
+    The moment there was content to show, the metric started failing and stayed
+    failing for three phases, reported each time as "pre-existing". Phase 19
+    measured it properly: every public route ships exactly ONE eager image (the
+    logo) and lazy-loads the rest, and a real browser at 390px makes 17
+    load-critical requests on the homepage — inside the budget all along.
+
+    So `requests` now counts what the browser actually fetches on load, and
+    `lazyImageCount` is asserted separately, which turns a metric nobody could
+    act on into a genuine guarantee that lazy loading is still in place.
+  */
+  const allImageTags = [...html.matchAll(/<img[^>]*>/g)].map((m) => m[0]);
+  const srcOf = (tag) => (tag.match(/\ssrc="([^"]+)"/) ?? [])[1];
+  const usable = (v) => Boolean(v) && !v.startsWith('data:');
+
+  const eagerFromTags = allImageTags.filter((t) => !/loading="lazy"/.test(t)).map(srcOf).filter(usable);
+  const lazyFromTags = allImageTags.filter((t) => /loading="lazy"/.test(t)).map(srcOf).filter(usable);
+
+  // A preloaded image is fetched immediately by definition.
+  const preloadedImages = [
+    ...html.matchAll(/<link[^>]+rel="preload"[^>]*as="image"[^>]*href="([^"]+)"/g),
+  ].map((m) => m[1]).filter(usable);
+
+  const images = [...eagerFromTags, ...lazyFromTags, ...preloadedImages];
+  const eagerImages = [...eagerFromTags, ...preloadedImages];
 
   return {
     scripts: [...new Set(scripts)],
@@ -146,6 +173,8 @@ export function referencedAssets(html) {
     fonts: [...new Set([...preloadFonts, ...cssFonts])],
     preloadedFonts: [...new Set(preloadFonts)],
     images: [...new Set(images)],
+    /** What a browser fetches on load: everything not `loading="lazy"`. */
+    eagerImages: [...new Set(eagerImages)],
   };
 }
 
@@ -194,7 +223,15 @@ export async function measure(route) {
     fontWire: fonts,
     imageWire: images,
     totalWire: page.wire + js + css + fonts + images,
-    requests: 1 + refs.scripts.length + refs.styles.length + refs.fonts.length + refs.images.length,
+    /*
+      The document, its render-blocking assets, and the images a browser
+      actually fetches on load. Lazy images are reported below, not counted
+      here — see the note in `referencedAssets`.
+    */
+    requests:
+      1 + refs.scripts.length + refs.styles.length + refs.fonts.length + refs.eagerImages.length,
+    eagerImageCount: refs.eagerImages.length,
+    lazyImageCount: refs.images.length - refs.eagerImages.length,
     scriptCount: refs.scripts.length,
     fontCount: refs.fonts.length,
     preloadedFontCount: refs.preloadedFonts.length,

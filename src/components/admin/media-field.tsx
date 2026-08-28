@@ -67,6 +67,7 @@ export function MediaField({
   hint,
   error,
   onChange,
+  required = false,
 }: {
   /** Form field name the parent action reads, e.g. `photoUrl`. */
   name: string;
@@ -77,6 +78,25 @@ export function MediaField({
   error?: string;
   /** Lets a parent mirror the value into its own live preview. */
   onChange?: (path: string) => void;
+  /**
+   * Whether the consuming record can be saved without a photograph.
+   *
+   * ⚠ THIS EXISTS BECAUSE THE FIELD USED TO LIE, IN BOTH DIRECTIONS AT ONCE.
+   *
+   * `(optional)` was appended unconditionally. A gallery entry's `imageUrl` is
+   * NOT NULL and its save action refuses an empty one, so the gallery form had
+   * worked around it by passing `label="Photograph (required)"` — and the
+   * control then rendered, in one line:
+   *
+   *     Photograph (required)(optional)
+   *
+   * The note further up this file warns about exactly this ("shipped one field
+   * whose help text said 'optional' while validation refused it empty"), and
+   * the schema comment on `GalleryItem.imageUrl` says the admin should say so
+   * "in words rather than discovering it at save time". Both were right and
+   * neither was being followed.
+   */
+  required?: boolean;
 }) {
   /*
     CONTROLLED BY THE PARENT, AND THE ACTION IS CALLED DIRECTLY.
@@ -269,7 +289,9 @@ export function MediaField({
     <div className="flex flex-col gap-2">
       <span className="text-small font-medium text-text">
         {label}
-        <span className="ml-2 font-normal text-muted">(optional)</span>
+        <span className="ml-2 font-normal text-muted">
+          {required ? '(required)' : '(optional)'}
+        </span>
       </span>
       {hint ? <p className="text-[13px] text-muted">{hint}</p> : null}
 

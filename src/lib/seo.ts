@@ -154,6 +154,23 @@ export type JsonLdContact = {
    * be the identical mismatch, one field along.
    */
   social?: { youtube: string | null; instagram: string | null };
+  /**
+   * The institute's own email address, resolved from the admin, or null.
+   *
+   * ⚠ THE THIRD FIELD TO NEED THIS NOTE, AND THE ARGUMENT IS UNCHANGED.
+   *
+   * `email` was read straight from `institute.email`, which is pinned to null
+   * in config and has been since Phase 3. Topic 12 made the address editable,
+   * so the moment an institute entered one the contact page and the footer
+   * showed it and the JSON-LD stayed silent — announcing to a search engine
+   * that this organisation has no email while the page printed one.
+   *
+   * Reproduced in Phase 19: saved through the real editor, the footer rendered
+   * `zzqa-office@example.invalid` and the structured data had no `email` key at
+   * all. Exactly the mismatch `coordinates` and `social` were added to prevent,
+   * one field along.
+   */
+  email?: string | null;
 };
 
 /**
@@ -201,7 +218,12 @@ export function instituteJsonLd(contact?: JsonLdContact) {
     telephone: address.phoneE164,
   };
 
-  if (institute.email) data.email = institute.email;
+  /*
+    The resolved value when we were given one, the shipped config otherwise —
+    the same rule `geo` and `sameAs` follow below, for the same reason.
+  */
+  const email = contact ? (contact.email ?? null) : institute.email;
+  if (email) data.email = email;
   if (institute.googleBusinessProfileUrl) {
     data.hasMap = institute.googleBusinessProfileUrl;
   }

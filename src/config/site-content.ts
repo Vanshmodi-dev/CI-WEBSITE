@@ -450,6 +450,29 @@ const ABOUT_FIELDS: readonly EditableField[] = [
     maxLength: 220,
     fallback: `${institute.name} teaches commerce, and only commerce, in ${institute.locality}.`,
   },
+  /*
+    THE TWO SECTION HEADINGS ON /about, ADDED IN PHASE 19.
+
+    Both bodies below have been editable since Phase 15 and their HEADINGS were
+    hard-coded in the page as `title="What we teach"` and `title="Our story"`.
+    A teacher could rewrite the paragraph under a heading and not the heading
+    over it, which reads as a bug rather than a decision — and the equivalent
+    headings on the homepage (`home.section.*.heading`) had been editable since
+    Topic 12, so there was a working precedent and no argument against it.
+
+    They were invisible to the Phase 18 content scan because that scan reads JSX
+    TEXT NODES and these are props. Topic 1 of Phase 19 is the pass that looked
+    at props, metadata and structured data, which is how all three were found.
+  */
+  {
+    key: 'about.whatWeTeachHeading',
+    renders: { route: '/about', section: 'What we teach' },
+    group: 'about',
+    label: 'First section — heading',
+    kind: 'line',
+    maxLength: 60,
+    fallback: 'What we teach',
+  },
   {
     key: 'about.whatWeTeach',
     renders: { route: '/about', section: 'What we teach' },
@@ -469,6 +492,15 @@ const ABOUT_FIELDS: readonly EditableField[] = [
     maxLength: 600,
     fallback:
       'Being commerce-only is the point. Every programme below shares the same subjects at its foundation, so what a student learns for their boards is the same material that carries them into CA Foundation.',
+  },
+  {
+    key: 'about.storyHeading',
+    renders: { route: '/about', section: 'Our story' },
+    group: 'about',
+    label: 'Second section — heading',
+    kind: 'line',
+    maxLength: 60,
+    fallback: 'Our story',
   },
   {
     key: 'about.story',
