@@ -63,6 +63,7 @@ import {
   EXPECTED_PRE_LAUNCH,
 } from '../src/lib/deployment-contract.ts';
 import { unverifiedFacts, AWAITING_CLIENT } from '../src/config/institute.ts';
+import { readS3Config, isLoopbackEndpoint } from '../src/lib/media/s3-config.ts';
 
 /* ============================================================ options ===== */
 
@@ -2114,6 +2115,164 @@ function checkConfiguration() {
   }
 }
 
+/* =================================================== 9b. MEDIA STORAGE ==== */
+
+/**
+ * Can this deployment actually keep a photograph?
+ *
+ * =============================================================================
+ * WHY THIS IS MECHANICAL AND NOT A CHECKLIST LINE
+ * =============================================================================
+ * Before Phase 17 the answer to "is media storage configured" lived in a
+ * human checklist. A checklist item cannot tell the difference between a
+ * correctly configured bucket, an empty configuration, and three of four
+ * secrets pasted into a dashboard — and the third of those is the one that
+ * loses a child's photograph while showing a green tick.
+ *
+ * So every part of it that can be decided from the configuration is decided
+ * here. What CANNOT be decided here is whether the credentials actually work,
+ * because that needs a network call to a real provider with real keys. That is
+ * a deliberate boundary and is reported as such rather than guessed.
+ */
+function checkMediaStorage() {
+  say('');
+  say('--- 9b. MEDIA STORAGE ---');
+
+  const verdict = readS3Config();
+  const ephemeral = Boolean(
+    env.VERCEL || env.AWS_LAMBDA_FUNCTION_NAME || env.NETLIFY || env.CF_PAGES,
+  );
+
+  /* P-MEDIA-01 - the configuration is whole, or absent, never half. */
+  if (verdict.state === 'partial') {
+    fail(
+      'P-MEDIA-01',
+      'media storage configuration is complete or absent, never partial',
+      `missing: ${verdict.missing.join(', ')}`,
+      'Set all four MEDIA_S3_* variables or none. A partial configuration is refused at ' +
+        'runtime rather than falling back to local disk, which on an ephemeral host loses ' +
+        'every photograph at the next deploy.',
+    );
+  } else if (verdict.state === 'invalid') {
+    fail(
+      'P-MEDIA-01',
+      'media storage configuration is complete or absent, never partial',
+      verdict.reason,
+      'Correct MEDIA_S3_ENDPOINT / MEDIA_S3_BUCKET. The endpoint is the service address ' +
+        'with no bucket name and no path.',
+    );
+  } else {
+    pass(
+      'P-MEDIA-01',
+      'media storage configuration is complete or absent, never partial',
+      verdict.state === 'ready' ? 'all four variables present' : 'none set',
+    );
+  }
+
+  /* P-MEDIA-02 - an ephemeral host MUST have durable storage. */
+  if (ephemeral && verdict.state !== 'ready') {
+    fail(
+      'P-MEDIA-02',
+      'an ephemeral host has durable media storage',
+      'the filesystem is discarded between deploys and no object storage is configured',
+      'Provision an S3-compatible bucket (Cloudflare R2 is the documented recommendation) ' +
+        'and set the four MEDIA_S3_* variables. Until then every upload is refused, which ' +
+        'is correct but means the media feature does not work.',
+    );
+  } else if (!ephemeral && verdict.state !== 'ready') {
+    record(
+      'P-MEDIA-02',
+      'an ephemeral host has durable media storage',
+      'NOT APPLICABLE',
+      'this host keeps its filesystem, so local storage is durable here',
+      '',
+    );
+  } else {
+    pass('P-MEDIA-02', 'an ephemeral host has durable media storage', 'object storage configured');
+  }
+
+  /*
+    P-MEDIA-03 - storage on loopback is local disk wearing a different hat.
+
+    `http://127.0.0.1:9000` is a legitimate MinIO deployment on a VPS, which is
+    why the configuration check allows it. On a host whose disk is discarded it
+    is not storage at all, and it would pass P-MEDIA-01 and P-MEDIA-02 while
+    losing everything, so it is refused explicitly.
+  */
+  if (verdict.state === 'ready' && isLoopbackEndpoint(verdict.config.endpoint)) {
+    if (ephemeral) {
+      fail(
+        'P-MEDIA-03',
+        'media storage is not on a disk this host will discard',
+        'MEDIA_S3_ENDPOINT points at loopback on an ephemeral host',
+        'Loopback storage on a serverless host is local disk by another name. Point it at ' +
+          'a real bucket.',
+      );
+    } else {
+      warn(
+        'P-MEDIA-03',
+        'media storage is not on a disk this host will discard',
+        'storage is on loopback (a self-hosted MinIO or similar)',
+        'Legitimate on a machine you control. Make sure that machine is backed up: nothing ' +
+          'else holds these photographs.',
+      );
+    }
+  } else {
+    pass('P-MEDIA-03', 'media storage is not on a disk this host will discard');
+  }
+
+  /* P-MEDIA-04 - the endpoint carries no credential, and https off-machine. */
+  if (verdict.state === 'ready') {
+    const endpoint = verdict.config.endpoint;
+    const hasCredential = /:\/\/[^/@]*@/.test(endpoint);
+    const insecure = endpoint.startsWith('http://') && !isLoopbackEndpoint(endpoint);
+    if (hasCredential || insecure) {
+      fail(
+        'P-MEDIA-04',
+        'the storage endpoint is safe to transmit credentials to',
+        hasCredential ? 'the endpoint embeds a credential' : 'the endpoint is plain http',
+        'Use a bare https:// service address. The keys go in MEDIA_S3_ACCESS_KEY_ID and ' +
+          'MEDIA_S3_SECRET_ACCESS_KEY, never in the URL.',
+      );
+    } else {
+      pass('P-MEDIA-04', 'the storage endpoint is safe to transmit credentials to');
+    }
+  } else {
+    record(
+      'P-MEDIA-04',
+      'the storage endpoint is safe to transmit credentials to',
+      'NOT APPLICABLE',
+      'no endpoint configured',
+      '',
+    );
+  }
+
+  /*
+    P-MEDIA-05 - whether the credentials WORK is not knowable from here.
+
+    Reported honestly rather than guessed. A pre-flight check that claimed to
+    have verified a bucket it never contacted would be worse than no check.
+  */
+  if (verdict.state === 'ready') {
+    record(
+      'P-MEDIA-05',
+      'the storage credentials are known to work',
+      'NOT TESTED',
+      'configuration is well-formed; reaching the bucket needs a live network call',
+      'After deploying, upload one photograph through Admin -> Photos and confirm it appears. ' +
+        'That is the only proof the credentials are right.',
+    );
+  } else {
+    record(
+      'P-MEDIA-05',
+      'the storage credentials are known to work',
+      'NOT APPLICABLE',
+      'no credentials configured',
+      '',
+    );
+  }
+}
+
 /* ======================================================== 10. SUMMARY ==== */
 
 function summarise() {
@@ -2225,6 +2384,7 @@ checkBuildArtefacts();
 checkBuildTimeEnvironment();
 checkRoutes();
 checkConfiguration();
+checkMediaStorage();
 
 const isBlocked = summarise();
 exit(isBlocked ? 1 : 0);

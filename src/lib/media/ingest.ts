@@ -12,8 +12,8 @@ import {
   decideFormat,
   mediaPath,
   type ImageFormat,
-} from './format';
-import { getMediaStore } from './store';
+} from './format.ts';
+import { getMediaStore } from './store.ts';
 import { logUnexpected } from '@/lib/log';
 
 /**
@@ -201,7 +201,15 @@ export async function ingestImage(file: File): Promise<IngestResult> {
   const store = getMediaStore();
   let deduplicated = false;
   try {
-    deduplicated = (await store.get(key)) !== null;
+    /*
+      `exists`, not `get`.
+
+      This asked the question with a full read until Phase 17, which was free on
+      local disk and absurd on remote storage: every upload downloaded an entire
+      photograph purely to discover whether it was already there. A HEAD is one
+      request and the same answer.
+    */
+    deduplicated = await store.exists(key);
     if (!deduplicated) {
       await store.put(key, output, CONTENT_TYPE_FOR[outFormat]);
     }

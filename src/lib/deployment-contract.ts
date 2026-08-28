@@ -146,6 +146,72 @@ export const ENV_CONTRACT: readonly EnvSpec[] = [
     purpose: 'Where enquiry notifications would go, once notifications are wired.',
     remediation: 'Set it only alongside RESEND_API_KEY.',
   },
+
+  /*
+    ===========================================================================
+    MEDIA STORAGE (Phase 17)
+    ===========================================================================
+    All four are OPTIONAL as a group and MANDATORY as a set. Nothing set means a
+    developer's machine, where local disk is correct. All four set means real
+    object storage. THREE set is a mistake, and `readS3Config()` refuses rather
+    than falling back — a half-configured deployment that quietly wrote to a
+    disk it is about to lose is exactly the failure Topic 5 declined to ship.
+
+    The pre-flight check enforces the same rule mechanically (P-MEDIA-01..05),
+    so this is not a note somebody has to remember to act on.
+  */
+  {
+    name: 'MEDIA_S3_ENDPOINT',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose:
+      'S3-compatible storage endpoint, e.g. https://<account>.r2.cloudflarestorage.com. ' +
+      'The service address only - no bucket name, no path.',
+    remediation:
+      'Set all four MEDIA_S3_* variables together, or none of them. Photographs are ' +
+      'lost on the next deploy if an ephemeral host has no durable storage.',
+  },
+  {
+    name: 'MEDIA_S3_BUCKET',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose: 'The bucket photographs are stored in. Must NOT be publicly listable.',
+    remediation:
+      'Create a private bucket. Objects are served through /media/[key], never directly, ' +
+      'so the bucket needs no public access at all.',
+  },
+  {
+    name: 'MEDIA_S3_ACCESS_KEY_ID',
+    requirement: 'optional',
+    secret: true,
+    clientExposed: false,
+    purpose: 'Access key id for the storage bucket.',
+    remediation:
+      'Issue a token scoped to this ONE bucket with object read/write only. ' +
+      'Never an account-wide key.',
+  },
+  {
+    name: 'MEDIA_S3_SECRET_ACCESS_KEY',
+    requirement: 'optional',
+    secret: true,
+    clientExposed: false,
+    purpose: 'Secret key for the storage bucket. Signs every request; never transmitted.',
+    remediation:
+      'Store it only in the host\'s environment settings. If it ever appears in a ' +
+      'repository or a log, rotate it first and worry about history second.',
+  },
+  {
+    name: 'MEDIA_S3_REGION',
+    requirement: 'optional',
+    secret: false,
+    clientExposed: false,
+    purpose:
+      'SigV4 signing region. Defaults to "auto", which is what Cloudflare R2 wants. ' +
+      'A real AWS S3 bucket needs its own region here.',
+    remediation: 'Leave unset for R2. Set it to the bucket region for AWS S3.',
+  },
 ] as const;
 
 /** Names only, for cross-checking against the source tree and `.env.example`. */

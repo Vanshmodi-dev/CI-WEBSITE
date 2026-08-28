@@ -5,7 +5,7 @@ import { getPrisma, isDatabaseConfigured } from '@/lib/db';
 import { PageHeader, Card, Notice, EmptyPanel } from '@/components/admin/ui';
 import { formatDateTime } from '@/lib/admin-format';
 import { mediaPath } from '@/lib/media/format';
-import { getMediaStore, mediaStorageIsProductionReady } from '@/lib/media/store';
+import { getMediaStore, describeMediaStorage } from '@/lib/media/store';
 import { DeleteMediaButton } from './delete-button';
 
 export const metadata: Metadata = { title: 'Photos' };
@@ -67,6 +67,7 @@ export default async function MediaLibraryPage() {
   }
 
   // Reported, not inferred: what storage actually holds versus what is recorded.
+  const storage = describeMediaStorage();
   const storedKeys = new Set(await getMediaStore().list().catch(() => []));
 
   return (
@@ -76,7 +77,16 @@ export default async function MediaLibraryPage() {
         description="Every photo uploaded to this website. Photos are attached to a student or story from that record's own page."
       />
 
-      {!mediaStorageIsProductionReady() ? (
+      {/*
+        WHERE THE PHOTOGRAPHS ACTUALLY GO, said plainly.
+
+        `describeMediaStorage()` was written in Topic 5 with a comment saying it
+        existed "so the pre-flight check and the admin can report the truth" —
+        and then nothing called it for two phases. It is called here now, so the
+        sentence is true and so a teacher can tell at a glance whether their
+        photographs are going somewhere durable.
+      */}
+      {!storage.durable ? (
         <div className="mb-6">
           <Notice tone="warn" title="Photo storage is for testing only on this server">
             <p>
@@ -85,9 +95,19 @@ export default async function MediaLibraryPage() {
               every deployment, so photo storage has to be set up before the
               site goes live. Nothing you upload now will survive that step.
             </p>
+            <p className="mt-2 text-[13px] text-muted">Storing to: {storage.description}</p>
           </Notice>
         </div>
-      ) : null}
+      ) : (
+        <div className="mb-6">
+          <Notice tone="ok" title="Photos are stored safely">
+            <p>
+              Uploaded photos go to permanent storage and survive a deployment.
+            </p>
+            <p className="mt-2 text-[13px] text-muted">Storing to: {storage.description}</p>
+          </Notice>
+        </div>
+      )}
 
       {assets.length === 0 ? (
         <EmptyPanel

@@ -53,6 +53,7 @@ import {
   institute,
 } from '../src/config/institute.ts';
 import { isIndexable, indexingBlockedBecause } from '../src/config/launch.ts';
+import { S3_ENV_VARS } from '../src/lib/media/s3-config.ts';
 
 /* ------------------------------------------------------------ helpers ---- */
 
@@ -142,6 +143,29 @@ describe('environment contract', () => {
     found.delete('NODE_ENV');
     const undocumented = [...found].filter((n) => !ENV_NAMES.includes(n));
     assert.deepEqual(undocumented, [], `Undocumented environment variables: ${undocumented.join(', ')}`);
+  });
+
+  /**
+   * The scan above matches `process.env.NAME` and nothing else, which is a real
+   * hole: a module that does `const env = process.env` and then reads
+   * `env.NAME` is invisible to it. Phase 17 wrote exactly that shape and the
+   * contract test went green while five new variables were undeclared.
+   *
+   * The source was changed to read literal names, and this assertion exists so
+   * the media storage set specifically cannot drift back out of the contract —
+   * it names them from the module that defines them rather than from a copy.
+   */
+  test('every media storage variable is declared in the contract', () => {
+    for (const name of S3_ENV_VARS) {
+      assert.ok(
+        ENV_NAMES.includes(name),
+        `${name} is read by src/lib/media/s3.ts but is not in the deployment contract`,
+      );
+    }
+    assert.ok(
+      ENV_NAMES.includes('MEDIA_S3_REGION'),
+      'MEDIA_S3_REGION is read but not declared',
+    );
   });
 
   test('every required variable appears in .env.example', () => {

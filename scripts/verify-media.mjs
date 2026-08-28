@@ -837,17 +837,36 @@ section('12. CLEANUP');
     which `npm run media:clean` is built to reclaim. A verification run that
     leaves litter on disk every time is not clean, so it sweeps its own.
   */
-  const storeRoot = path.join(process.cwd(), '.media-store');
+  /*
+    ⚠ SWEPT THROUGH THE STORE, NOT THROUGH THE FILESYSTEM.
+
+    This used to `readdir` the local `.media-store` directory directly, which
+    worked precisely as long as photographs lived on local disk. Phase 17 ran
+    this whole suite against object storage and it reported "swept 0 file(s)"
+    while leaving nine real objects orphaned in the bucket — the cleanup was
+    looking at an empty directory and pronouncing itself finished.
+
+    Going through the store means the sweep follows the photographs wherever
+    the run actually put them.
+  */
   let sweptFiles = 0;
   try {
-    for (const entry of await import('node:fs/promises').then((fs) => fs.readdir(storeRoot))) {
-      await rm(path.join(storeRoot, entry), { force: true });
+    const { getMediaStore } = await import('../src/lib/media/store.ts');
+    const store = getMediaStore();
+    for (const key of await store.list()) {
+      await store.remove(key).catch(() => {});
       sweptFiles += 1;
     }
-  } catch {
-    /* No store directory: nothing to sweep. */
+  } catch (error) {
+    /*
+      Reported, never swallowed. The first version of this hid the failure in a
+      bare catch, and when the script was run WITHOUT `--conditions=react-server`
+      the `server-only` guard threw on import — so the sweep did nothing at all
+      and still printed a reassuring zero.
+    */
+    console.log(`  ! could not sweep the media store: ${String(error).slice(0, 120)}`);
   }
-  console.log(`  swept ${sweptFiles} file(s) from the local store`);
+  console.log(`  swept ${sweptFiles} object(s) from the media store`);
   check(
     (await prisma.topper.count({ where: { studentName: { startsWith: 'ZZMEDIA' } } })) === 0,
     'no ZZMEDIA records remain',

@@ -95,28 +95,135 @@ earns its place, and `npm audit` reports 0 vulnerabilities.
 
 ## Photo storage — the decision
 
-**Current state:** the admin accepts a *path* to an image already in `/public`.
-Validated by `isSafePhotoPath()` (hardened this phase — it previously accepted
-`/../../etc/passwd` and `//evil.com`) and covered by unit tests.
+> **Corrected 28 Aug 2026 (Phase 16, Topic 12).** Everything this section said
+> before that date described the state of the project in Phase 7 and had been
+> wrong since Topic 5 built the upload system. It claimed the admin accepted "a
+> path to an image already in `/public`", that "the teacher cannot upload", and
+> that an upload pipeline was "not built now". All three were false, and the
+> list of requirements "when built" was a list of things already implemented.
+> A costing document that misdescribes what exists is how a launch decision gets
+> made on the wrong facts, so it is corrected here rather than annotated.
 
-**This works, but the teacher cannot upload.** They would have to send a file to
-a developer, which is exactly the dependency the admin panel exists to remove.
+### What exists today
 
-**Recommended when photos exist: Vercel Blob.** ~₹0 for this volume, integrates
-with the existing hosting, no new vendor.
+The upload pipeline is **built and tested** (`src/lib/media/`, 112 assertions in
+`npm run verify:media`). A teacher uploads from `/admin/media` or from any form
+with a photo field, and the file goes through:
 
-Requirements when built — **student photographs deserve particular care**:
+| Stage | What happens |
+| --- | --- |
+| Declared type | Refused unless jpeg/png/webp/avif |
+| Magic bytes | Checked **before** any decoder sees the file, so a renamed `.exe` or an SVG polyglot never reaches `sharp` |
+| Dimensions | Read from metadata before pixel work; a decompression bomb is refused cheaply |
+| Re-encode | Always. The bytes served are ours, never the bytes uploaded |
+| EXIF | Orientation applied, then **all metadata dropped — including GPS** |
+| Naming | Content hash, 32 hex characters. The uploaded filename is never trusted or stored |
+| Size | Capped on the way in, and again on the stored result |
+| Serving | `/media/[key]`, a route handler that refuses any key it did not issue |
 
-- server-issued upload tokens, never a client-side key
-- MIME **and** magic-byte validation, not just the file extension
-- re-encode through `sharp` so an uploaded file is never served back as-is
-- randomised filenames; the original name is never trusted
-- size cap (~2 MB) and dimension cap
-- **delete the file when the record is deleted** — an orphaned photo of a minor
-  sitting in public storage is exactly the failure this project guards against
+So the requirement list that used to sit here as future work is done.
 
-Estimated 1 day. Not built now because there are no photos to store, and an
-upload pipeline for zero files is speculative work.
+### What is missing, and it is the only thing
+
+**A bucket.** Phase 17 built the adapter; nobody has opened an account.
+
+`MediaStore` now has four implementations (`src/lib/media/store.ts`):
+
+| Implementation | Chosen when |
+| --- | --- |
+| `S3MediaStore` | All four `MEDIA_S3_*` variables are set. Real object storage |
+| `LocalDiskStore` | Nothing set, and the host keeps its filesystem. A developer |
+| `UnconfiguredStore` | Nothing set, and the host discards its filesystem. Refuses |
+| `MisconfiguredStore` | **Some** variables set. Refuses, everywhere, always |
+
+That last row is the one that matters. Three of four secrets is somebody
+part-way through configuring a deployment, and falling back to local disk there
+would accept uploads, display them correctly, and lose every one at the next
+deploy. It is an error, never a fallback — enforced at runtime and again by
+`P-MEDIA-01` in pre-flight.
+
+**Opening the account is a HUMAN DECISION and remains a LAUNCH BLOCKER.** No
+credential was invented and no provider was activated from inside this project.
+
+### Evaluating the options
+
+Pricing verified against the providers' own documentation on 28 August 2026.
+Judged on what actually matters for photographs that may include children.
+
+| | Cloudflare R2 | Backblaze B2 | Vercel Blob | AWS S3 |
+| --- | --- | --- | --- | --- |
+| Free tier | **10 GB/month** | **10 GB, permanent** | Hobby allowance | 5 GB, first 12 months only |
+| Egress | **Free, unmetered** | Free to 3x stored, then $0.01/GB; free via Cloudflare CDN | Counts against the plan | **Charged — the trap** |
+| Storage beyond free | $0.015/GB-month | ~$0.006/GB-month | Plan-dependent | ~$0.023/GB-month |
+| Operations | 1M writes + 10M reads free/month | Cheap per-call | Simple + advanced ops metered | Metered |
+| S3-compatible | **Yes** | **Yes** | **No — proprietary SDK** | Yes (it is S3) |
+| Lock-in | Low | Low | **High** | Low |
+| Private objects | Yes | Yes | Yes | Yes |
+| Card required | **Yes, even on the free tier** | Yes | Existing Vercel account | Yes |
+
+**Recommendation: Cloudflare R2.**
+
+Two things decide it. Egress is free and unmetered, which removes the single
+cost that can surprise a small institute — a gallery page that gets shared
+widely turns a ₹0 bill into a real one, with no warning, on any metered
+provider. And it speaks the S3 API, so the provider is a configuration value
+rather than an architecture.
+
+**Vercel Blob was seriously considered and rejected**, despite being the least
+work and the incumbent recommendation in this document. It is not
+S3-compatible — it has its own SDK — which is maximum lock-in for the one part
+of this system holding data that cannot be regenerated. And its Hobby tier does
+not degrade when limits are reached, it **cuts off**: the documentation is
+explicit that access is lost until thirty days have passed. Photographs of
+students becoming unreachable for up to a month is not a failure mode worth
+accepting to save half a day of work.
+
+AWS S3 is excluded for charging egress, which is exactly what a near-zero-budget
+project should design out.
+
+### What it will actually cost
+
+Photographs are re-encoded to a 1920px longest edge before storage, which puts
+them around 300 KB each.
+
+| | Free tier | This institute, realistically |
+| --- | --- | --- |
+| Storage | 10 GB | ~30,000 photographs would fit. A few hundred is plausible |
+| Writes (Class A) | 1M/month | A handful a week |
+| Reads (Class B) | 10M/month | Served through `/media/[key]` with a one-year immutable cache and Next's image cache in front, so requests that reach the bucket at all are rare |
+
+**Expected recurring cost: ₹0**, with roughly two orders of magnitude of
+headroom on every axis.
+
+### The adapter, and why there is no SDK
+
+`@aws-sdk/client-s3` was rejected. It pulls in dozens of transitive packages to
+sign four kinds of request, and that weight is paid on every serverless cold
+start. AWS Signature Version 4 is a documented algorithm over `node:crypto`,
+which already ships with the runtime, so `src/lib/media/sigv4.ts` implements it
+in about sixty lines and **adds zero dependencies**.
+
+The signing key derivation is checked against the worked example published in
+AWS's own SigV4 documentation (`tests/sigv4.test.ts`), which is an external fact
+this project cannot accidentally satisfy.
+
+### The orphan question, answered honestly
+
+Deleting a faculty member, a gallery item or a result **does not delete the
+photograph**. That is deliberate and recorded in the delete actions: the same
+bytes may be referenced by another record, and the media library refuses to
+delete a file anything still points at. An orphaned file is invisible and
+recoverable; a broken reference is neither.
+
+The consequence is that unreferenced files accumulate. `npm run media:audit`
+reports them and `npm run media:clean` reclaims them. **That is a manual step,
+and on a hosted deployment nothing runs it automatically yet** — worth knowing
+before it is described as automatic.
+
+**Consent withdrawal is different and is not left to a cleanup script.** Untick
+the permission on a gallery item and it comes off the website on save, enforced
+by a database CHECK constraint rather than by the form. The file remaining in
+storage is not a publication.
 
 ---
 

@@ -32,14 +32,49 @@
  */
 
 import { env, argv, exit } from 'node:process';
-import { readdir, unlink, stat } from 'node:fs/promises';
-import path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
-import { isMediaKey, keyFromPath, mediaPath } from '../src/lib/media/format.ts';
+import { keyFromPath, mediaPath } from '../src/lib/media/format.ts';
+import { getMediaStore } from '../src/lib/media/store.ts';
 
 const CLEAN = argv.includes('--clean');
-const ROOT = path.join(process.cwd(), '.media-store');
+/*
+  ⚠ THROUGH THE STORE, NOT THROUGH THE FILESYSTEM.
+
+  This script used to `readdir` a hard-coded `.media-store` directory and
+  `unlink` out of it. That worked for exactly one deployment shape — a machine
+  keeping its own disk — and would have been silently useless the moment
+  photographs moved to object storage: every stored object would have been
+  reported as a MISSING FILE, and `--clean` would have had nothing to clean
+  while real orphans accumulated in the bucket.
+
+  Going through `getMediaStore()` means the audit follows the photographs
+  wherever they actually live.
+
+  Run with the react-server condition, so `server-only` resolves to its empty
+  module:
+
+    node --conditions=react-server scripts/media-audit.mjs
+*/
+const store = getMediaStore();
+
+/**
+ * How recently uploaded an object has to be before cleanup leaves it alone.
+ *
+ * ⚠ THIS CLOSES A REAL RACE.
+ *
+ * An upload writes the OBJECT first and the database row second — deliberately,
+ * so that a half-failure leaves a recoverable orphan rather than a broken
+ * reference. The consequence is that between those two steps a perfectly good
+ * photograph is indistinguishable from an orphan, and a `--clean` running at
+ * that moment would delete a photograph the teacher had just been told was
+ * saved.
+ *
+ * An hour is far longer than the window really is (milliseconds locally, a
+ * network round trip remotely) and costs nothing: an orphan that survives one
+ * extra hour is an orphan cleaned on the next run.
+ */
+const GRACE_MS = 60 * 60 * 1000;
 
 if (!env.DATABASE_URL) {
   console.error('DATABASE_URL is not set.');
@@ -53,7 +88,7 @@ const prisma = new PrismaClient({
 /** Keys physically present. Sidecar `.json` files are ignored. */
 async function storedKeys() {
   try {
-    return (await readdir(ROOT)).filter((entry) => isMediaKey(entry));
+    return await store.list();
   } catch {
     return [];
   }
@@ -124,21 +159,20 @@ const brokenRefs = [...referencedBy.entries()].filter(([key]) => !stored.has(key
 const unreferenced = rows.filter((row) => !referencedBy.has(row.key));
 
 console.log('\n=== MEDIA AUDIT ===');
-console.log(`  store            ${ROOT}`);
+console.log(`  store            ${store.describe()}`);
 console.log(`  files on disk    ${files.length}`);
 console.log(`  rows recorded    ${rows.length}`);
 console.log(`  referenced keys  ${referencedBy.size}`);
 
 console.log('\n--- orphan files (stored, no row) ---');
 if (orphanFiles.length === 0) console.log('  none');
+const now = Date.now();
+const orphanAges = new Map();
 for (const key of orphanFiles) {
-  let size = 0;
-  try {
-    size = (await stat(path.join(ROOT, key))).size;
-  } catch {
-    /* raced with a delete; the size is cosmetic */
-  }
-  console.log(`  ${key}  ${Math.round(size / 1024)} KB`);
+  const when = await store.lastModified(key).catch(() => null);
+  orphanAges.set(key, when);
+  const age = when ? `${Math.round((now - when.getTime()) / 60000)} min old` : 'age unknown';
+  console.log(`  ${key}  ${age}`);
 }
 
 console.log('\n--- missing files (row exists, bytes gone) ---');
@@ -167,11 +201,26 @@ if (CLEAN) {
     published page, not a job for a cleanup script.
   */
   let removed = 0;
+  let skipped = 0;
   for (const key of orphanFiles) {
-    await unlink(path.join(ROOT, key)).catch(() => {});
-    await unlink(path.join(ROOT, `${key}.json`)).catch(() => {});
+    /*
+      An object younger than the grace period may be an upload in flight, whose
+      database row is about to be written. Age unknown is treated the same way:
+      when the store cannot say how old something is, the safe answer is to
+      leave it and report it, not to delete it.
+    */
+    const when = orphanAges.get(key) ?? null;
+    if (!when || now - when.getTime() < GRACE_MS) {
+      skipped += 1;
+      console.log(`  kept    ${key}  (uploaded too recently to be sure it is an orphan)`);
+      continue;
+    }
+    await store.remove(key).catch(() => {});
     removed += 1;
     console.log(`  removed ${key}`);
+  }
+  if (skipped > 0) {
+    console.log(`\n  ${skipped} recent orphan(s) left alone. Re-run later to reclaim them.`);
   }
   console.log(`  ${removed} orphan file(s) removed`);
 } else if (orphanFiles.length > 0) {

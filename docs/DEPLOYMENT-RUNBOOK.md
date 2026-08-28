@@ -173,6 +173,62 @@ Expect `P-ENV-*` all PASS. The database section will still fail until Step 5.
 
 ---
 
+### Step 4b — Provision media storage
+
+> **HUMAN ACTION REQUIRED.** This needs an account nobody but the owner can
+> open. Skip it only if photographs will never be uploaded — the site works
+> without it, and every upload is refused rather than lost.
+
+Photographs are the one thing that cannot live in PostgreSQL and cannot live on
+the server's disk. On Vercel, and on every serverless host, the filesystem is
+discarded between deploys, so a photograph written to disk survives until the
+next deployment and then silently disappears.
+
+**Cloudflare R2 is the recommendation**, for two reasons that are about cost
+rather than fashion: its egress is free and unmetered, and it speaks the S3 API,
+so nothing here is locked to it. Backblaze B2, Wasabi, MinIO and AWS S3 all work
+with the same four variables and no code change.
+
+At the volume this institute will produce — photographs are re-encoded to a
+1920px longest edge, roughly 300 KB each — R2's free 10 GB is around thirty
+thousand photographs. **The expected recurring cost is zero.**
+
+1. Create a bucket. **Private.** It needs no public access at all: objects are
+   served through `/media/[key]`, which applies the content type, `nosniff` and
+   an immutable cache header, and refuses any key this application did not
+   issue.
+2. Create an API token scoped to **that one bucket**, with object read and write
+   only. Never an account-wide key.
+3. Set four variables in the host's environment:
+
+   ```
+   MEDIA_S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+   MEDIA_S3_BUCKET=commerce-insight-media
+   MEDIA_S3_ACCESS_KEY_ID=<token id>
+   MEDIA_S3_SECRET_ACCESS_KEY=<token secret>
+   ```
+
+   `MEDIA_S3_REGION` is optional and defaults to `auto`, which is what R2 wants.
+   A real AWS S3 bucket needs its own region here.
+
+> ⚠ **All four together, or none of them.** Three of four is refused at runtime
+> and fails `P-MEDIA-01` in pre-flight. That is deliberate: a half-configured
+> deployment that quietly fell back to local disk would accept uploads, display
+> them correctly, and lose every one at the next deploy — which is the exact
+> failure this design exists to prevent, and it is worse arriving by accident.
+
+**Cloudflare requires a payment card on the account before R2 can be enabled,
+even on the free tier.** Nothing is charged inside the free limits, but the card
+is not optional and the owner has to add it.
+
+Verify with `npm run verify:preflight` — `P-MEDIA-01` to `P-MEDIA-04` check the
+configuration mechanically. `P-MEDIA-05` reports **NOT TESTED**, honestly:
+whether the credentials actually work cannot be known without a live call, so
+after deploying, upload one photograph through **Admin → Photos** and confirm it
+appears. That is the only proof.
+
+---
+
 ### Step 5 — Apply the migration
 
 ```bash
@@ -375,11 +431,19 @@ has been performed.
 | Before a migration | Take a branch/snapshot manually. Instant, free, and a perfect rollback point. | Deployer |
 | Accidental deletion | Point-in-time restore to just before it. **This is the realistic failure**: a teacher deleting a student record. | Deployer |
 | Off-site copy | `pg_dump` monthly to local storage, once real data exists. | Institute + agency |
+| **Photographs** | **Not in the database.** They live in the object storage bucket, and `pg_dump` does not touch them. Enable the provider's versioning or object lifecycle retention on the bucket, or copy it periodically with `rclone`. | Institute + agency |
 | Restore testing | Restore into a scratch database and run `verify:preflight` against it. An untested backup is a hope. | Agency, quarterly |
 
 > **Student records cannot be reconstructed.** The marks came from a physical
 > result and the consent came from a signed form. Once real data exists, a
 > monthly `pg_dump` stops being optional.
+
+> ⚠ **A database backup is not a backup of the photographs.** They are the one
+> kind of content this site holds that lives outside PostgreSQL. Restoring the
+> database into an empty bucket gives every record a broken image and no way to
+> tell what was lost — `npm run media:audit` will report them as BROKEN
+> REFERENCES, which is a diagnosis rather than a recovery. The bucket needs its
+> own retention.
 
 > ⚠ Deleting a topper **cascades** to their subject marks (`ON DELETE CASCADE`,
 > verified by `P-DB-08`). "Hide from website" is offered separately and is

@@ -250,3 +250,26 @@ Only after **every** 🔴 and 🟠 item above.
 | H · Launch | 7 | — |
 
 **54 items, none of which an agency can tick on the institute's behalf.**
+
+---
+
+## Media storage — HUMAN ACTION REQUIRED
+
+Photographs cannot be stored on the web server: its filesystem is discarded on
+every deployment. They need an object storage bucket, and opening the account
+is the one part of this nobody else can do.
+
+| # | Action | Why it matters | Done |
+| --- | --- | --- | --- |
+| M1 | Create a Cloudflare account and enable R2 | The recommended option: free egress, an S3-compatible API, and roughly thirty thousand photographs inside the free tier | ☐ |
+| M2 | Add a payment card | Cloudflare requires one before R2 can be enabled, **even on the free tier**. Nothing is charged inside the free limits | ☐ |
+| M3 | Create a **private** bucket | Objects are served through the site, never directly. A public bucket would hand out a directory of student photographs to anyone who guessed the hostname | ☐ |
+| M4 | Create an API token scoped to that one bucket, read + write only | An account-wide key in a web application's environment is a much larger blast radius than this needs | ☐ |
+| M5 | Set all four `MEDIA_S3_*` variables in the host | **All four or none.** Three of four is refused, on purpose | ☐ |
+| M6 | Run `npm run verify:preflight` and confirm `P-MEDIA-01`…`04` pass | The configuration is checked mechanically, not by eye | ☐ |
+| M7 | Upload one photograph through Admin → Photos and confirm it appears | `P-MEDIA-05` reports NOT TESTED because credentials cannot be verified without a live call. **This step is that call** | ☐ |
+| M8 | Turn on bucket versioning or a retention policy | A `pg_dump` does not back up photographs. Nothing else holds them | ☐ |
+
+> Until M1–M5 are done, uploads are **refused with an explanation** rather than
+> accepted and lost. The site works; the photo feature does not. That is the
+> intended behaviour, not a bug to work around.

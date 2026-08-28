@@ -48,15 +48,16 @@
     "verify:cms": "node scripts/verify-cms.mjs",
     "verify:preflight": "node scripts/verify-preflight.mjs",
     "verify:production": "node scripts/verify-production.mjs",
-    "verify:media": "node scripts/verify-media.mjs",
-    "media:audit": "node scripts/media-audit.mjs",
-    "media:clean": "node scripts/media-audit.mjs --clean",
+    "verify:media": "node --conditions=react-server scripts/verify-media.mjs",
+    "media:audit": "node --conditions=react-server scripts/media-audit.mjs",
+    "media:clean": "node --conditions=react-server scripts/media-audit.mjs --clean",
     "verify:faculty": "node scripts/verify-faculty.mjs",
     "verify:reviews": "node scripts/verify-reviews.mjs",
     "verify:gallery": "node scripts/verify-gallery.mjs",
     "verify:videos": "node scripts/verify-videos.mjs",
     "verify:map": "node scripts/verify-map.mjs",
-    "verify:admin": "node scripts/verify-admin.mjs"
+    "verify:admin": "node scripts/verify-admin.mjs",
+    "verify:storage": "node --conditions=react-server scripts/verify-storage.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
