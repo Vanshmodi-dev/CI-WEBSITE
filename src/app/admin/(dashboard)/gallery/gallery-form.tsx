@@ -1,14 +1,13 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import { saveGalleryItem, type GalleryFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { MediaField } from '@/components/admin/media-field';
 import { Field, inputClass, selectClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 import {
   GALLERY_CATEGORIES,
   CATEGORY_LABEL,
@@ -221,23 +220,19 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
         </p>
 
         <div className="flex flex-col gap-5">
-          <div className="flex items-start gap-3">
-            <input
-              id="g-showsPeople"
-              name="showsPeople"
-              type="checkbox"
-              checked={showsPeople}
-              onChange={(e) => setShowsPeople(e.target.checked)}
-              className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-            />
-            <label htmlFor="g-showsPeople" className="text-small text-text">
-              You can recognise somebody in this photograph
-              <span className="mt-0.5 block text-[13px] text-muted">
+          <Checkbox
+            id="g-showsPeople"
+            name="showsPeople"
+            checked={showsPeople}
+            onChange={(e) => setShowsPeople(e.target.checked)}
+            label="You can recognise somebody in this photograph"
+            description={
+              <>
                 Leave this ticked unless the photograph is only of the building,
                 a classroom or equipment. If you are not sure, leave it ticked.
-              </span>
-            </label>
-          </div>
+              </>
+            }
+          />
 
           {/*
             The consent fields stay MOUNTED when `showsPeople` is unticked, and
@@ -264,23 +259,19 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
               )}
             </Field>
 
-            <div className="flex items-start gap-3">
-              <input
-                id="g-consentPhoto"
-                name="consentPhoto"
-                type="checkbox"
-                checked={consentPhoto}
-                onChange={(e) => setConsentPhoto(e.target.checked)}
-                className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-              />
-              <label htmlFor="g-consentPhoto" className="text-small text-text">
-                Permission to publish this photograph
-                <span className="mt-0.5 block text-[13px] text-muted">
+            <Checkbox
+              id="g-consentPhoto"
+              name="consentPhoto"
+              checked={consentPhoto}
+              onChange={(e) => setConsentPhoto(e.target.checked)}
+              label="Permission to publish this photograph"
+              description={
+                <>
                   Untick this if permission is withdrawn. The photograph comes
                   off the website straight away when you save.
-                </span>
-              </label>
-            </div>
+                </>
+              }
+            />
           </div>
         </div>
       </Card>
@@ -331,47 +322,29 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
             </Notice>
           ) : null}
 
-          <div className="flex items-start gap-3">
-            <input
-              id="g-published"
-              name="published"
-              type="checkbox"
-              defaultChecked={
-                state.values
-                  ? state.values.published === 'on'
-                  : (values.published ?? false)
-              }
-              className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-            />
-            <label htmlFor="g-published" className="text-small text-text">
-              Show this photograph on the website
-              <span className="mt-0.5 block text-[13px] text-muted">
+          <Checkbox
+            id="g-published"
+            name="published"
+            defaultChecked={
+              state.values ? state.values.published === 'on' : (values.published ?? false)
+            }
+            label="Show this photograph on the website"
+            description={
+              <>
                 Nothing appears publicly until this is ticked and the permission
                 above is recorded.
-              </span>
-            </label>
-          </div>
+              </>
+            }
+          />
         </div>
       </Card>
 
-      <div className="flex items-center gap-4">
-        <SaveButton editing={editing} />
-        <Link
-          href="/admin/gallery"
-          className="inline-flex min-h-11 items-center text-small font-medium text-muted hover:text-heading"
-        >
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/gallery"
+        createLabel="Add photograph"
+        editing={editing}
+      />
     </form>
   );
 }
 
-function SaveButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add photograph'}
-    </Button>
-  );
-}

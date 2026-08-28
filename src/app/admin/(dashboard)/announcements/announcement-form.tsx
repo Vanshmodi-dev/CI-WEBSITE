@@ -1,13 +1,12 @@
 'use client';
 
 import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import { saveAnnouncement, type AnnouncementFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { Field, inputClass, textareaClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 
 const initial: AnnouncementFormState = { status: 'idle' };
 
@@ -175,41 +174,23 @@ export function AnnouncementForm({
         <h2 className="font-display text-[18px] font-semibold text-heading">
           Visibility
         </h2>
-        <label className="mt-4 flex items-start gap-3 text-small text-text">
-          <input
-            type="checkbox"
-            name="published"
-            defaultChecked={
-                state.values
-                  ? state.values.published === 'on'
-                  : (values.published ?? false)
-              }
-            className="mt-1 h-4 w-4 shrink-0 rounded-[3px] border-rule-strong accent-navy-800"
-          />
-          <span>
-            <span className="font-medium">Show this on the website</span>
-            <span className="mt-0.5 block text-[13px] text-muted">
-              Leave unticked to save it as a draft and publish later.
-            </span>
-          </span>
-        </label>
+        <Checkbox
+          className="mt-4"
+          name="published"
+          defaultChecked={
+            state.values ? state.values.published === 'on' : (values.published ?? false)
+          }
+          label="Show this on the website"
+          description="Leave unticked to save it as a draft and publish later."
+        />
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton editing={editing} />
-        <Link href="/admin/announcements" className="text-small text-link">
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/announcements"
+        createLabel="Add announcement"
+        editing={editing}
+      />
     </form>
   );
 }
 
-function SubmitButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add announcement'}
-    </Button>
-  );
-}

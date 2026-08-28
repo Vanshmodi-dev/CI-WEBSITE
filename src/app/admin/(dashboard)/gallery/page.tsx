@@ -7,6 +7,7 @@ import { PageHeader, Card, Notice, StatusPill, EmptyPanel } from '@/components/a
 import { isSafePhotoPath } from '@/lib/validation';
 import { CATEGORY_LABEL, describeVisibility, type GalleryCategoryValue } from '@/lib/gallery';
 import { deleteGalleryItem } from './actions';
+import { DeleteButton } from '@/components/admin/delete-button';
 
 export const metadata: Metadata = { title: 'Gallery' };
 export const dynamic = 'force-dynamic';
@@ -213,12 +214,11 @@ export default async function AdminGalleryPage({
                       */}
                       <form action={deleteGalleryItem}>
                         <input type="hidden" name="id" value={item.id} />
-                        <button
-                          type="submit"
-                          className="inline-flex min-h-11 items-center rounded-sm px-3 text-small font-medium text-muted transition-colors hover:text-danger"
-                        >
-                          Remove<span className="sr-only"> {item.alt}</span>
-                        </button>
+                        <DeleteButton
+                          label="Remove"
+                          name={item.alt}
+                          confirmMessage="Remove this photograph?"
+                        />
                       </form>
                     </div>
                   </Card>

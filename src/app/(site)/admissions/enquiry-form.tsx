@@ -6,6 +6,7 @@ import { submitEnquiryAction } from './actions';
 import { initialEnquiryState, type EnquiryFormState } from './form-state';
 import { CLASS_LEVELS, CLASS_LEVEL_LABELS, LIMITS } from '@/lib/validation';
 import { Field, inputClass, selectClass, textareaClass } from '@/components/primitives/field';
+import { Checkbox } from '@/components/primitives/checkbox';
 import { Button } from '@/components/primitives/button';
 // The institute NAME is confirmed brand copy and is not editable, so it stays
 // a static import. Only the contact details arrive as props.
@@ -232,20 +233,24 @@ export function EnquiryForm({
       </Field>
 
       <div className="flex flex-col gap-2">
-        <label className="flex items-start gap-3 text-small text-text">
-          <input
-            type="checkbox"
-            name="consent"
-            value="on"
-            className="mt-1 h-4 w-4 shrink-0 rounded-[3px] border-rule-strong accent-navy-800"
-            aria-describedby={state.errors.consent ? 'consent-error' : undefined}
-            aria-invalid={state.errors.consent ? true : undefined}
-          />
-          <span>
-            I agree that {institute.name} may contact me about this enquiry by
-            phone, WhatsApp or email.
-          </span>
-        </label>
+        {/*
+          The one control a parent MUST tick to send an enquiry, and until
+          Topic 11 the smallest thing on the page at 16x16. The shared
+          primitive is 24x24 with the whole row as the hit area - see the note
+          in `primitives/checkbox.tsx` for why no test had ever measured it.
+        */}
+        <Checkbox
+          name="consent"
+          value="on"
+          aria-describedby={state.errors.consent ? 'consent-error' : undefined}
+          aria-invalid={state.errors.consent ? true : undefined}
+          label={
+            <>
+              I agree that {institute.name} may contact me about this enquiry by
+              phone, WhatsApp or email.
+            </>
+          }
+        />
         {state.errors.consent ? (
           <p id="consent-error" className="text-[13px] font-medium text-danger">
             {state.errors.consent}

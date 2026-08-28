@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute } from '@/config/institute';
 import { pageMetadata, listingIndexing } from '@/lib/seo';
 import { getPublishedGallery, getGalleryCategories } from '@/lib/public-data';
-import { getContactBlock } from '@/lib/site-content';
+import { getSiteContent, getContactBlock } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { GalleryViewer } from '@/components/domain/gallery-viewer';
@@ -117,9 +117,12 @@ export default async function GalleryPage({
 }) {
   const category = readCategory(await searchParams);
 
-  const [categories, contact] = await Promise.all([
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [categories, contact, content] = await Promise.all([
     getGalleryCategories(),
     getContactBlock(),
+    getSiteContent(),
   ]);
 
   /*
@@ -136,13 +139,10 @@ export default async function GalleryPage({
     <>
       <PageHeader
         eyebrow="Gallery"
-        title={<>Inside {institute.name}</>}
+        title={<>{content['page.gallery.title']}</>}
         standfirst={
           visible.length > 0 ? (
-            <>
-              Photographs of the classrooms, the teaching and the days that
-              matter, in {institute.locality}.
-            </>
+            <>{content['page.gallery.standfirst']}</>
           ) : (
             <>
               We would rather show you the real place than a stock photograph of
@@ -214,13 +214,8 @@ export default async function GalleryPage({
 
       <ClosingCta
         id="gallery-cta"
-        title={<>Come and see the rest</>}
-        body={
-          <>
-            Photographs only go so far. We are in {institute.locality}, and you
-            are welcome to visit while teaching is going on.
-          </>
-        }
+        title={<>{content['page.gallery.ctaTitle']}</>}
+        body={<>{content['page.gallery.ctaBody']}</>}
         actions={
           <>
             <Button href="/contact" size="lg">

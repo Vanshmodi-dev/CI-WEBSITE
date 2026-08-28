@@ -1,14 +1,13 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import { saveFaculty, type FacultyFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { MediaField } from '@/components/admin/media-field';
 import { Field, inputClass, textareaClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 
 const initial: FacultyFormState = { status: 'idle' };
 
@@ -214,45 +213,29 @@ export function FacultyForm({ values = {} }: { values?: FacultyValues }) {
             )}
           </Field>
 
-          <div className="flex items-start gap-3">
-            <input
-              id="f-published"
-              name="published"
-              type="checkbox"
-              defaultChecked={
-                state.values ? state.values.published === 'on' : (values.published ?? false)
-              }
-              className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-            />
-            <label htmlFor="f-published" className="text-small text-text">
-              Show this teacher on the website
-              <span className="mt-0.5 block text-[13px] text-muted">
+          <Checkbox
+            id="f-published"
+            name="published"
+            defaultChecked={
+              state.values ? state.values.published === 'on' : (values.published ?? false)
+            }
+            label="Show this teacher on the website"
+            description={
+              <>
                 Leave this unticked to keep working on the entry. Nothing appears
                 publicly until it is ticked.
-              </span>
-            </label>
-          </div>
+              </>
+            }
+          />
         </div>
       </Card>
 
-      <div className="flex items-center gap-4">
-        <SaveButton editing={editing} />
-        <Link
-          href="/admin/faculty"
-          className="inline-flex min-h-11 items-center text-small font-medium text-muted hover:text-heading"
-        >
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/faculty"
+        createLabel="Add teacher"
+        editing={editing}
+      />
     </form>
   );
 }
 
-function SaveButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add teacher'}
-    </Button>
-  );
-}

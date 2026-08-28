@@ -1,6 +1,7 @@
 import { institute, addressFull, publishedCourses } from './institute.ts';
 import { primaryNav, footerNav, HIDDEN_UNTIL_POPULATED } from './nav.ts';
 import { validateCoordinates } from '../lib/location.ts';
+import { validateEmail, validateSocial } from '../lib/contact-links.ts';
 
 /**
  * THE EDITABLE-CONTENT REGISTRY.
@@ -101,6 +102,7 @@ export type FieldGroupId =
   | 'home'
   | 'about'
   | 'courses'
+  | 'pages'
   | 'navigation';
 
 export type FieldGroup = {
@@ -137,6 +139,13 @@ export const FIELD_GROUPS: readonly FieldGroup[] = [
     blurb:
       'A short description for each programme. The programme names and their web addresses are fixed in code.',
     affects: ['/courses'],
+  },
+  {
+    id: 'pages',
+    title: 'Page headings',
+    blurb:
+      'The big heading at the top of each page and the sentence under it. The page addresses themselves are fixed in code.',
+    affects: ['*'],
   },
   {
     id: 'navigation',
@@ -292,6 +301,74 @@ const CONTACT_FIELDS: readonly EditableField[] = [
       : '',
     blankable: true,
     validate: validateCoordinates,
+  },
+  /*
+    EMAIL, AND WHY IT IS EDITABLE RATHER THAN A CODE CONSTANT.
+
+    `institute.email` is `null` and has been since Phase 6, because the
+    previous website published a personal Gmail address (a gaming handle) and
+    nothing may replace it until the institute has a mailbox on its own domain.
+    That reasoning is unchanged and the field ships blank.
+
+    What changed in Topic 12 is WHO CAN FILL IT IN. The address was a code
+    constant, so the day the institute finally has one, publishing it needed a
+    developer, a commit and a deploy — for a single line of text. The owner
+    requirement for this whole project is that the institute can change the
+    website without needing a developer, and an unreachable email address on a
+    coaching site is exactly the kind of thing that stays wrong for months when
+    fixing it requires somebody else's calendar.
+
+    Blank is still the default and blank still renders NOTHING, so the honest
+    empty state is preserved. `institute.email` remains the fallback, so if it
+    is ever given a value in code that value still shows.
+  */
+  {
+    key: 'contact.email',
+    renders: { route: '*', section: 'Email — contact page and footer' },
+    group: 'contact',
+    label: 'Email address',
+    help:
+      'Optional. Use an address on the institute’s own domain — a personal Gmail on a school website looks unprofessional and is easy to lose. Leave blank and no email is shown anywhere.',
+    kind: 'line',
+    maxLength: 120,
+    fallback: institute.email ?? '',
+    blankable: true,
+    validate: validateEmail,
+  },
+  /*
+    SOCIAL LINKS.
+
+    Same argument as the email, plus one of its own: these are the only fields
+    in the registry whose value becomes an `href` pointing off this site, so
+    they are validated by PARSING and comparing the host to a closed set with
+    `===`. See `lib/contact-links.ts` for why `startsWith` is not acceptable
+    here — Topics 9 and 10 both established the rule and both had to.
+  */
+  {
+    key: 'social.youtube',
+    renders: { route: '*', section: 'Follow — footer' },
+    group: 'contact',
+    label: 'YouTube channel',
+    help:
+      'Optional. Paste the address of the institute’s channel, for example https://www.youtube.com/@yourchannel. Leave blank and no YouTube link is shown.',
+    kind: 'line',
+    maxLength: 200,
+    fallback: institute.social.youtube ?? '',
+    blankable: true,
+    validate: validateSocial('youtube'),
+  },
+  {
+    key: 'social.instagram',
+    renders: { route: '*', section: 'Follow — footer' },
+    group: 'contact',
+    label: 'Instagram profile',
+    help:
+      'Optional. Paste the address of the institute’s profile, for example https://www.instagram.com/yourprofile. Leave blank and no Instagram link is shown.',
+    kind: 'line',
+    maxLength: 200,
+    fallback: institute.social.instagram ?? '',
+    blankable: true,
+    validate: validateSocial('instagram'),
   },
 ];
 
@@ -475,11 +552,321 @@ const FOOTER_FIELDS: readonly EditableField[] = footerNav.map((group) => ({
   fallback: group.heading,
 }));
 
+
+/**
+ * The heading and standfirst at the top of each page.
+ *
+ * =============================================================================
+ * WHY THESE BECAME EDITABLE IN TOPIC 12
+ * =============================================================================
+ * The owner requirement for this project is that the institute can change the
+ * website without needing a developer. A content inventory of every public
+ * route found that the words a visitor reads FIRST on each page - the H1 and
+ * the sentence beneath it - were hard-coded in ten page components. The
+ * institute could edit its address and its menu labels, but not the sentence
+ * that decides whether somebody keeps reading.
+ *
+ * `/about` is absent from this table on purpose: it already had `about.title`
+ * and `about.standfirst` from Phase 15, and a second pair of keys for the same
+ * two strings is how a registry starts lying about what it renders.
+ *
+ * =============================================================================
+ * WHAT IS STILL CODE-OWNED, AND WHY
+ * =============================================================================
+ * The EYEBROW above each title stays in code. It is a one-or-two word label the
+ * design uses as a typographic device rather than as prose, and it is exactly
+ * the field that invites a paragraph into a slot built for two words.
+ *
+ * The EMPTY-STATE standfirsts on /gallery, /videos and /reviews also stay in
+ * code. Those pages show different wording when they have nothing to show -
+ * "We would rather show you real reviews than write our own" - and that
+ * sentence is part of the honesty rule the whole rebuild is built on, not
+ * editorial copy the institute should be able to soften. Editing here changes
+ * the populated version, which is the one a visitor normally sees.
+ */
+type PageCopy = {
+  slug: string;
+  route: string;
+  label: string;
+  title: string;
+  /** Absent where the sentence is code-owned. See /reviews below. */
+  standfirst?: string;
+};
+
+const PAGE_COPY: readonly PageCopy[] = [
+  {
+    slug: 'courses',
+    route: '/courses',
+    label: 'Courses',
+    title: 'What we teach',
+    standfirst: `Commerce programmes for school and professional examinations, in ${institute.locality}.`,
+  },
+  {
+    slug: 'faculty',
+    route: '/faculty',
+    label: 'Our teachers',
+    title: 'The people who teach here',
+    standfirst: `Commerce is taught at ${institute.name} by people who teach it every day, in ${institute.locality}.`,
+  },
+  {
+    slug: 'results',
+    route: '/results',
+    label: 'Results',
+    title: 'Our students\u2019 results',
+    standfirst:
+      'Published with each student\u2019s permission. Where a student asked us not to show their name or photograph, we don\u2019t.',
+  },
+  {
+    slug: 'stories',
+    route: '/stories',
+    label: 'Student stories',
+    title: 'How they got there',
+    standfirst:
+      'A result is one number. These are the longer versions \u2014 what was hard, what changed, and how it turned out.',
+  },
+  {
+    slug: 'announcements',
+    route: '/announcements',
+    label: 'Updates',
+    title: 'What\u2019s happening',
+    standfirst: 'Admission dates, batch news and notices from the institute.',
+  },
+  {
+    slug: 'gallery',
+    route: '/gallery',
+    label: 'Gallery',
+    title: `Inside ${institute.name}`,
+    standfirst: `Photographs of the classrooms, the teaching and the days that matter, in ${institute.locality}.`,
+  },
+  {
+    slug: 'videos',
+    route: '/videos',
+    label: 'Videos',
+    title: 'Watch a lesson before you decide',
+    standfirst: `Teaching from ${institute.name}, published on YouTube. The quickest way to judge an institute is to watch someone teach.`,
+  },
+  {
+    slug: 'reviews',
+    route: '/reviews',
+    label: 'Reviews',
+    title: 'What people say',
+    /*
+      NO EDITABLE STANDFIRST ON /reviews, DELIBERATELY.
+
+      The sentence there names the live source the reviews came from
+      (`payload.sourceLabel`) and states that the institute neither
+      writes nor edits them. That is PROVENANCE, not editorial copy -
+      it is the claim the Review Engine exists to make true - and an
+      institute able to reword it could quietly drop the attribution.
+
+      It also could not be a static fallback without losing the source
+      label, so making it editable would have changed what the page says
+      as a side effect of making it editable.
+    */
+  },
+  {
+    slug: 'contact',
+    route: '/contact',
+    label: 'Contact',
+    title: 'Come and see us',
+    standfirst: `We are in ${institute.locality}. Call or message us with any question about programmes, batches or admissions.`,
+  },
+  {
+    slug: 'admissions',
+    route: '/admissions',
+    label: 'Admissions',
+    title: 'Talk to us about joining',
+    /*
+      VERBATIM FROM THE PAGE, not a rewrite.
+
+      A first draft of this table invented a plausible sentence here,
+      because the extraction that built it truncated before the real one.
+      A fallback that does not match the shipped copy silently REWRITES
+      the page the moment the field goes live, on a site whose whole
+      premise is that it does not publish things nobody approved.
+    */
+    standfirst:
+      'Tell us which class or course you are asking about and we will call you back. If you would rather talk straight away, WhatsApp or call us — that is often quicker.',
+  },
+];
+
+const PAGE_FIELDS: readonly EditableField[] = PAGE_COPY.flatMap((page) => [
+  {
+    key: `page.${page.slug}.title`,
+    group: 'pages' as const,
+    renders: { route: page.route, section: 'Page heading' },
+    label: `${page.label}: heading`,
+    help: 'The large heading at the top of the page.',
+    kind: 'line' as const,
+    maxLength: 80,
+    fallback: page.title,
+  },
+  ...(page.standfirst === undefined
+    ? []
+    : [
+        {
+          key: `page.${page.slug}.standfirst`,
+          group: 'pages' as const,
+          renders: { route: page.route, section: 'Page heading' },
+          label: `${page.label}: sentence under the heading`,
+          kind: 'paragraph' as const,
+          maxLength: 260,
+          fallback: page.standfirst,
+        },
+      ]),
+]);
+
+/**
+ * The headings that label each band of the homepage.
+ *
+ * These are the words a visitor scans on the way down the longest page on the
+ * site, and every one of them was hard-coded. The ids are the ones the page
+ * already uses for its `aria-labelledby`, so a key names the same thing the
+ * markup does.
+ */
+const HOME_SECTIONS: readonly { id: string; label: string; title: string }[] = [
+  { id: 'results', label: 'Results', title: 'Our students\u2019 results' },
+  { id: 'batches', label: 'Upcoming batches', title: 'Upcoming batches' },
+  { id: 'stories', label: 'Student stories', title: 'How they got there' },
+  { id: 'faculty', label: 'Teachers', title: 'Who will teach you' },
+  { id: 'reviews', label: 'Reviews', title: 'What people say' },
+  { id: 'videos', label: 'Videos', title: 'Learn beyond the classroom' },
+  { id: 'gallery', label: 'Gallery', title: 'Inside the institute' },
+];
+
+const HOME_SECTION_FIELDS: readonly EditableField[] = HOME_SECTIONS.map((section) => ({
+  key: `home.section.${section.id}.heading`,
+  group: 'home' as const,
+  renders: { route: '/', section: `Homepage section: ${section.label}` },
+  label: `Homepage section: ${section.label}`,
+  help:
+    'The heading on this band of the homepage. The band hides itself when there is nothing to show.',
+  kind: 'line' as const,
+  maxLength: 60,
+  fallback: section.title,
+}));
+
+
+/**
+ * The closing invitation at the foot of each page.
+ *
+ * Every page ends with the same shape: a short heading, a sentence, and two
+ * buttons. The heading and the sentence are the institute's pitch and they were
+ * hard-coded on nine pages.
+ *
+ * ⚠ THE BUTTONS ARE NOT HERE, AND THAT IS THE POINT.
+ *
+ * Their labels and their destinations stay in code together. Splitting them —
+ * an editable label over a fixed destination — produces a button reading
+ * "WhatsApp us" that opens the enquiry form, which is worse than either half
+ * being wrong on its own. The destinations are `/admissions`, `tel:` and a
+ * WhatsApp deep link built from the phone number the institute already
+ * controls, so the thing an owner would actually want to change here is the
+ * phone number, and that is already editable.
+ */
+type ClosingCopy = {
+  slug: string;
+  route: string;
+  label: string;
+  title: string;
+  body: string;
+};
+
+const CLOSING_COPY: readonly ClosingCopy[] = [
+  {
+    slug: 'about',
+    route: '/about',
+    label: 'About',
+    title: 'Come and see the place',
+    body: `The clearest way to judge an institute is to visit it and talk to the people teaching. We are in ${institute.locality}.`,
+  },
+  {
+    slug: 'courses',
+    route: '/courses',
+    label: 'Courses',
+    title: 'Not sure which one fits?',
+    body: 'Tell us which class you are in and what you are aiming for, and we will talk you through the options.',
+  },
+  {
+    slug: 'faculty',
+    route: '/faculty',
+    label: 'Our teachers',
+    title: 'Come and meet them',
+    body: `The clearest way to judge an institute is to talk to the people teaching. We are in ${institute.locality}.`,
+  },
+  {
+    slug: 'results',
+    route: '/results',
+    label: 'Results',
+    title: 'Want to study with us?',
+    body: 'Tell us which class you are in and we will explain how we can help.',
+  },
+  {
+    slug: 'stories',
+    route: '/stories',
+    label: 'Student stories',
+    title: 'Your story could start here',
+    body: 'Talk to us about which programme suits where you are now.',
+  },
+  {
+    slug: 'gallery',
+    route: '/gallery',
+    label: 'Gallery',
+    title: 'Come and see the rest',
+    body: `Photographs only go so far. We are in ${institute.locality}, and you are welcome to visit while teaching is going on.`,
+  },
+  {
+    slug: 'videos',
+    route: '/videos',
+    label: 'Videos',
+    title: 'Come and sit in on a class',
+    body: `A video shows you the teaching. A visit shows you the room, the batch size and the questions students actually ask. We are in ${institute.locality}.`,
+  },
+  {
+    slug: 'reviews',
+    route: '/reviews',
+    label: 'Reviews',
+    title: 'Come and see for yourself',
+    body: `The clearest way to judge an institute is to visit it and talk to the people teaching. We are in ${institute.locality}.`,
+  },
+  {
+    slug: 'contact',
+    route: '/contact',
+    label: 'Contact',
+    title: 'Still deciding?',
+    body: 'Send us an enquiry and we will talk you through the options.',
+  },
+];
+
+const CLOSING_FIELDS: readonly EditableField[] = CLOSING_COPY.flatMap((page) => [
+  {
+    key: `page.${page.slug}.ctaTitle`,
+    group: 'pages' as const,
+    renders: { route: page.route, section: 'Closing invitation' },
+    label: `${page.label}: closing heading`,
+    kind: 'line' as const,
+    maxLength: 70,
+    fallback: page.title,
+  },
+  {
+    key: `page.${page.slug}.ctaBody`,
+    group: 'pages' as const,
+    renders: { route: page.route, section: 'Closing invitation' },
+    label: `${page.label}: closing sentence`,
+    kind: 'paragraph' as const,
+    maxLength: 240,
+    fallback: page.body,
+  },
+]);
+
 export const EDITABLE_FIELDS: readonly EditableField[] = [
   ...CONTACT_FIELDS,
   ...HOME_FIELDS,
+  ...HOME_SECTION_FIELDS,
   ...ABOUT_FIELDS,
   ...COURSE_FIELDS,
+  ...PAGE_FIELDS,
+  ...CLOSING_FIELDS,
   ...NAV_FIELDS,
   ...FOOTER_FIELDS,
 ];
@@ -787,6 +1174,33 @@ export const VERIFICATION_IS_SEPARATE = true;
  * gates nothing: adding a line here does not make anything editable, and
  * removing one does not make anything safe.
  */
+/**
+ * Every public route on this site.
+ *
+ * Exists so that "site chrome" — a field whose `renders.route` is `'*'` — has
+ * something concrete to expand to when the admin saves and the caches need
+ * clearing. `tests/site-content.test.ts` asserts every entry resolves to a
+ * `page.tsx`, so this cannot list a route that does not exist.
+ *
+ * Course pages are appended from `publishedCourses` rather than written out,
+ * for the same reason the sitemap does it: a course must appear here the moment
+ * it is published and never before.
+ */
+export const PUBLIC_ROUTES: readonly string[] = [
+  '/',
+  '/about',
+  '/courses',
+  '/faculty',
+  '/results',
+  '/stories',
+  '/announcements',
+  '/gallery',
+  '/videos',
+  '/reviews',
+  '/contact',
+  '/admissions',
+];
+
 export const CODE_OWNED: ReadonlyArray<{ label: string; why: string }> = [
   {
     label: 'Page web addresses (/courses/ca-foundation and the rest)',
@@ -811,5 +1225,29 @@ export const CODE_OWNED: ReadonlyArray<{ label: string; why: string }> = [
   {
     label: 'Colours, fonts, spacing and layout',
     why: 'Every combination on the site is checked for readable contrast. A colour picker would let one save drop text below the level a partially sighted reader can make out.',
+  },
+  /*
+    ADDED IN TOPIC 12, after an inventory of every public page.
+
+    Page headings, the sentences under them and the closing invitations all
+    BECAME editable in that pass. What follows is what deliberately did not, so
+    this list stays a true account of where the line is rather than a list of
+    things nobody had got to yet.
+  */
+  {
+    label: 'The small label above each heading ("Results", "Our teachers")',
+    why: 'A two-word typographic label rather than a sentence. The slot is built for two words and a paragraph in it breaks the top of the page.',
+  },
+  {
+    label: 'The wording on buttons, and where they go',
+    why: 'These two travel together. An editable label over a fixed destination is how you end up with a button reading "WhatsApp us" that opens the enquiry form. The phone number they dial IS yours to change, under Contact details.',
+  },
+  {
+    label: 'What a page says when it has nothing to show yet',
+    why: 'The gallery, videos and reviews pages say plainly that there is nothing there rather than filling the space. That sentence is the honesty rule the rebuild was commissioned to fix, so it is not something a future owner can soften.',
+  },
+  {
+    label: 'The sentence about where reviews come from',
+    why: 'It names the service the reviews were left on and states that the institute neither writes nor edits them. That is the claim the whole review system exists to make true, so it cannot be reworded from inside the admin.',
   },
 ];

@@ -259,7 +259,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-results"
             eyebrow="Results"
-            title="Our students’ results"
+            title={content['home.section.results.heading']}
             action={<MoreLink href="/results">All results</MoreLink>}
           />
 
@@ -277,7 +277,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-batches"
             eyebrow="Admissions open"
-            title="Upcoming batches"
+            title={content['home.section.batches.heading']}
             action={<MoreLink href="/admissions">Enquire about a batch</MoreLink>}
           />
           <BatchList batches={shownBatches} courseName={courseName} />
@@ -290,7 +290,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-stories"
             eyebrow="Student stories"
-            title="How they got there"
+            title={content['home.section.stories.heading']}
             action={<MoreLink href="/stories">All stories</MoreLink>}
           />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -314,7 +314,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-faculty"
             eyebrow="Meet your mentors"
-            title="Who will teach you"
+            title={content['home.section.faculty.heading']}
             action={<MoreLink href="/faculty">All teachers</MoreLink>}
           />
           <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -339,7 +339,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-reviews"
             eyebrow={`Reviews on ${reviewPayload.sourceLabel}`}
-            title="What people say"
+            title={content['home.section.reviews.heading']}
             action={<MoreLink href="/reviews">All reviews</MoreLink>}
           />
           <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -370,7 +370,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-videos"
             eyebrow="Videos"
-            title="Learn beyond the classroom"
+            title={content['home.section.videos.heading']}
             action={<MoreLink href="/videos">All videos</MoreLink>}
           />
           <VideoStrip videos={videos.slice(0, 3)} />
@@ -396,7 +396,7 @@ export default async function HomePage() {
           <SectionHeader
             id="home-gallery"
             eyebrow="Gallery"
-            title="Inside the institute"
+            title={content['home.section.gallery.heading']}
             action={<MoreLink href="/gallery">See the gallery</MoreLink>}
           />
           <GalleryStrip items={gallery} />

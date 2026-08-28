@@ -12,6 +12,7 @@ import {
   type VideoSubjectValue,
 } from '@/lib/video';
 import { deleteVideo } from './actions';
+import { DeleteButton } from '@/components/admin/delete-button';
 
 export const metadata: Metadata = { title: 'Videos' };
 export const dynamic = 'force-dynamic';
@@ -192,12 +193,11 @@ export default async function AdminVideosPage({
                     */}
                     <form action={deleteVideo}>
                       <input type="hidden" name="id" value={video.id} />
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-11 items-center rounded-sm px-3 text-small font-medium text-muted transition-colors hover:text-danger"
-                      >
-                        Remove<span className="sr-only"> {video.title}</span>
-                      </button>
+                      <DeleteButton
+                        label="Remove"
+                        name={video.title}
+                        confirmMessage="Remove this video?"
+                      />
                     </form>
                   </div>
                 </Card>

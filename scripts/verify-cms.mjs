@@ -766,6 +766,91 @@ section('17. THE PREVIEW AND ITS EDITOR ON SMALL SCREENS');
   await page.viewport(1280, 900);
 }
 
+section('14. THE THREE FIELDS THAT BECOME AN OUTBOUND LINK');
+{
+  /*
+    Topic 12 added `social.youtube`, `social.instagram` and `contact.email`.
+
+    Every other editable field on this site is rendered as TEXT, where React's
+    escaping is the whole defence. These three end up inside an `href` in the
+    footer of every page, so they are the only place where an administrator's
+    typing becomes a DESTINATION rather than words.
+
+    `tests/contact-links.test.ts` proves the parser refuses these strings. This
+    proves the SERVER does — a correct parser is worth nothing if the action
+    forgets to call it, which is exactly the defect Topic 5 found in the stories
+    action after it had been in production for months.
+
+    Every rejection is paired with a positive control further down: the same
+    field must still accept a real profile URL. A validator that refused
+    everything would sail through the negative half alone.
+  */
+  const readField = async (key) => {
+    await page.goto(BASE + PREVIEW);
+    return page.eval(
+      `(document.querySelector('[name="' + ${JSON.stringify(key)} + '"]') || {}).value`,
+    );
+  };
+
+  const save = async (key, value) => {
+    await page.goto(BASE + PREVIEW);
+    const markup = await page.eval('document.documentElement.outerHTML');
+    const fields = fieldsOf(markup, `value="${key}"`);
+    fields[key] = value;
+    return postAction(PREVIEW, fields, { cookie: adminCookie });
+  };
+
+  const attacks = [
+    ['social.youtube', 'javascript:alert(1)', 'a javascript: URL'],
+    ['social.youtube', 'https://youtube.com.attacker.example/@x', 'a lookalike host'],
+    ['social.youtube', 'https://youtube.com@evil.example/x', 'credentials disguising the host'],
+    ['social.instagram', 'https://evilinstagram.com/x', 'a host that merely ends with the real one'],
+    ['social.instagram', 'data:text/html,<script>alert(1)</script>', 'a data: URL'],
+    ['contact.email', 'a" onmouseover="alert(1)@x.com', 'an address carrying an attribute break'],
+    ['contact.email', 'nobody', 'a string that is not an address'],
+  ];
+
+  for (const [key, payload, description] of attacks) {
+    await save(key, payload);
+
+    const stored = await readField(key);
+    check(
+      stored !== payload,
+      `${key} refuses ${description}`,
+      stored === payload ? 'IT WAS STORED' : 'not stored',
+    );
+
+    const home = await publicHtml('/');
+    check(
+      !home.includes(payload),
+      `and ${description} never reaches the public page`,
+    );
+  }
+
+  // POSITIVE CONTROLS — the same fields must still take a real value.
+  for (const [key, good] of [
+    ['social.youtube', 'https://www.youtube.com/@zzcmsmarker'],
+    ['social.instagram', 'https://www.instagram.com/zzcmsmarker'],
+    ['contact.email', 'zzcms-marker@example.com'],
+  ]) {
+    await save(key, good);
+    check(
+      (await readField(key)) === good,
+      `control: ${key} still accepts a real value`,
+      await readField(key),
+    );
+  }
+
+  // And back to the empty state these three ship in.
+  for (const key of ['social.youtube', 'social.instagram', 'contact.email']) {
+    await save(key, '');
+  }
+  check(
+    (await readField('contact.email')) === '',
+    'the three link fields are left as this suite found them',
+  );
+}
+
 console.log('\n========================================================');
 console.log(`CMS VERIFICATION: ${pass} passed, ${fail} failed`);
 if (failures.length > 0) {

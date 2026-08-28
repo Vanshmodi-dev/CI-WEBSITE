@@ -145,13 +145,8 @@ export default async function AboutPage() {
 
       <ClosingCta
         id="about-cta"
-        title={<>Come and see the place</>}
-        body={
-          <>
-            The clearest way to judge an institute is to visit it and talk to
-            the people teaching. We are in {institute.locality}.
-          </>
-        }
+        title={<>{content['page.about.ctaTitle']}</>}
+        body={<>{content['page.about.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

@@ -1,14 +1,13 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import Image from 'next/image';
 import { saveVideo, type VideoFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { Field, inputClass, selectClass, textareaClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 import {
   parseYouTubeId,
   thumbnailUrl,
@@ -261,47 +260,29 @@ export function VideoForm({ values = {} }: { values?: VideoValues }) {
             )}
           </Field>
 
-          <div className="flex items-start gap-3">
-            <input
-              id="v-published"
-              name="published"
-              type="checkbox"
-              defaultChecked={
-                state.values
-                  ? state.values.published === 'on'
-                  : (values.published ?? false)
-              }
-              className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-            />
-            <label htmlFor="v-published" className="text-small text-text">
-              Show this video on the website
-              <span className="mt-0.5 block text-[13px] text-muted">
+          <Checkbox
+            id="v-published"
+            name="published"
+            defaultChecked={
+              state.values ? state.values.published === 'on' : (values.published ?? false)
+            }
+            label="Show this video on the website"
+            description={
+              <>
                 Leave this unticked to keep working on the entry. Nothing appears
                 publicly until it is ticked.
-              </span>
-            </label>
-          </div>
+              </>
+            }
+          />
         </div>
       </Card>
 
-      <div className="flex items-center gap-4">
-        <SaveButton editing={editing} />
-        <Link
-          href="/admin/videos"
-          className="inline-flex min-h-11 items-center text-small font-medium text-muted hover:text-heading"
-        >
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/videos"
+        createLabel="Add video"
+        editing={editing}
+      />
     </form>
   );
 }
 
-function SaveButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add video'}
-    </Button>
-  );
-}

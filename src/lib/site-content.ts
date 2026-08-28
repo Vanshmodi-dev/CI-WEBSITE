@@ -13,6 +13,7 @@ import {
 } from '@/config/site-content';
 import { primaryNav, footerNav } from '@/config/nav';
 import { parseCoordinates, directionsUrl, type Coordinates } from '@/lib/location';
+import { validateEmail, parseSocialUrl } from '@/lib/contact-links';
 
 /**
  * Reading editable website copy.
@@ -104,6 +105,15 @@ export type ContactBlock = {
    */
   coordinates: Coordinates | null;
   /**
+   * The institute's own email address, or null when none has been supplied.
+   *
+   * Null is the normal state today and it renders NOTHING — never a
+   * placeholder, never a personal address carried over from the old site.
+   */
+  email: string | null;
+  /** Social profiles the institute actually has. Absent ones are null. */
+  social: { youtube: string | null; instagram: string | null };
+  /**
    * "Get directions", always present.
    *
    * Built from the coordinates when they exist and from the address when they
@@ -150,9 +160,44 @@ export async function getContactBlock(): Promise<ContactBlock> {
   const coordinates = parseCoordinates(content['contact.coordinates'] ?? '');
   const addressLine = addressLineFrom(content as Record<string, string>);
 
+  /*
+    RE-VALIDATED ON THE WAY OUT, exactly as the coordinates above are, and for
+    the same reason: the write guard protects values arriving through the path
+    everybody remembers, and this protects against a row that is ALREADY wrong
+    — written by a direct query, or by an import somebody adds later. These
+    three become `href` attributes on every page, so a bad one is not a
+    cosmetic problem.
+  */
+  const emailRaw = (content['contact.email'] ?? '').trim();
+  const email = emailRaw !== '' && validateEmail(emailRaw) === null ? emailRaw : null;
+
+  /*
+    THE KEYS ARE WRITTEN OUT, NOT BUILT FROM A TEMPLATE.
+
+    `tests/site-content.test.ts` proves every registry key is read by real
+    source, by looking for the key string in `src/`. A template literal
+    `content[`social.${platform}`]` defeats that — and it defeated it QUIETLY,
+    because the substring "social.youtube" also occurs in the unrelated
+    property access `contact.social.youtube` further down the footer. The test
+    went green on a coincidence rather than on a read.
+
+    Spelling the keys out costs three lines and makes the proof real.
+  */
+  const socialOrNull = (platform: 'youtube' | 'instagram', raw: string) => {
+    const value = raw.trim();
+    if (value === '') return null;
+    const parsed = parseSocialUrl(platform, value);
+    return 'url' in parsed ? parsed.url : null;
+  };
+
   return {
     addressLine,
     coordinates,
+    email,
+    social: {
+      youtube: socialOrNull('youtube', content['social.youtube'] ?? ''),
+      instagram: socialOrNull('instagram', content['social.instagram'] ?? ''),
+    },
     directionsHref: directionsUrl(addressLine, coordinates),
     phonePrimaryDisplay: primary,
     phonePrimaryE164: e164,

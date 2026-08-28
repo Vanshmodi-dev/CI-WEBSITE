@@ -8,6 +8,7 @@ import { Field, inputClass, textareaClass } from '@/components/primitives/field'
 import { Button } from '@/components/primitives/button';
 import type { FieldView, FieldGroup } from '@/config/site-content';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
+import { Checkbox } from '@/components/primitives/checkbox';
 
 const initial: WebsiteFormState = { status: 'idle' };
 
@@ -156,21 +157,13 @@ export function GroupForm({
 function ToggleRow({ field, checked }: { field: FieldView; checked: boolean }) {
   const id = `f-${field.key}`;
   return (
-    <div className="flex items-start gap-3">
-      <input
-        id={id}
-        name={field.key}
-        type="checkbox"
-        defaultChecked={checked}
-        className="mt-1 h-5 w-5 shrink-0 rounded-sm border-rule-strong accent-navy-800"
-      />
-      <label htmlFor={id} className="text-small text-text">
-        {field.label}
-        {field.help ? (
-          <span className="mt-0.5 block text-[13px] text-muted">{field.help}</span>
-        ) : null}
-      </label>
-    </div>
+    <Checkbox
+      id={id}
+      name={field.key}
+      defaultChecked={checked}
+      label={field.label}
+      description={field.help}
+    />
   );
 }
 

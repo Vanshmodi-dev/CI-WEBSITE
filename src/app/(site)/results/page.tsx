@@ -7,6 +7,7 @@ import { Section, PageHeader, ClosingCta } from '@/components/primitives/section
 import { Button } from '@/components/primitives/button';
 import { ResultCard } from '@/components/domain/public-cards';
 import { PROGRAMME_LABELS } from '@/lib/admin-format';
+import { getSiteContent } from '@/lib/site-content';
 
 type ResultsSearchParams = { year?: string; programme?: string; page?: string };
 
@@ -79,7 +80,12 @@ export default async function ResultsPage({
   searchParams: Promise<ResultsSearchParams>;
 }) {
   const { year, programme, page, filtered } = readFilters(await searchParams);
-  const data = await getPublishedResults({ year, programme, page });
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [data, content] = await Promise.all([
+    getPublishedResults({ year, programme, page }),
+    getSiteContent(),
+  ]);
 
   function hrefWith(next: Record<string, string | undefined>) {
     const search = new URLSearchParams();
@@ -97,17 +103,8 @@ export default async function ResultsPage({
     <>
       <PageHeader
         eyebrow="Results"
-        title={
-          <>
-            Our students&rsquo; results
-          </>
-        }
-        standfirst={
-          <>
-            Published with each student&rsquo;s permission. Where a student
-            asked us not to show their name or photograph, we don&rsquo;t.
-          </>
-        }
+        title={<>{content['page.results.title']}</>}
+        standfirst={<>{content['page.results.standfirst']}</>}
       />
 
       <Section tone="surface" labelledBy="results-heading">
@@ -220,12 +217,8 @@ export default async function ResultsPage({
 
       <ClosingCta
         id="results-cta"
-        title={<>Want to study with us?</>}
-        body={
-          <>
-            Tell us which class you are in and we will explain how we can help.
-          </>
-        }
+        title={<>{content['page.results.ctaTitle']}</>}
+        body={<>{content['page.results.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

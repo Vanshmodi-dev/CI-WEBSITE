@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
-import { getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata } from '@/lib/seo';
 import { issueFormToken } from '@/lib/crypto';
 import { Section, PageHeader } from '@/components/primitives/section';
@@ -23,7 +23,9 @@ export const metadata: Metadata = pageMetadata({
 export const dynamic = 'force-dynamic';
 
 export default async function AdmissionsPage() {
-  const contact = await getContactBlock();
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [contact, content] = await Promise.all([getContactBlock(), getSiteContent()]);
 
   const formToken = issueFormToken();
 
@@ -31,18 +33,8 @@ export default async function AdmissionsPage() {
     <>
       <PageHeader
         eyebrow="Admissions"
-        title={
-          <>
-            Talk to us about joining
-          </>
-        }
-        standfirst={
-          <>
-            Tell us which class or course you are asking about and we will
-            call you back. If you would rather talk straight away, WhatsApp or
-            call us — that is often quicker.
-          </>
-        }
+        title={<>{content['page.admissions.title']}</>}
+        standfirst={<>{content['page.admissions.standfirst']}</>}
       >
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Button

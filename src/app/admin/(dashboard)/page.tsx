@@ -85,7 +85,16 @@ export default async function AdminDashboard() {
                 <h2 className="font-display text-[18px] font-semibold text-heading">
                   Recent enquiries
                 </h2>
-                <Link href="/admin/enquiries" className="text-small text-link">
+                {/*
+                  `min-h-11` and the padding are what carry this over the 24x24
+                  floor (WCAG 2.5.8) - it measured 42x23 in Topic 11. The
+                  negative margin keeps it optically aligned with the heading
+                  now that it has a hit area.
+                */}
+                <Link
+                  href="/admin/enquiries"
+                  className="-mr-2 inline-flex min-h-11 items-center rounded-sm px-2 text-small text-link"
+                >
                   See all
                 </Link>
               </div>
@@ -127,7 +136,16 @@ export default async function AdminDashboard() {
                 <h2 className="font-display text-[18px] font-semibold text-heading">
                   Upcoming batches
                 </h2>
-                <Link href="/admin/batches" className="text-small text-link">
+                                {/*
+                  `min-h-11` and the padding are what carry this over the 24x24
+                  floor (WCAG 2.5.8) - it measured 42x23 in Topic 11. The
+                  negative margin keeps it optically aligned with the heading
+                  now that it has a hit area.
+                */}
+                <Link
+                  href="/admin/batches"
+                  className="-mr-2 inline-flex min-h-11 items-center rounded-sm px-2 text-small text-link"
+                >
                   See all
                 </Link>
               </div>

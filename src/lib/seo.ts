@@ -144,6 +144,16 @@ export type JsonLdContact = {
    * arrive here already resolved, from the same call the page uses.
    */
   coordinates?: { lat: number; lng: number } | null;
+  /**
+   * The institute's social profiles, resolved from the admin.
+   *
+   * Here for the same reason `coordinates` is, and the note above is the
+   * argument in full: these feed `sameAs`, which is how a search engine
+   * confirms that a YouTube channel and this business are one organisation.
+   * Reading them from config while the footer rendered the edited values would
+   * be the identical mismatch, one field along.
+   */
+  social?: { youtube: string | null; instagram: string | null };
 };
 
 /**
@@ -208,9 +218,20 @@ export function instituteJsonLd(contact?: JsonLdContact) {
     };
   }
 
-  const sameAs = [institute.social.youtube, institute.social.instagram].filter(
-    (u): u is string => Boolean(u),
-  );
+  /*
+    THE SAME RULE AS `geo` ABOVE: the resolved value when we were given one,
+    the shipped config otherwise.
+
+    Topic 12 made the social links editable, and this was still reading the
+    code constants — so the footer would have linked a channel the institute
+    had just added while `sameAs` stayed silent about it. `sameAs` is how a
+    search engine confirms that a YouTube channel and a business are the same
+    organisation, so a mismatch here is not cosmetic.
+  */
+  const socialLinks = contact?.social
+    ? [contact.social.youtube, contact.social.instagram]
+    : [institute.social.youtube, institute.social.instagram];
+  const sameAs = socialLinks.filter((u): u is string => Boolean(u));
   if (sameAs.length > 0) data.sameAs = sameAs;
 
   /*

@@ -27,6 +27,7 @@ import {
   validatePhone,
   phoneE164,
   navKeyFor,
+  PUBLIC_ROUTES,
   type EditableField,
 } from '../src/config/site-content.ts';
 
@@ -340,6 +341,55 @@ describe('declared render locations are true of the source', () => {
       assert.ok(
         candidates.some((p) => existsSync(p)),
         `${f.key} declares route ${route}, which has no page.tsx`,
+      );
+    }
+  });
+
+  /**
+   * PUBLIC_ROUTES is what a site-chrome field expands to when caches are
+   * cleared, so an entry that does not resolve is a `revalidatePath` call
+   * against nothing — and, worse, a route MISSING from it is a page that keeps
+   * serving a stale header after the institute changes its phone number.
+   *
+   * That is not hypothetical: Topic 12 found `/faculty` and `/reviews` absent
+   * from the hand-written list this replaced, both ISR-cached, one of them for
+   * six hours.
+   */
+  test('every public route in PUBLIC_ROUTES exists on disk', () => {
+    for (const route of PUBLIC_ROUTES) {
+      const segment = route === '/' ? '' : route;
+      assert.ok(
+        existsSync(join(SRC, 'app', '(site)', segment, 'page.tsx')),
+        `PUBLIC_ROUTES lists ${route}, which has no page.tsx`,
+      );
+    }
+  });
+
+  /**
+   * And the other direction: a page that exists but is not listed is the exact
+   * shape of the bug above. Course detail pages are excluded because they are
+   * one dynamic route expanded from `publishedCourses` at the call site.
+   */
+  test('every public page on disk is listed in PUBLIC_ROUTES', () => {
+    const siteDir = join(SRC, 'app', '(site)');
+    const found: string[] = [];
+    const walk = (dir: string, prefix: string) => {
+      for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          if (entry.startsWith('[')) continue;
+          walk(full, `${prefix}/${entry}`);
+        } else if (entry === 'page.tsx') {
+          found.push(prefix === '' ? '/' : prefix);
+        }
+      }
+    };
+    walk(siteDir, '');
+
+    for (const route of found) {
+      assert.ok(
+        PUBLIC_ROUTES.includes(route),
+        `${route} has a page.tsx but is missing from PUBLIC_ROUTES, so a contact or menu change will not refresh it`,
       );
     }
   });

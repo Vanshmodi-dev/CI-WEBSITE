@@ -2,15 +2,14 @@
 
 import { useActionState, useState } from 'react';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import { saveStory, type StoryFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { MediaField } from '@/components/admin/media-field';
 import { Field, inputClass, selectClass, textareaClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { blockersForPublishing, type DisplayNameModeValue } from '@/lib/student-display';
 import { PROGRAMME_LABELS, DISPLAY_NAME_LABELS } from '@/lib/admin-format';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 
 const initial: StoryFormState = { status: 'idle' };
 
@@ -340,30 +339,22 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
           </div>
         ) : null}
 
-        <label className="mt-4 flex items-start gap-3 text-small text-text">
-          <input
-            type="checkbox"
-            name="published"
-            checked={published && canPublish}
-            disabled={!canPublish}
-            onChange={(e) => setPublished(e.target.checked)}
-            className="mt-1 h-4 w-4 shrink-0 rounded-[3px] border-rule-strong accent-navy-800 disabled:opacity-40"
-          />
-          <span>
-            <span className="font-medium">Show this story on the website</span>
-            <span className="mt-0.5 block text-[13px] text-muted">
-              New stories stay private until you tick this.
-            </span>
-          </span>
-        </label>
+        <Checkbox
+          className="mt-4"
+          name="published"
+          checked={published && canPublish}
+          disabled={!canPublish}
+          onChange={(e) => setPublished(e.target.checked)}
+          label="Show this story on the website"
+          description="New stories stay private until you tick this."
+        />
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton editing={editing} />
-        <Link href="/admin/stories" className="text-small text-link">
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/stories"
+        createLabel="Add story"
+        editing={editing}
+      />
     </form>
   );
 }
@@ -382,27 +373,13 @@ function Permission({
   hint: string;
 }) {
   return (
-    <label className="flex items-start gap-3 text-small text-text">
-      <input
-        type="checkbox"
-        name={name}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 shrink-0 rounded-[3px] border-rule-strong accent-navy-800"
-      />
-      <span>
-        <span className="font-medium">{label}</span>
-        <span className="mt-0.5 block text-[13px] text-muted">{hint}</span>
-      </span>
-    </label>
+    <Checkbox
+      name={name}
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      label={label}
+      description={hint}
+    />
   );
 }
 
-function SubmitButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add story'}
-    </Button>
-  );
-}

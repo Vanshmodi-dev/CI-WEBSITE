@@ -1,15 +1,14 @@
 'use client';
 
 import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import Link from 'next/link';
 import { saveBatch } from './actions';
 import type { BatchFormState } from './actions';
 import { Card, Notice } from '@/components/admin/ui';
 import { Field, inputClass, selectClass } from '@/components/primitives/field';
-import { Button } from '@/components/primitives/button';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import { institute } from '@/config/institute';
+import { Checkbox } from '@/components/primitives/checkbox';
+import { FormActions } from '@/components/admin/form-actions';
 
 const initial: BatchFormState = { status: 'idle' };
 
@@ -169,42 +168,28 @@ export function BatchForm({ values = {} }: { values?: BatchValues }) {
         <h2 className="font-display text-[18px] font-semibold text-heading">
           Visibility
         </h2>
-        <label className="mt-4 flex items-start gap-3 text-small text-text">
-          <input
-            type="checkbox"
-            name="published"
-            defaultChecked={
-                state.values
-                  ? state.values.published === 'on'
-                  : (values.published ?? false)
-              }
-            className="mt-1 h-4 w-4 shrink-0 rounded-[3px] border-rule-strong accent-navy-800"
-          />
-          <span>
-            <span className="font-medium">Show this batch on the website</span>
-            <span className="mt-0.5 block text-[13px] text-muted">
+        <Checkbox
+          className="mt-4"
+          name="published"
+          defaultChecked={
+            state.values ? state.values.published === 'on' : (values.published ?? false)
+          }
+          label="Show this batch on the website"
+          description={
+            <>
               Leave unticked to keep it as a draft. Batches that have already
               started stop appearing as “upcoming” on their own.
-            </span>
-          </span>
-        </label>
+            </>
+          }
+        />
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <SubmitButton editing={editing} />
-        <Link href="/admin/batches" className="text-small text-link">
-          Cancel
-        </Link>
-      </div>
+      <FormActions
+        cancelHref="/admin/batches"
+        createLabel="Add batch"
+        editing={editing}
+      />
     </form>
   );
 }
 
-function SubmitButton({ editing }: { editing: boolean }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" disabled={pending}>
-      {pending ? 'Saving…' : editing ? 'Save changes' : 'Add batch'}
-    </Button>
-  );
-}

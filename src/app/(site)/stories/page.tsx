@@ -6,6 +6,7 @@ import { getPublishedStoriesPage } from '@/lib/public-data';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { StoryCard } from '@/components/domain/public-cards';
+import { getSiteContent } from '@/lib/site-content';
 
 type StoriesSearchParams = { page?: string };
 
@@ -64,24 +65,20 @@ export default async function StoriesPage({
   searchParams: Promise<StoriesSearchParams>;
 }) {
   const page = readPage(await searchParams);
-  const data = await getPublishedStoriesPage({ page });
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [data, content] = await Promise.all([
+    getPublishedStoriesPage({ page }),
+    getSiteContent(),
+  ]);
   const stories = data.stories;
 
   return (
     <>
       <PageHeader
         eyebrow="Student stories"
-        title={
-          <>
-            How they got there
-          </>
-        }
-        standfirst={
-          <>
-            A result is one number. These are the longer versions — what was
-            hard, what changed, and how it turned out.
-          </>
-        }
+        title={<>{content['page.stories.title']}</>}
+        standfirst={<>{content['page.stories.standfirst']}</>}
       />
 
       <Section tone="surface" labelledBy="stories-heading">
@@ -152,12 +149,8 @@ export default async function StoriesPage({
 
       <ClosingCta
         id="stories-cta"
-        title={<>Your story could start here</>}
-        body={
-          <>
-            Talk to us about which programme suits where you are now.
-          </>
-        }
+        title={<>{content['page.stories.ctaTitle']}</>}
+        body={<>{content['page.stories.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

@@ -930,10 +930,46 @@ section('8. DELETION');
       return id && id.value === ${JSON.stringify(doomed.id)};
     });
     if (!target) return false;
-    target.querySelector('button[type=submit]').click();
+    const btn = [...target.querySelectorAll('button')]
+      .find((b) => /remove|delete/i.test((b.textContent || '').trim()));
+    if (!btn) return false;
+    btn.click();
     return true;
   })()`);
   check(clicked === 'true' || clicked === true, 'the Remove control was found and pressed');
+  await new Promise((r) => setTimeout(r, 1200));
+
+  /*
+    ONE CLICK MUST NEVER DELETE.
+
+    Topic 11 found this photograph list deleting on a single click with no
+    confirmation of any kind, while announcements, batches, stories and results
+    all asked first. `DeleteButton` now gives every one of them the same inline
+    question, so the suite drives two clicks - and asserts the first one did
+    nothing, because a test that only proves deletion works would have passed
+    against the defect.
+  */
+  check(
+    (await prisma.galleryItem.findUnique({ where: { id: doomed.id } })) !== null,
+    'one click on Remove does NOT delete the photograph',
+  );
+  check(
+    await page.eval(`Boolean([...document.querySelectorAll('[role="alert"]')].find((el) => /remove this photograph/i.test(el.textContent || '')))`),
+    'it asks first, naming what it is about to remove',
+  );
+
+  await page.eval(`(() => {
+    const target = [...document.querySelectorAll('form')].find((f) => {
+      const id = f.querySelector('input[name="id"]');
+      return id && id.value === ${JSON.stringify(doomed.id)};
+    });
+    if (!target) return false;
+    const go = [...target.querySelectorAll('button')]
+      .find((b) => /^(remove|delete)$/i.test((b.textContent || '').trim()));
+    if (!go) return false;
+    go.click();
+    return true;
+  })()`);
   await new Promise((r) => setTimeout(r, 2500));
 
   check(

@@ -16,11 +16,20 @@ import { LogoWordmark } from '@/components/domain/logo';
  */
 export async function SiteFooter() {
   const year = new Date().getFullYear();
-  const hasSocial = Boolean(institute.social.youtube || institute.social.instagram);
-
   // Server component, so it reads the edited content directly. `cache()` in
   // site-content.ts means this shares one query with the header above it.
   const [footerNav, contact] = await Promise.all([getFooterNav(), getContactBlock()]);
+
+  /*
+    EMAIL AND SOCIAL COME FROM THE ADMIN NOW, not from `institute.ts`.
+
+    Both used to be code constants pinned to `null`, so the day the institute
+    finally had an address or a channel, showing it needed a developer. Topic 12
+    made them editable fields with the config values as their fallbacks, which
+    means the behaviour when nothing is supplied is UNCHANGED — the blocks below
+    still render nothing at all rather than a placeholder.
+  */
+  const hasSocial = Boolean(contact.social.youtube || contact.social.instagram);
   const whatsappHref = () => whatsappLink(contact.whatsappNumber);
 
   return (
@@ -91,15 +100,15 @@ export async function SiteFooter() {
                   WhatsApp
                 </a>
               </li>
-              {/* Email omitted — institute.email is null until a domain
-                  mailbox exists. Master Plan §22. */}
-              {institute.email ? (
+              {/* Absent until somebody enters one in Admin -> Website text.
+                  Never a placeholder address. Master Plan §22. */}
+              {contact.email ? (
                 <li>
                   <a
-                    href={`mailto:${institute.email}`}
+                    href={`mailto:${contact.email}`}
                     className="text-band-muted hover:text-band-text"
                   >
-                    {institute.email}
+                    {contact.email}
                   </a>
                 </li>
               ) : null}
@@ -125,10 +134,10 @@ export async function SiteFooter() {
             <div>
               <h2 className="eyebrow font-sans text-accent">Follow</h2>
               <ul className="mt-3 flex flex-col gap-2 text-small">
-                {institute.social.youtube ? (
+                {contact.social.youtube ? (
                   <li>
                     <a
-                      href={institute.social.youtube}
+                      href={contact.social.youtube}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-band-muted hover:text-band-text"
@@ -137,10 +146,10 @@ export async function SiteFooter() {
                     </a>
                   </li>
                 ) : null}
-                {institute.social.instagram ? (
+                {contact.social.instagram ? (
                   <li>
                     <a
-                      href={institute.social.instagram}
+                      href={contact.social.instagram}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-band-muted hover:text-band-text"

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { institute, addressFull } from '@/config/institute';
-import { getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata } from '@/lib/seo';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -25,7 +25,9 @@ export const metadata: Metadata = pageMetadata({
  * do not render rather than showing a placeholder (§42).
  */
 export default async function ContactPage() {
-  const contact = await getContactBlock();
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [contact, content] = await Promise.all([getContactBlock(), getSiteContent()]);
   /*
     THE MAP IS GATED ON A VERIFIED POINT, THE DIRECTIONS LINK IS NOT.
 
@@ -45,17 +47,8 @@ export default async function ContactPage() {
     <>
       <PageHeader
         eyebrow="Contact"
-        title={
-          <>
-            Come and see us
-          </>
-        }
-        standfirst={
-          <>
-            We are in {institute.locality}. Call or message us with any
-            question about programmes, batches or admissions.
-          </>
-        }
+        title={<>{content['page.contact.title']}</>}
+        standfirst={<>{content['page.contact.standfirst']}</>}
       >
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <Button href={contact.telHref} size="lg">
@@ -115,17 +108,18 @@ export default async function ContactPage() {
           </div>
 
           {/* Email renders only when a professional address exists. The
-              previous site published a personal Gmail; institute.email is
-              null until a domain mailbox is set up (Master Plan §22). */}
-          {institute.email ? (
+              previous site published a personal Gmail, so nothing is shown
+              until somebody enters an address in Admin -> Website text
+              (Master Plan §22). */}
+          {contact.email ? (
             <div>
               <h3 className="eyebrow text-accent-text">Email</h3>
               <p className="mt-3 text-[17px]">
                 <a
-                  href={`mailto:${institute.email}`}
+                  href={`mailto:${contact.email}`}
                   className="text-link hover:text-link-hover"
                 >
-                  {institute.email}
+                  {contact.email}
                 </a>
               </p>
             </div>
@@ -147,8 +141,8 @@ export default async function ContactPage() {
         </div>
       </Section>
 
-      {!institute.email ? (
-        <Hidden reason="Email block — no professional address supplied yet" />
+      {!contact.email ? (
+        <Hidden reason="Email block — not entered yet (Admin → Website text → Contact details)" />
       ) : null}
       {contact.hours.length === 0 ? (
         <Hidden reason="Opening hours — not entered yet (Admin → Website text → Contact details)" />
@@ -180,12 +174,8 @@ export default async function ContactPage() {
 
       <ClosingCta
         id="contact-cta"
-        title={<>Still deciding?</>}
-        body={
-          <>
-            Send us an enquiry and we will talk you through the options.
-          </>
-        }
+        title={<>{content['page.contact.ctaTitle']}</>}
+        body={<>{content['page.contact.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

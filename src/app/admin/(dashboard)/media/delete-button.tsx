@@ -11,7 +11,18 @@ import { deleteMedia } from './actions';
  * cannot say which photo it means beyond a string, cannot be styled to match
  * the admin, and on mobile appears at the top of the screen far from the button
  * that opened it. Two clicks in place, with the filename in the question, is
- * clearer and is the pattern the rest of this admin already uses.
+ * clearer.
+ *
+ * ⚠ THE SENTENCE THAT USED TO END THAT PARAGRAPH WAS WRONG. It claimed this was
+ * "the pattern the rest of this admin already uses". When Topic 11 checked, the
+ * rest of the admin used `window.confirm` on four pages and asked NOTHING at
+ * all on three others. The reasoning above was sound and the claim about the
+ * rest of the codebase was not, which is a good argument for not describing
+ * code you have not just read.
+ *
+ * `components/admin/delete-button.tsx` now implements this same two-step
+ * pattern for every other destructive action, so the claim is true today - and
+ * that file, not this comment, is where the reasoning lives.
  *
  * A photo still attached to a record has no delete button at all. The server
  * refuses that case regardless — the button is hidden because offering an

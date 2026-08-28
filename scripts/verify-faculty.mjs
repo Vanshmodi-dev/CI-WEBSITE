@@ -679,19 +679,74 @@ section('10. AUDIT LOG');
   );
 }
 
+/**
+ * Remove one record the way a person does: click Remove, then confirm.
+ *
+ * ⚠ TWO CLICKS, AND THE FIRST ONE MUST NOT DELETE.
+ *
+ * Topic 11 found that faculty, gallery and videos deleted on a single click
+ * with no confirmation of any kind, while four other entities asked first.
+ * `DeleteButton` now gives all seven the same inline confirmation, so a suite
+ * that clicks once and expects the row to vanish is testing the defect rather
+ * than the fix.
+ */
+async function removeThroughAdmin(id) {
+  const clicked = await page.eval(`(() => {
+    const form = [...document.querySelectorAll('form')].find((f) => {
+      const input = f.querySelector('input[name="id"]');
+      return input && input.value === ${JSON.stringify(id)};
+    });
+    if (!form) return false;
+    const btn = [...form.querySelectorAll('button')]
+      .find((b) => /remove|delete/i.test((b.textContent || '').trim()));
+    if (!btn) return false;
+    btn.click();
+    return true;
+  })()`);
+  if (!clicked) return false;
+
+  await new Promise((r) => setTimeout(r, 900));
+
+  return page.eval(`(() => {
+    const form = [...document.querySelectorAll('form')].find((f) => {
+      const input = f.querySelector('input[name="id"]');
+      return input && input.value === ${JSON.stringify(id)};
+    });
+    if (!form) return false;
+    const go = [...form.querySelectorAll('button')]
+      .find((b) => /^(remove|delete)$/i.test((b.textContent || '').trim()));
+    if (!go) return false;
+    go.click();
+    return true;
+  })()`);
+}
+
 section('11. DELETION');
 {
   const row = await prisma.faculty.findFirst({ where: { name: `${P} Control Teacher` } });
   await page.goto(`${BASE}/admin/faculty`);
+
+  // The negative half first: one click must never be enough.
   await page.eval(`(() => {
-    const forms = [...document.querySelectorAll('form')];
-    const target = forms.find((f) => {
+    const form = [...document.querySelectorAll('form')].find((f) => {
       const input = f.querySelector('input[name="id"]');
       return input && input.value === ${JSON.stringify(row.id)};
     });
-    if (target) target.querySelector('button[type=submit]').click();
-    return Boolean(target);
+    if (form) [...form.querySelectorAll('button')]
+      .find((b) => /remove|delete/i.test((b.textContent || '').trim())).click();
   })()`);
+  await new Promise((r) => setTimeout(r, 1200));
+  check(
+    (await prisma.faculty.findUnique({ where: { id: row.id } })) !== null,
+    'one click on Remove does NOT delete a teacher',
+  );
+  check(
+    await page.eval(`Boolean([...document.querySelectorAll('[role="alert"]')].find((el) => /remove this teacher/i.test(el.textContent || '')))`),
+    'it asks first, naming what it is about to remove',
+  );
+
+  await page.goto(`${BASE}/admin/faculty`);
+  await removeThroughAdmin(row.id);
   await new Promise((r) => setTimeout(r, 2500));
 
   check(
@@ -723,15 +778,8 @@ section('12. THE EMPTY STATE');
   });
   for (const row of remaining) {
     await page.goto(`${BASE}/admin/faculty`);
-    await page.eval(`(() => {
-      const form = [...document.querySelectorAll('form')].find((f) => {
-        const input = f.querySelector('input[name="id"]');
-        return input && input.value === ${JSON.stringify(row.id)};
-      });
-      if (form) form.querySelector('button[type=submit]').click();
-      return Boolean(form);
-    })()`);
-    await new Promise((r) => setTimeout(r, 1500));
+    await removeThroughAdmin(row.id);
+    await new Promise((r) => setTimeout(r, 1800));
   }
   check(
     (await countFaculty()) === 0,

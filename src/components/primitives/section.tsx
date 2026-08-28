@@ -104,7 +104,14 @@ export function SectionHeader({
   className,
 }: {
   eyebrow?: string;
-  title: string;
+  /*
+    A NODE, not a string, since Topic 12 made these headings editable.
+    `SiteContent` indexes to `string | undefined`, and the alternative was
+    a `?? ''` at each of seven call sites - which would quietly render an
+    EMPTY heading in the one case it is meant to guard against. It is only
+    ever rendered as the content of an <h2>.
+  */
+  title: ReactNode;
   standfirst?: string;
   action?: ReactNode;
   id?: string;

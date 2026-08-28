@@ -19,6 +19,7 @@ import {
   cleanValue,
   validateValue,
   type FieldGroupId,
+  PUBLIC_ROUTES,
 } from '@/config/site-content';
 
 /**
@@ -62,24 +63,41 @@ function isGroupId(value: string): value is FieldGroupId {
  * heading would make an unrelated page slow for no reason.
  */
 function revalidateFor(group: FieldGroupId): void {
-  const routes =
-    group === 'contact' || group === 'navigation'
-      ? [
-          '/',
-          '/about',
-          '/courses',
-          '/results',
-          '/stories',
-          '/announcements',
-          '/contact',
-          '/admissions',
-          ...institute.courses.map((c) => `/courses/${c.slug}`),
-        ]
-      : group === 'courses'
-        ? ['/courses', ...institute.courses.map((c) => `/courses/${c.slug}`)]
-        : group === 'about'
-          ? ['/about']
-          : ['/'];
+  /*
+    DERIVED FROM THE REGISTRY, NOT FROM A HAND-WRITTEN LIST.
+
+    ⚠ THE HAND-WRITTEN LIST HAD DRIFTED TWICE BY THE TIME TOPIC 12 CHECKED IT.
+
+    It was a chain of ternaries with `['/']` as the fallback, and:
+
+      1. `/faculty` and `/reviews` were missing from the site-wide branch.
+         Both are ISR-cached (15 minutes and SIX HOURS), both render the header
+         and footer, and both were therefore serving a stale phone number after
+         the institute corrected it. Topics 6 and 7 added those routes without
+         touching this list — the same drift `verify-ux.mjs` suffered when the
+         same two routes were added to the site and not to its route array.
+
+      2. A group added later fell through to `['/']` and silently revalidated
+         the wrong page. Topic 12 added `pages`, and editing the heading on
+         /faculty cleared the homepage instead of /faculty.
+
+    Every field already declares where it renders, and a unit test proves each
+    declaration matches a real `page.tsx`. So the routes are computed from the
+    declarations. A new field, a new group or a new route is now covered by
+    construction, and the failure mode that produced both bugs above cannot
+    recur.
+  */
+  const routes = new Set<string>();
+
+  for (const field of fieldsInGroup(group)) {
+    if (field.renders.route === '*') {
+      // Site chrome: header, footer, floating call button. Everything.
+      for (const route of PUBLIC_ROUTES) routes.add(route);
+      for (const course of institute.courses) routes.add(`/courses/${course.slug}`);
+    } else {
+      routes.add(field.renders.route);
+    }
+  }
 
   for (const route of routes) revalidatePath(route);
   // The sitemap's dates are content-derived, so any content change ages it.

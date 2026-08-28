@@ -364,15 +364,26 @@ try {
 
   await page.goto(`${BASE}/admin/students/${created.id}`);
   /**
-   * The confirmation is a native `window.confirm`, not inline text.
+   * The confirmation is INLINE — a question and a Keep/Delete pair that replace
+   * the button in place. It used to be a native `window.confirm`.
    *
-   * An earlier draft of this suite looked for a visible "cannot be undone"
-   * warning beside the button, found none, and filed a UX complaint. The
-   * confirmation was there the whole time — `DeleteButton` calls
-   * `window.confirm(confirmMessage)` and cancels the submit when it is
-   * declined. Testing for the mechanism rather than for one particular
-   * presentation is both correct and stronger: this now proves that DECLINING
-   * actually cancels, which the inline-text check never would have.
+   * ⚠ THIS SECTION WAS REWRITTEN IN TOPIC 11, AND THE REASON MATTERS.
+   *
+   * An earlier note here recorded a genuine lesson: a first draft looked for
+   * visible warning text, found none, and filed a UX complaint against a
+   * confirmation that was really there — in a `window.confirm` the draft never
+   * thought to stub. Testing the MECHANISM rather than one presentation was the
+   * right correction.
+   *
+   * Topic 11 then changed the mechanism deliberately. Three other entities
+   * (faculty, gallery, videos) had no confirmation whatsoever — one click and
+   * the record was gone — and unifying all seven on the inline pattern was the
+   * fix. So this suite now drives the inline controls.
+   *
+   * The shape of the test is unchanged and still the strong one: DECLINE and
+   * prove the record survives, then ACCEPT and prove it goes. A test that only
+   * proved deletion works would have passed against the one-click version that
+   * was the actual defect.
    */
   const deleteButton = await page.eval(`(() => {
     const btn = [...document.querySelectorAll('button')]
@@ -381,32 +392,50 @@ try {
   })()`);
   check(Boolean(deleteButton), 'the edit page offers a delete control', String(deleteButton));
 
-  // Decline the confirmation: the record must survive.
+  // First click: the question appears and NOTHING is deleted.
   await page.eval(`(() => {
-    window.__confirmMessage = null;
-    window.confirm = (m) => { window.__confirmMessage = m; return false; };
-    const btn = [...document.querySelectorAll('button')]
-      .find((b) => /delete/i.test(b.textContent || ''));
-    btn.click();
+    [...document.querySelectorAll('button')]
+      .find((b) => /delete/i.test(b.textContent || '')).click();
   })()`);
   await page.eval('new Promise((r) => setTimeout(r, 1500))', true);
-  const confirmMessage = await page.eval('window.__confirmMessage');
+
+  const confirmMessage = await page.eval(`(() => {
+    const el = document.querySelector('[role="alert"]');
+    return el ? (el.textContent || '').trim() : null;
+  })()`);
   check(Boolean(confirmMessage), 'deleting asks for confirmation first', String(confirmMessage));
   check(
     /permanent|cannot be undone|sure|\?/i.test(String(confirmMessage ?? '')),
     'the confirmation says what is about to happen',
     String(confirmMessage),
   );
+  check(
+    await page.eval(`Boolean([...document.querySelectorAll('button')].find((b) => /^keep$/i.test((b.textContent || '').trim())))`),
+    'the confirmation offers a way out as well as a way through',
+  );
+
+  // Decline it: the record must survive.
+  await page.eval(`(() => {
+    [...document.querySelectorAll('button')]
+      .find((b) => /^keep$/i.test((b.textContent || '').trim())).click();
+  })()`);
+  await page.eval('new Promise((r) => setTimeout(r, 1500))', true);
   const survived = await prisma.topper.findUnique({ where: { id: created.id }, select: { id: true } });
   check(Boolean(survived), 'declining the confirmation does NOT delete the record');
 
-  // Accept it: the record must go.
+  // Accept it: the record must go. Two clicks, because one must never be enough.
   await page.goto(`${BASE}/admin/students/${created.id}`);
   await page.eval(`(() => {
-    window.confirm = () => true;
-    const btn = [...document.querySelectorAll('button')]
-      .find((b) => /delete/i.test(b.textContent || ''));
-    btn.click();
+    [...document.querySelectorAll('button')]
+      .find((b) => /delete/i.test(b.textContent || '')).click();
+  })()`);
+  await page.eval('new Promise((r) => setTimeout(r, 1200))', true);
+  const afterFirstClick = await prisma.topper.findUnique({ where: { id: created.id }, select: { id: true } });
+  check(Boolean(afterFirstClick), 'ONE click never deletes anything');
+
+  await page.eval(`(() => {
+    [...document.querySelectorAll('button')]
+      .filter((b) => /^delete$/i.test((b.textContent || '').trim())).pop().click();
   })()`);
   await page.eval('new Promise((r) => setTimeout(r, 3000))', true);
   const deleted = await prisma.topper.findUnique({ where: { id: created.id }, select: { id: true } });

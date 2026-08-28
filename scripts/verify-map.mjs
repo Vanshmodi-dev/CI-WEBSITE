@@ -42,6 +42,8 @@ const PASSWORD = env.ADMIN_PASSWORD ?? '';
 
 /** The one key this suite writes. */
 const KEY = 'contact.coordinates';
+/** The single-field editor. See the note on `contactForm()`. */
+const EDITOR = '/admin/preview';
 /** Somewhere in Pratap Nagar, Jaipur. Synthetic but plausible. */
 const POINT = '26.849123,75.805456';
 
@@ -220,10 +222,35 @@ check(
  * it is not testing.
  */
 async function contactForm() {
+  /*
+    ⚠ THE FORM COMES FROM /admin/preview, NOT /admin/website. THIS MATTERS.
+
+    Both pages post to the same action, but they carry DIFFERENT stale-edit
+    tokens. `/admin/website` renders one form per group and its token is the
+    newest `updatedAt` across the WHOLE group. `/admin/preview` renders one form
+    per field and its token covers that field alone.
+
+    The action checks the submitted token against the rows it is about to write
+    — for `only=contact.coordinates` that is one row. So pairing the GROUP token
+    with a single-key save is only ever accepted when no other row in the group
+    exists, because that is the one case where the two tokens coincide (both
+    describe an empty set).
+
+    This suite did exactly that, and passed for two topics because the contact
+    group happened to be empty on every run. It was proved by writing a single
+    `contact.city` row — a field that has existed since Phase 15 — and watching
+    every save in this file be refused as stale. Nothing about the application
+    is wrong: it is refusing a form that cannot prove which version it read,
+    which is precisely its job.
+
+    Topic 11 hit the same trap from the other direction and nearly filed it as a
+    high-severity application defect. Recording it here so the next person does
+    not have to find it a third time.
+  */
   const markup = await (
-    await fetch(`${BASE}/admin/website`, { headers: { Cookie: adminCookie } })
+    await fetch(`${BASE}/admin/preview`, { headers: { Cookie: adminCookie } })
   ).text();
-  const fields = fieldsOf(markup, `name="${KEY}"`);
+  const fields = fieldsOf(markup, `value="${KEY}"`);
   fields.only = KEY;
   return fields;
 }
@@ -280,7 +307,7 @@ section('1. DIRECTIONS WORK BEFORE A POINT IS VERIFIED');
   */
   const reset = await contactForm();
   reset[KEY] = '';
-  await postAction('/admin/website', reset, { cookie: adminCookie });
+  await postAction(EDITOR, reset, { cookie: adminCookie });
 
   check(
     (await storedValue() ?? '') === '',
@@ -321,7 +348,7 @@ section('2. A TEACHER ENTERS COORDINATES AND THE MAP APPEARS');
 {
   const fields = await contactForm();
   fields[KEY] = POINT;
-  const res = await postAction('/admin/website', fields, { cookie: adminCookie });
+  const res = await postAction(EDITOR, fields, { cookie: adminCookie });
   check(res.status < 400 || res.status === 303, 'the save was accepted', `status ${res.status}`);
 
   const stored = await storedValue();
@@ -409,7 +436,7 @@ section('3. ONLY TWO NUMBERS SURVIVE THE MUTATION BOUNDARY');
   for (const hostile of HOSTILE) {
     const fields = await contactForm();
     fields[KEY] = hostile;
-    await postAction('/admin/website', fields, { cookie: adminCookie });
+    await postAction(EDITOR, fields, { cookie: adminCookie });
     const now = await storedValue();
     check(
       now === POINT,
@@ -420,7 +447,7 @@ section('3. ONLY TWO NUMBERS SURVIVE THE MUTATION BOUNDARY');
       // Put the good value back so later assertions stay meaningful.
       const repair = await contactForm();
       repair[KEY] = POINT;
-      await postAction('/admin/website', repair, { cookie: adminCookie });
+      await postAction(EDITOR, repair, { cookie: adminCookie });
     }
   }
 
@@ -430,12 +457,12 @@ section('3. ONLY TWO NUMBERS SURVIVE THE MUTATION BOUNDARY');
     const other = '19.076,72.8777';
     const fields = await contactForm();
     fields[KEY] = other;
-    await postAction('/admin/website', fields, { cookie: adminCookie });
+    await postAction(EDITOR, fields, { cookie: adminCookie });
     check((await storedValue()) === other, 'control: a different valid point IS accepted');
 
     const back = await contactForm();
     back[KEY] = POINT;
-    await postAction('/admin/website', back, { cookie: adminCookie });
+    await postAction(EDITOR, back, { cookie: adminCookie });
     check((await storedValue()) === POINT, 'and restored for the checks below');
   }
 
@@ -462,7 +489,7 @@ section('3b. AN UNREGISTERED KEY CANNOT BE INVENTED');
     fields['contact.mapsUrl'] = 'https://evil.example/maps';
     fields['contact.placeId'] = 'ChIJevil';
     fields['zzmap.unregistered'] = 'nope';
-    await postAction('/admin/website', fields, { cookie: adminCookie });
+    await postAction(EDITOR, fields, { cookie: adminCookie });
   }
 
   // (b) `only` itself naming a key that is not in the registry.
@@ -470,7 +497,7 @@ section('3b. AN UNREGISTERED KEY CANNOT BE INVENTED');
     const fields = await contactForm();
     fields.only = rogueKey;
     fields[rogueKey] = 'https://evil.example/maps';
-    const res = await postAction('/admin/website', fields, { cookie: adminCookie });
+    const res = await postAction(EDITOR, fields, { cookie: adminCookie });
     check(res.status < 500, `only=${rogueKey} is handled, not crashed`, `status ${res.status}`);
   }
 
@@ -678,12 +705,12 @@ section('6. A STALE EDITOR CANNOT OVERWRITE A NEWER CHANGE');
   // Tab B changes the value underneath it.
   const tabB = await contactForm();
   tabB[KEY] = '19.076,72.8777';
-  await postAction('/admin/website', tabB, { cookie: adminCookie });
+  await postAction(EDITOR, tabB, { cookie: adminCookie });
   check((await storedValue()) === '19.076,72.8777', "control: tab B's change landed");
 
   // Tab A now saves its older view.
   tabA[KEY] = '11.111,22.222';
-  await postAction('/admin/website', tabA, { cookie: adminCookie });
+  await postAction(EDITOR, tabA, { cookie: adminCookie });
 
   const after = await storedValue();
   check(
@@ -696,7 +723,7 @@ section('6. A STALE EDITOR CANNOT OVERWRITE A NEWER CHANGE');
   // Restore.
   const repair = await contactForm();
   repair[KEY] = POINT;
-  await postAction('/admin/website', repair, { cookie: adminCookie });
+  await postAction(EDITOR, repair, { cookie: adminCookie });
   check((await storedValue()) === POINT, 'restored for the checks below');
 }
 
@@ -707,7 +734,7 @@ section('7. AUTHORISATION AND CSRF');
   const before = await storedValue();
 
   // (a) No cookie at all — the proxy refuses at the edge.
-  const anon = await postAction('/admin/website', { ...(await contactForm()), [KEY]: '1,1' });
+  const anon = await postAction(EDITOR, { ...(await contactForm()), [KEY]: '1,1' });
   check(
     anon.status === 307 || anon.status === 302,
     'an anonymous save is redirected at the edge',
@@ -749,7 +776,7 @@ section('8. CLEARING THE POINT TAKES THE MAP DOWN');
 {
   const fields = await contactForm();
   fields[KEY] = '';
-  await postAction('/admin/website', fields, { cookie: adminCookie });
+  await postAction(EDITOR, fields, { cookie: adminCookie });
 
   const stored = await storedValue();
   check(stored === '' || stored === null, 'the value is cleared', String(stored));
@@ -773,7 +800,7 @@ section('8. CLEARING THE POINT TAKES THE MAP DOWN');
   // Put the point back for the layout checks.
   const restore = await contactForm();
   restore[KEY] = POINT;
-  await postAction('/admin/website', restore, { cookie: adminCookie });
+  await postAction(EDITOR, restore, { cookie: adminCookie });
   await waitForPublic('/contact', (h) => h.includes('Show the map'));
 }
 

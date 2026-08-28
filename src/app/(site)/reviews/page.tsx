@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
 import { pageMetadata } from '@/lib/seo';
 import { getPublicReviews } from '@/lib/reviews/fetch';
-import { getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { ReviewCard } from '@/components/domain/public-cards';
@@ -56,14 +56,20 @@ export const revalidate = 21600;
  * "nothing here yet" state a business with no reviews would see. No error text.
  */
 export default async function ReviewsPage() {
-  const [payload, contact] = await Promise.all([getPublicReviews(), getContactBlock()]);
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [payload, contact, content] = await Promise.all([
+    getPublicReviews(),
+    getContactBlock(),
+    getSiteContent(),
+  ]);
   const reviews = payload?.reviews ?? [];
 
   return (
     <>
       <PageHeader
         eyebrow="Reviews"
-        title={<>What people say</>}
+        title={<>{content['page.reviews.title']}</>}
         standfirst={
           reviews.length > 0 ? (
             <>
@@ -128,13 +134,8 @@ export default async function ReviewsPage() {
 
       <ClosingCta
         id="reviews-cta"
-        title={<>Come and see for yourself</>}
-        body={
-          <>
-            The clearest way to judge an institute is to visit it and talk to
-            the people teaching. We are in {institute.locality}.
-          </>
-        }
+        title={<>{content['page.reviews.ctaTitle']}</>}
+        body={<>{content['page.reviews.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

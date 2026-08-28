@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { institute, publishedCourses } from '@/config/institute';
-import { getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { pageMetadata } from '@/lib/seo';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
@@ -17,9 +17,12 @@ export const metadata: Metadata = pageMetadata({
 export const revalidate = 3600;
 
 export default async function CoursesPage() {
-  const [batches, contact] = await Promise.all([
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [batches, contact, content] = await Promise.all([
     getUpcomingBatches(),
     getContactBlock(),
+    getSiteContent(),
   ]);
   const countFor = (slug: string) =>
     batches.filter((b) => b.courseSlug === slug).length;
@@ -28,17 +31,8 @@ export default async function CoursesPage() {
     <>
       <PageHeader
         eyebrow="Programmes"
-        title={
-          <>
-            What we teach
-          </>
-        }
-        standfirst={
-          <>
-            Commerce programmes for school and professional examinations, in{' '}
-            {institute.locality}.
-          </>
-        }
+        title={<>{content['page.courses.title']}</>}
+        standfirst={<>{content['page.courses.standfirst']}</>}
       />
 
       <Section tone="surface" labelledBy="courses-heading">
@@ -59,13 +53,8 @@ export default async function CoursesPage() {
 
       <ClosingCta
         id="courses-cta"
-        title={<>Not sure which one fits?</>}
-        body={
-          <>
-            Tell us which class you are in and what you are aiming for, and we
-            will talk you through the options.
-          </>
-        }
+        title={<>{content['page.courses.ctaTitle']}</>}
+        body={<>{content['page.courses.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

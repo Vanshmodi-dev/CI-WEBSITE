@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute } from '@/config/institute';
 import { pageMetadata, listingIndexing } from '@/lib/seo';
 import { getPublishedVideos, getVideoSubjects } from '@/lib/public-data';
-import { getContactBlock } from '@/lib/site-content';
+import { getSiteContent, getContactBlock } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { VideoPlayer } from '@/components/domain/video-player';
@@ -106,7 +106,13 @@ export default async function VideosPage({
 }) {
   const subject = readSubject(await searchParams);
 
-  const [subjects, contact] = await Promise.all([getVideoSubjects(), getContactBlock()]);
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [subjects, contact, content] = await Promise.all([
+    getVideoSubjects(),
+    getContactBlock(),
+    getSiteContent(),
+  ]);
 
   /*
     A subject that is valid but does not have its own filter behaves as no
@@ -120,13 +126,10 @@ export default async function VideosPage({
     <>
       <PageHeader
         eyebrow="Videos"
-        title={<>Watch a lesson before you decide</>}
+        title={<>{content['page.videos.title']}</>}
         standfirst={
           videos.length > 0 ? (
-            <>
-              Teaching from {institute.name}, published on YouTube. The quickest
-              way to judge an institute is to watch someone teach.
-            </>
+            <>{content['page.videos.standfirst']}</>
           ) : (
             <>
               We would rather you watched the teaching than read our description
@@ -204,14 +207,8 @@ export default async function VideosPage({
 
       <ClosingCta
         id="videos-cta"
-        title={<>Come and sit in on a class</>}
-        body={
-          <>
-            A video shows you the teaching. A visit shows you the room, the
-            batch size and the questions students actually ask. We are in{' '}
-            {institute.locality}.
-          </>
-        }
+        title={<>{content['page.videos.ctaTitle']}</>}
+        body={<>{content['page.videos.ctaBody']}</>}
         actions={
           <>
             <Button href="/contact" size="lg">

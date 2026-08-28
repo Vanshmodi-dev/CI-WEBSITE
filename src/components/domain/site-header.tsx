@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useDrawer } from '@/components/primitives/use-drawer';
 import { cn } from '@/lib/cn';
 import { institute } from '@/config/institute';
 import type { ResolvedNavLink } from '@/lib/site-content';
@@ -56,75 +57,21 @@ export function SiteHeader({
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  /**
-   * Escape closes and returns focus; Tab stays inside. Master Plan §20.
-   *
-   * ⚠ THE TAB HANDLING IS NOT OPTIONAL FOR aria-modal="true".
-   *
-   * `aria-modal` tells assistive technology that everything behind the dialog
-   * is inert. It does NOT stop the browser moving keyboard focus there, and
-   * Phase 11 measured exactly that: tabbing through the open drawer walked
-   * straight out into the page underneath, which is still rendered, still
-   * focusable, and completely hidden behind the panel. A keyboard or
-   * switch-control user ended up operating controls they could not see.
-   *
-   * The wrap below is the ARIA authoring-practices modal pattern: from the last
-   * control, Tab goes to the first; from the first, Shift+Tab goes to the last.
-   */
-  useEffect(() => {
-    if (!open) return;
-
-    function focusable(): HTMLElement[] {
-      const root = dialogRef.current;
-      if (!root) return [];
-      return [
-        ...root.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter((el) => el.offsetParent !== null || el === document.activeElement);
-    }
-
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        // setOpenPath, not setOpen: the state setter is referentially stable,
-        // so the effect does not need to re-subscribe on every render.
-        setOpenPath(null);
-        triggerRef.current?.focus();
-        return;
-      }
-
-      if (e.key !== 'Tab') return;
-
-      const items = focusable();
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement as HTMLElement | null;
-
-      // Focus outside the dialog at all (it can drift there on open) is pulled
-      // back to the first control rather than left where it is.
-      if (!active || !dialogRef.current?.contains(active)) {
-        e.preventDefault();
-        first?.focus();
-        return;
-      }
-      if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first?.focus();
-      } else if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last?.focus();
-      }
-    }
-
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
-    closeButtonRef.current?.focus();
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-    };
-  }, [open]);
+  /*
+    Escape closes and returns focus; Tab stays inside; the page behind does not
+    scroll. The implementation moved to `primitives/use-drawer.ts` in Topic 11
+    so the ADMIN drawer could have it too - it had none of this, which nobody
+    had noticed because only the public drawer was ever measured. The reasoning
+    that used to live here lives there now, unchanged.
+  */
+  const closeDrawer = useCallback(() => setOpenPath(null), []);
+  useDrawer({
+    open,
+    onClose: closeDrawer,
+    dialogRef,
+    triggerRef,
+    initialFocusRef: closeButtonRef,
+  })
 
   return (
     <>

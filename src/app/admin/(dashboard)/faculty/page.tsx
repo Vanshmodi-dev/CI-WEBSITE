@@ -6,6 +6,7 @@ import { getPrisma, isDatabaseConfigured } from '@/lib/db';
 import { PageHeader, Card, Notice, StatusPill, EmptyPanel } from '@/components/admin/ui';
 import { isSafePhotoPath } from '@/lib/validation';
 import { deleteFaculty } from './actions';
+import { DeleteButton } from '@/components/admin/delete-button';
 
 export const metadata: Metadata = { title: 'Faculty' };
 export const dynamic = 'force-dynamic';
@@ -164,12 +165,11 @@ export default async function FacultyPage({
                     */}
                     <form action={deleteFaculty}>
                       <input type="hidden" name="id" value={member.id} />
-                      <button
-                        type="submit"
-                        className="inline-flex min-h-11 items-center rounded-sm px-3 text-small font-medium text-muted transition-colors hover:text-danger"
-                      >
-                        Remove<span className="sr-only"> {member.name}</span>
-                      </button>
+                      <DeleteButton
+                        label="Remove"
+                        name={member.name}
+                        confirmMessage="Remove this teacher?"
+                      />
                     </form>
                   </div>
                 </Card>

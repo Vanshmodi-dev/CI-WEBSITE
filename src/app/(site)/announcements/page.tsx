@@ -5,6 +5,7 @@ import { getActiveAnnouncements } from '@/lib/public-data';
 import { Section, PageHeader } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { AnnouncementCard } from '@/components/domain/public-cards';
+import { getSiteContent } from '@/lib/site-content';
 
 export const metadata: Metadata = pageMetadata({
   title: 'Updates',
@@ -24,22 +25,19 @@ export const revalidate = 900;
  * batch that had already started.
  */
 export default async function AnnouncementsPage() {
-  const announcements = await getActiveAnnouncements();
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [announcements, content] = await Promise.all([
+    getActiveAnnouncements(),
+    getSiteContent(),
+  ]);
 
   return (
     <>
       <PageHeader
         eyebrow="Updates"
-        title={
-          <>
-            What&rsquo;s happening
-          </>
-        }
-        standfirst={
-          <>
-            Admission dates, batch news and notices from the institute.
-          </>
-        }
+        title={<>{content['page.announcements.title']}</>}
+        standfirst={<>{content['page.announcements.standfirst']}</>}
       />
 
       <Section tone="surface" labelledBy="updates-heading">

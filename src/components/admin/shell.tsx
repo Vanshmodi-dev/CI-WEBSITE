@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { institute } from '@/config/institute';
+import { useDrawer } from '@/components/primitives/use-drawer';
 
 /**
  * Admin shell — sidebar, header, mobile drawer.
@@ -94,6 +95,28 @@ export function AdminShell({
   const [openPath, setOpenPath] = useState<string | null>(null);
   const open = openPath !== null && openPath === pathname;
 
+  /*
+    THE DRAWER IS A MODAL, AND UNTIL TOPIC 11 IT DID NOT BEHAVE LIKE ONE.
+
+    Measured against the public drawer in the same browser run: Escape did
+    nothing, focus never entered the panel, and fifteen controls stayed
+    tabbable behind it. The public site had all of this from Phase 11 and the
+    admin - the one surface the institute owner actually uses - had none of it.
+
+    Same hook, same behaviour, one place to fix it next time.
+  */
+  const dialogRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const closeDrawer = useCallback(() => setOpenPath(null), []);
+  useDrawer({
+    open,
+    onClose: closeDrawer,
+    dialogRef,
+    triggerRef,
+    initialFocusRef: closeButtonRef,
+  });
+
   const current =
     NAV_ITEMS.find((i) =>
       i.exact ? pathname === i.href : pathname.startsWith(i.href),
@@ -106,6 +129,7 @@ export function AdminShell({
         <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
           <div className="flex items-center gap-3">
             <button
+              ref={triggerRef}
               type="button"
               onClick={() => setOpenPath(open ? null : pathname)}
               aria-expanded={open}
@@ -167,18 +191,51 @@ export function AdminShell({
         {/* Drawer — mobile */}
         {open ? (
           <div className="fixed inset-0 z-50 lg:hidden">
+            {/*
+              The scrim stays out of the tab order - it is a click target for a
+              pointer, and a keyboard user closes with Escape or the button
+              inside the panel. A tabbable scrim is one more stop between the
+              keyboard and the menu it is trying to reach.
+            */}
             <button
               type="button"
-              aria-label="Close menu"
+              aria-hidden="true"
               tabIndex={-1}
-              onClick={() => setOpenPath(null)}
+              onClick={closeDrawer}
               className="absolute inset-0 bg-navy-950/50"
             />
             <nav
+              ref={dialogRef}
               id="admin-nav"
+              role="dialog"
+              aria-modal="true"
               aria-label="Admin sections"
-              className="absolute inset-y-0 left-0 w-64 bg-paper px-3 py-6 shadow-e3"
+              className="absolute inset-y-0 left-0 flex w-64 flex-col bg-paper px-3 py-6 shadow-e3"
             >
+              {/*
+                A REAL close control, focusable, and the first thing focus
+                lands on. The previous scrim button carried `aria-label="Close
+                menu"` and `tabIndex={-1}` together, which announces a control
+                to a screen reader and then denies the keyboard any way to
+                reach it.
+              */}
+              <button
+                ref={closeButtonRef}
+                type="button"
+                onClick={closeDrawer}
+                className="mb-4 ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-heading hover:bg-surface"
+              >
+                <span className="sr-only">Close menu</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M6 6l12 12M18 6L6 18"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
+                </svg>
+              </button>
               <NavList pathname={pathname} />
             </nav>
           </div>

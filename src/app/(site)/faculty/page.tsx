@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
 import { pageMetadata } from '@/lib/seo';
 import { getPublishedFaculty } from '@/lib/public-data';
-import { getContactBlock, whatsappLink } from '@/lib/site-content';
+import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { FacultyCard } from '@/components/domain/public-cards';
@@ -42,22 +42,20 @@ export const revalidate = 900;
  * not collect; this is the same rule.
  */
 export default async function FacultyPage() {
-  const [faculty, contact] = await Promise.all([
+  // `getSiteContent()` is wrapped in React `cache()`, so the header, the
+  // footer and this page share ONE query rather than three.
+  const [faculty, contact, content] = await Promise.all([
     getPublishedFaculty(),
     getContactBlock(),
+    getSiteContent(),
   ]);
 
   return (
     <>
       <PageHeader
         eyebrow="Our teachers"
-        title={<>The people who teach here</>}
-        standfirst={
-          <>
-            Commerce is taught at {institute.name} by people who teach it every
-            day, in {institute.locality}.
-          </>
-        }
+        title={<>{content['page.faculty.title']}</>}
+        standfirst={<>{content['page.faculty.standfirst']}</>}
       />
 
       {/*
@@ -113,13 +111,8 @@ export default async function FacultyPage() {
 
       <ClosingCta
         id="faculty-cta"
-        title={<>Come and meet them</>}
-        body={
-          <>
-            The clearest way to judge an institute is to talk to the people
-            teaching. We are in {institute.locality}.
-          </>
-        }
+        title={<>{content['page.faculty.ctaTitle']}</>}
+        body={<>{content['page.faculty.ctaBody']}</>}
         actions={
           <>
             <Button href="/admissions" size="lg">

@@ -40,7 +40,7 @@ import { env, exit } from 'node:process';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
 import { launch } from './browser.mjs';
-import { EDITABLE_FIELDS } from '../src/config/site-content.ts';
+import { EDITABLE_FIELDS, PUBLIC_ROUTES } from '../src/config/site-content.ts';
 
 const BASE = env.BASE_URL ?? 'http://localhost:3000';
 const EMAIL = env.ADMIN_EMAIL ?? 'admin@localhost.invalid';
@@ -291,6 +291,36 @@ function markerFor(field, index) {
     case 'contact.coordinates':
       // Renders a MAP, not text. The observable effect is the panel appearing.
       return { value: '26.849123,75.805456', find: 'Show the map' };
+
+    /*
+      TOPIC 12 FIELDS THAT VALIDATE THEIR CONTENT.
+
+      These three refuse anything that is not a real email address or a real
+      profile URL on an exact-matched host, so a `ZZADM` marker is REJECTED by
+      the action and never stored. The first run of this suite after they were
+      added reported "stored null" for all three and looked like three fields
+      failing to save.
+
+      It was the suite that was wrong, and the application was doing precisely
+      what it was built to do. Same lesson as the PIN code and the phone number
+      above: a field with a validator needs a marker that satisfies it, and the
+      marker has to stay recognisable enough to find in the rendered HTML.
+
+      The domains are reserved for documentation (RFC 2606) or clearly
+      synthetic, so nothing here points at a real institute or a real account.
+    */
+    case 'contact.email':
+      return { value: 'zzadm-marker@example.com', find: 'zzadm-marker@example.com' };
+    case 'social.youtube':
+      return {
+        value: 'https://www.youtube.com/@zzadmmarker',
+        find: 'youtube.com/@zzadmmarker',
+      };
+    case 'social.instagram':
+      return {
+        value: 'https://www.instagram.com/zzadmmarker',
+        find: 'instagram.com/zzadmmarker',
+      };
     default: {
       const marker = `ZZADM${String(index).padStart(2, '0')}`;
       // Nav labels are capped at 24 characters; keep every marker short.
@@ -311,10 +341,40 @@ const toggleFields = EDITABLE_FIELDS.filter((f) => f.kind === 'toggle');
 console.log(`  ${textFields.length} text fields and ${toggleFields.length} toggles to cover\n`);
 
 const notReaching = [];
+const skipped = [];
+
+/**
+ * Some headings label a band that only exists when it has something to show.
+ *
+ * ⚠ THESE ARE NOT PASSES AND THEY ARE NOT FAILURES.
+ *
+ * `home.section.reviews.heading` labels the reviews band on the homepage, and
+ * that band renders only when the Review Engine returns reviews. For this
+ * client the engine is switched off (`enabled: false` in its config), so the
+ * band is correctly absent and the heading has nowhere to appear. Asserting it
+ * reaches the page would be asserting that a hidden section is visible.
+ *
+ * The precondition is CHECKED rather than assumed, so if reviews ever do arrive
+ * the field stops being skipped and starts being tested. A skip that cannot
+ * detect its own reason for existing is just a disabled test.
+ */
+async function unavailableReason(field) {
+  if (field.key !== 'home.section.reviews.heading') return null;
+  const home = await (await fetch(`${BASE}/`)).text();
+  if (home.includes('id="home-reviews"')) return null;
+  return 'the reviews band is hidden because the Review Engine returns none for this client';
+}
 
 for (const [index, field] of textFields.entries()) {
   const { value, find } = markerFor(field, index);
   const route = routeFor(field);
+
+  const unavailable = await unavailableReason(field);
+  if (unavailable) {
+    skipped.push(`${field.key} — ${unavailable}`);
+    console.log(`  SKIP  ${field.key} — NOT TESTED: ${unavailable}`);
+    continue;
+  }
 
   /*
     A MENU LABEL ONLY RENDERS WHILE ITS ENTRY IS SHOWN.
@@ -355,6 +415,52 @@ for (const [index, field] of textFields.entries()) {
 }
 
 /* ============================================ 2. THE NAVIGATION TOGGLES == */
+
+section('1b. A CONTACT CHANGE REACHES EVERY CACHED PAGE, NOT JUST THE HOMEPAGE');
+{
+  /*
+    REGRESSION FOR THE STALE-CACHE DEFECT TOPIC 12 FOUND.
+
+    The phone number is site chrome: it is in the header, the footer and the
+    call button on all twelve public routes. Section 1 only ever checked it on
+    `/`, because `routeFor()` maps a `'*'` field to the homepage — so the suite
+    could not see that `revalidatePath` was being called for a hand-written
+    list of routes that had fallen behind the site.
+
+    `/faculty` (cached 15 minutes) and `/reviews` (cached SIX HOURS) were both
+    missing from that list. Correcting the institute's phone number left the old
+    one on those two pages until the cache aged out on its own.
+
+    So this drives one chrome field and then checks EVERY public route. It is
+    one save and twelve reads, and it is the assertion that would have caught
+    the original defect.
+  */
+  /*
+    A NUMBER NO OTHER SECTION USES.
+
+    The first version of this section borrowed `+91 90000 33333`, which
+    section 4 also writes - into `contact.phoneSecondary` - before asserting
+    that clearing it makes the digits DISAPPEAR from /contact. The primary
+    number set here was still on the page, so section 4 failed on a promise the
+    product was keeping. Two sections, one marker, one false failure.
+  */
+  const NUMBER = '+91 90000 44444';
+  const FIND = '90000 44444';
+
+  const saved = await saveOne('contact.phonePrimary', NUMBER);
+  check(saved.ok, 'a site-wide contact change saves', saved.reason ?? '');
+
+  if (saved.ok) {
+    for (const route of PUBLIC_ROUTES) {
+      const reached = await waitForPublic(route, (h) => h.includes(FIND));
+      check(
+        reached.ok,
+        `the new phone number reaches ${route}`,
+        reached.ok ? `after ${reached.attempt} request(s)` : 'still showing the old number',
+      );
+    }
+  }
+}
 
 section('2. EVERY MENU TOGGLE ACTUALLY SHOWS AND HIDES ITS LINK');
 {
@@ -1078,6 +1184,12 @@ section('10. RESTORE EVERYTHING THIS SUITE TOUCHED');
   await page.close();
   await browser.close();
   await prisma.$disconnect();
+}
+
+if (skipped.length > 0) {
+  console.log('');
+  console.log('NOT TESTED (the section they label is legitimately not rendered):');
+  for (const line of skipped) console.log(`  - ${line}`);
 }
 
 if (notReaching.length > 0) {
