@@ -186,8 +186,38 @@ institute's obligations and the institute's decisions.
 > one, and the institute is the only party who can say which it is.
 
 > **F9 is the one that will actually happen.** A parent will ask for their
-> child's photograph to be taken down. Unpublishing works and takes seconds —
-> but somebody has to be reachable, and know that they are the one who does it.
+> child's photograph to be taken down. Somebody has to be reachable, and know
+> that they are the one who does it.
+
+### The takedown procedure, exactly
+
+Verified end to end by `npm run verify:consent` (19 assertions). **It is two
+steps, and the difference between them matters.**
+
+**Step 1 — take it off the website.** Open the record (Students & results,
+Student stories, or Gallery), untick the photograph permission, Save.
+
+The photograph disappears from every public page immediately. For a gallery
+entry the whole entry comes down with it. A colleague with the same record open
+in another tab cannot put it back by saving their stale copy — that is refused.
+This is the step that answers the phone call, and it takes seconds.
+
+**Step 2 — delete the file itself.** Admin → Photos, find the photograph,
+Delete.
+
+Step 1 removes every link to the image. It does **not** delete the bytes: the
+file stays reachable at its own address — `/media/<32-character-hash>.jpg` — for
+anyone who already has that exact URL. The address is unguessable and nothing on
+the site points at it any more, but it has not stopped existing.
+
+If the parent asked for the photograph to be *removed*, rather than just taken
+off the page, do step 2 as well. The library refuses the deletion while any
+record still uses the file and names which ones, so step 2 usually means
+detaching it from those records first.
+
+> ⚠ **Do not skip step 1 and go straight to deleting the file.** The record
+> would keep its permission ticked while pointing at a photograph that no longer
+> exists, and re-attaching a photograph later would republish it.
 
 ---
 

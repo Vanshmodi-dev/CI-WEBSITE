@@ -14,6 +14,8 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import {
   normalisePayload,
@@ -538,5 +540,78 @@ describe('text passes through as text', () => {
   test('control characters are stripped from text', () => {
     const result = ok(payload({ reviews: [review({ text: 'Good\u0000 teach\u001Fing.' })] }));
     assert.equal(result.reviews[0]?.text, 'Good teaching.');
+  });
+});
+
+/* ==================================================== cross-repo drift ==== */
+
+/**
+ * The consumer, checked against the ENGINE'S OWN FILE rather than a copy of it.
+ *
+ * =============================================================================
+ * WHY A COPIED FIXTURE IS NOT ENOUGH
+ * =============================================================================
+ * `fromEngineExample()` above reproduces the engine's published example, schema
+ * violations and all, and it is the right first test. But it is a
+ * RECONSTRUCTION: it was written by reading the engine once. If the engine
+ * changes what it publishes — a new `schema_version`, a restructured review,
+ * a renamed field — that fixture keeps passing and this site quietly stops
+ * showing reviews on the day the engine is finally switched on.
+ *
+ * The engine lives beside this repository rather than inside it, so this cannot
+ * be a hard dependency. When it is present, its real example is fed through the
+ * real normaliser. When it is absent, the test SAYS SO rather than passing
+ * silently — a skip nobody can see is how a suite reports coverage it does not
+ * have.
+ */
+describe('the engine payload contract, read from the engine itself', () => {
+  const ENGINE_EXAMPLE = fileURLToPath(
+    new URL('../../tp-reviews-engine/examples/static/reviews.json', import.meta.url),
+  );
+  const present = existsSync(ENGINE_EXAMPLE);
+
+  test('the engine repository is beside this one (context, not a failure)', () => {
+    if (!present) {
+      console.log(
+        '    NOT CHECKED: ../tp-reviews-engine is not present on this machine, ' +
+          'so the live payload contract was not verified against the engine.',
+      );
+    }
+    assert.ok(true);
+  });
+
+  test('the engine publishes the schema version this consumer supports', { skip: !present }, () => {
+    const example = JSON.parse(readFileSync(ENGINE_EXAMPLE, 'utf8')) as Record<string, unknown>;
+    assert.equal(
+      example.schema_version,
+      SUPPORTED_SCHEMA_VERSION,
+      'the engine has changed schema version. This consumer refuses unknown ' +
+        'versions on purpose, so the reviews band would go blank — update the ' +
+        'normaliser deliberately rather than widening the check.',
+    );
+  });
+
+  test('and this consumer ACCEPTS the engine’s real example', { skip: !present }, () => {
+    const example = JSON.parse(readFileSync(ENGINE_EXAMPLE, 'utf8'));
+    const verdict = normalisePayload(example);
+    assert.ok(
+      verdict.ok,
+      `the normaliser refuses the engine's own published example: ${
+        verdict.ok ? '' : verdict.reason
+      }`,
+    );
+  });
+
+  test('and loses none of its reviews', { skip: !present }, () => {
+    const example = JSON.parse(readFileSync(ENGINE_EXAMPLE, 'utf8'));
+    const verdict = normalisePayload(example);
+    if (!verdict.ok) throw new Error(verdict.reason);
+    const published = Array.isArray(example.reviews) ? example.reviews.length : 0;
+    assert.equal(
+      verdict.payload.reviews.length,
+      published,
+      'the consumer dropped reviews the engine published. Each one dropped is a ' +
+        'real review a visitor will not see.',
+    );
   });
 });

@@ -418,6 +418,15 @@ describe('declared render locations are true of the source', () => {
       // The course page indexes with the identical template literal, so the
       // proof is that exact expression appearing in the page source.
       'courses.': 'courses.${course.slug}.description',
+      /*
+        The two owner-supplied homepage bands are read in a loop over a fixed
+        list of indexes, so the proof is those exact expressions appearing in
+        the homepage source. If the loop is removed the string goes with it and
+        this fails, which is the point — the fields would otherwise still be
+        editable in the admin while reaching nothing.
+      */
+      'home.trust.': 'home.trust.${n}.value',
+      'home.why.': 'home.why.${n}.title',
     };
 
     for (const f of EDITABLE_FIELDS) {

@@ -127,6 +127,29 @@ export default async function HomePage() {
     getPublishedVideos({ limit: 4 }),
   ]);
 
+  /*
+    THE TWO OWNER-SUPPLIED BANDS, ASSEMBLED HERE SO THE JSX STAYS READABLE.
+
+    A stat counts only when BOTH halves are present: a number with nothing
+    naming it, or a label with no number, is worse than showing neither. Same
+    rule for a point — a heading with no sentence is still a point worth
+    showing, but a sentence with no heading is not.
+  */
+  const trustStats = [1, 2, 3, 4]
+    .map((n) => ({
+      value: (content[`home.trust.${n}.value`] ?? '').trim(),
+      label: (content[`home.trust.${n}.label`] ?? '').trim(),
+    }))
+    .filter((stat) => stat.value !== '' && stat.label !== '');
+
+  const whyHeading = (content['home.why.heading'] ?? '').trim();
+  const whyPoints = [1, 2, 3]
+    .map((n) => ({
+      title: (content[`home.why.${n}.title`] ?? '').trim(),
+      body: (content[`home.why.${n}.body`] ?? '').trim(),
+    }))
+    .filter((point) => point.title !== '');
+
   const batchCountFor = (slug: string) =>
     courseBatches.filter((b) => b.courseSlug === slug).length;
 
@@ -234,10 +257,81 @@ export default async function HomePage() {
       </section>
 
       {/*
-        4 · Credibility strip — DELIBERATELY ABSENT.
-        Student numbers, years of experience and success rates are exactly the
-        figures the previous site invented. None are confirmed, so none appear.
+        4 · Credibility strip — EMPTY UNTIL THE INSTITUTE FILLS IT IN.
+
+        This comment used to read "DELIBERATELY ABSENT", and the reasoning was
+        right: student numbers, years of experience and success rates are
+        exactly the figures the previous site invented, and none of them is
+        confirmed. What the comment did not do was the other half of the
+        blueprint's instruction (§9): "the UI should be designed so these
+        values can be dynamically updated later." There was no mechanism, so
+        the day the institute confirmed a number, showing it needed a developer.
+
+        There is one now. Every figure is an editable field that ships EMPTY,
+        the band renders nothing at all until a pair is filled in, and nothing
+        here can publish a number a human did not type.
       */}
+      {trustStats.length > 0 ? (
+        <Section tone="surface" className="py-10 md:py-12">
+          <Container>
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4">
+              {trustStats.map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd>
+                    <span className="block font-display text-[30px] font-bold leading-none text-heading md:text-[36px]">
+                      {stat.value}
+                    </span>
+                    <span className="mt-2 block text-small text-muted">{stat.label}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </Container>
+        </Section>
+      ) : null}
+
+      {/*
+        4b · Why this institute — the same rule.
+
+        §10 and §50 both ask for a value-proposition band, and the vision brief
+        spells out six candidate cards. Every one of them ("Doubt Support",
+        "Personal Attention") is a claim about a service, and both documents
+        attach the same condition: "actual offerings sir se verify." So the
+        wording is the institute's to write, the fallbacks are empty, and the
+        band does not exist until somebody has written at least one point.
+      */}
+      {whyPoints.length > 0 ? (
+        <Section tone="paper" labelledBy={whyHeading ? 'home-why' : undefined}>
+          <Container>
+            {whyHeading ? (
+              <h2
+                id="home-why"
+                className="mb-8 font-display text-[26px] font-bold leading-tight text-heading md:text-[32px]"
+              >
+                {whyHeading}
+              </h2>
+            ) : null}
+            <ul className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              {whyPoints.map((point) => (
+                <li
+                  key={point.title}
+                  className="rounded-md border border-rule bg-surface p-5"
+                >
+                  <h3 className="font-display text-[17px] font-semibold text-heading">
+                    {point.title}
+                  </h3>
+                  {point.body ? (
+                    <p className="measure mt-2 text-small leading-relaxed text-muted">
+                      {point.body}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </Container>
+        </Section>
+      ) : null}
 
       {/*
         5 · Courses — DELIBERATELY NOT A SEPARATE BAND ANY MORE.

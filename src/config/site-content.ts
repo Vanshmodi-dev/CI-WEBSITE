@@ -836,6 +836,110 @@ const PAGE_FIELDS: readonly EditableField[] = PAGE_COPY.flatMap((page) => [
  * already uses for its `aria-labelledby`, so a key names the same thing the
  * markup does.
  */
+/**
+ * THE TWO HOMEPAGE BANDS THE BLUEPRINT ASKS FOR AND NOBODY COULD BUILD.
+ *
+ * =============================================================================
+ * WHY THEY WERE MISSING, AND WHY THEY ARE FIELDS RATHER THAN COPY
+ * =============================================================================
+ * The master directive asks for both, twice: §9 and §10 describe them, and §50
+ * puts them in the homepage flow immediately after the hero. The vision brief
+ * repeats them as Section 2 and Section 3 with example content:
+ *
+ *     5000+ Students · 18+ Years Experience · 95%+ Success Rate
+ *     Concept First · Personal Attention · Exam Focused · Doubt Support
+ *
+ * And both documents attach the same condition, in the client's own words:
+ * "Obviously actual numbers sir se verify karenge. Fake numbers bilkul nahi"
+ * and "actual offerings sir se verify."
+ *
+ * Every one of those example values is exactly the kind of figure the previous
+ * site invented and the audit caught. So they could not be written into the
+ * page — and the credibility strip's absence was recorded in `page.tsx` for
+ * precisely that reason. What was never done was the other half of §9's
+ * instruction: "the UI should be designed so these values can be dynamically
+ * updated later." There was no mechanism at all, so the day the institute
+ * confirmed its numbers, showing them needed a developer.
+ *
+ * These fields are that mechanism. Every one is BLANKABLE and every one ships
+ * EMPTY, so the homepage today renders exactly what it rendered before: nothing
+ * where these bands would go. The moment somebody types a real figure into
+ * Admin → Website text, the band appears. Nothing here asserts anything about
+ * the institute, and nothing can be published that a human did not type.
+ *
+ * ⚠ THE FALLBACKS ARE EMPTY ON PURPOSE. Do not "helpfully" seed them with the
+ * blueprint's example numbers. They are illustrations in a brief, not facts
+ * about this institute, and a fallback is what the site shows when nobody has
+ * decided — which is the one moment it must show nothing.
+ */
+const TRUST_STATS = [1, 2, 3, 4] as const;
+
+const TRUST_FIELDS: readonly EditableField[] = TRUST_STATS.flatMap((n) => [
+  {
+    key: `home.trust.${n}.value`,
+    group: 'home' as const,
+    renders: { route: '/', section: 'Trust bar — the figures under the hero' },
+    label: `Figure ${n} — the number`,
+    help:
+      n === 1
+        ? 'For example a student count or a number of years. Leave every figure blank and the whole band stays hidden. Only put a number here once it is confirmed.'
+        : undefined,
+    kind: 'line' as const,
+    maxLength: 16,
+    fallback: '',
+    blankable: true,
+  },
+  {
+    key: `home.trust.${n}.label`,
+    group: 'home' as const,
+    renders: { route: '/', section: 'Trust bar — the figures under the hero' },
+    label: `Figure ${n} — what it counts`,
+    kind: 'line' as const,
+    maxLength: 32,
+    fallback: '',
+    blankable: true,
+  },
+]);
+
+const WHY_PILLARS = [1, 2, 3] as const;
+
+const WHY_FIELDS: readonly EditableField[] = [
+  {
+    key: 'home.why.heading',
+    group: 'home',
+    renders: { route: '/', section: 'Why this institute' },
+    label: 'Why-us band: heading',
+    help:
+      'The band appears only once you have written at least one point below it.',
+    kind: 'line',
+    maxLength: 60,
+    fallback: '',
+    blankable: true,
+  },
+  ...WHY_PILLARS.flatMap((n) => [
+    {
+      key: `home.why.${n}.title`,
+      group: 'home' as const,
+      renders: { route: '/', section: 'Why this institute' },
+      label: `Point ${n} — heading`,
+      kind: 'line' as const,
+      maxLength: 40,
+      fallback: '',
+      blankable: true,
+    },
+    {
+      key: `home.why.${n}.body`,
+      group: 'home' as const,
+      renders: { route: '/', section: 'Why this institute' },
+      label: `Point ${n} — sentence`,
+      kind: 'paragraph' as const,
+      maxLength: 180,
+      fallback: '',
+      blankable: true,
+    },
+  ]),
+];
+
 const HOME_SECTIONS: readonly { id: string; label: string; title: string }[] = [
   { id: 'results', label: 'Results', title: 'Our students\u2019 results' },
   { id: 'batches', label: 'Upcoming batches', title: 'Upcoming batches' },
@@ -975,6 +1079,8 @@ export const EDITABLE_FIELDS: readonly EditableField[] = [
   ...CONTACT_FIELDS,
   ...HOME_FIELDS,
   ...HOME_SECTION_FIELDS,
+  ...TRUST_FIELDS,
+  ...WHY_FIELDS,
   ...ABOUT_FIELDS,
   ...COURSE_FIELDS,
   ...PAGE_FIELDS,

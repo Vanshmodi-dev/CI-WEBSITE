@@ -58,6 +58,7 @@
     "verify:map": "node scripts/verify-map.mjs",
     "verify:admin": "node scripts/verify-admin.mjs",
     "verify:admin-ux": "node scripts/verify-admin-ux.mjs",
+    "verify:consent": "node scripts/verify-consent.mjs",
     "verify:storage": "node --conditions=react-server scripts/verify-storage.mjs"
   },
   "dependencies": {

@@ -392,6 +392,34 @@ for (const [index, field] of textFields.entries()) {
   const navLabel = /^nav\.(.+)\.label$/.exec(field.key);
   if (navLabel) await saveOne(`nav.${navLabel[1]}.visible`, 'on');
 
+  /*
+    THE TWO OWNER-SUPPLIED BANDS RENDER ONLY IN COMPANY.
+
+    Phase 20 added the trust bar and the why-us band that the blueprint asks
+    for (§9, §10, §50) and nobody could build, because every example value in
+    both documents is a claim the institute has not confirmed. They ship EMPTY
+    and appear only once a real person fills them in — so a figure with no
+    label, or a heading with no points, correctly renders nothing.
+
+    That is the product behaving properly rather than a field failing to reach
+    its route, so the companion is filled first — exactly what a teacher does
+    when they want the band to appear. The same reasoning as the menu toggle
+    above, and the band's hide-when-incomplete behaviour is proved directly in
+    `verify-ux`.
+  */
+  const trustHalf = /^home\.trust\.(\d)\.(value|label)$/.exec(field.key);
+  if (trustHalf) {
+    const [, n, half] = trustHalf;
+    await saveOne(
+      `home.trust.${n}.${half === 'value' ? 'label' : 'value'}`,
+      half === 'value' ? 'ZZADM counted' : '100+',
+    );
+  }
+  if (field.key === 'home.why.heading' || /^home\.why\.\d\.body$/.test(field.key)) {
+    const n = field.key === 'home.why.heading' ? '1' : field.key.split('.')[2];
+    await saveOne(`home.why.${n}.title`, 'ZZADM point');
+  }
+
   const saved = await saveOne(field.key, value);
   if (!saved.ok) {
     check(false, `${field.key} saved`, saved.reason ?? `status ${saved.status}`);

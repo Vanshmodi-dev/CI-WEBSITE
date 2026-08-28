@@ -400,6 +400,117 @@ const NEW_CTA = 'ZZCMS Preview Edit Worked';
   );
 }
 
+section('9b. A BAND THE INSTITUTE HAS NOT FILLED IN DOES NOT EXIST');
+{
+  /*
+    =========================================================================
+    THE TWO BANDS THE BLUEPRINT ASKS FOR AND NOBODY COULD BUILD
+    =========================================================================
+    §9 and §10 of the master directive, and Sections 2 and 3 of the vision
+    brief, both describe a credibility strip and a why-us band on the homepage.
+    Both give example content — "5000+ Students", "18+ Years Experience",
+    "Doubt Support" — and both attach the same condition in the client's own
+    words: "Fake numbers bilkul nahi" and "actual offerings sir se verify."
+
+    Every example is exactly the kind of figure the previous site invented, so
+    the bands could not be written into the page. What was missing was the
+    other half of §9: "the UI should be designed so these values can be
+    dynamically updated later."
+
+    Phase 20 built that. The rule this section defends is the one that makes it
+    safe: a band exists ONLY when a human has supplied complete content. A
+    figure with nothing naming it, or a heading with no points under it, must
+    render nothing at all — because a half-filled credibility strip is how an
+    unverified number reaches a visitor.
+  */
+  const KEYS = [
+    'home.trust.1.value', 'home.trust.1.label',
+    'home.why.heading', 'home.why.1.title', 'home.why.1.body',
+  ];
+  /*
+    This suite talks HTTP and a browser, never the database. That is fine here:
+    every one of these fields has an EMPTY fallback, so what the editor shows
+    is exactly what is stored — there is no fallback standing in front of it.
+  */
+  const currentValue = async (key) => {
+    await page.goto(BASE + PREVIEW);
+    return page.eval(
+      '(() => {' +
+        '  const only = document.querySelector(\'input[name="only"][value=\' + ' +
+        JSON.stringify(JSON.stringify(key)) +
+        ' + \']\');' +
+        '  if (!only) return null;' +
+        "  const box = only.closest('form').querySelector('input[type=text], textarea');" +
+        '  return box ? box.value : null;' +
+        '})()',
+    );
+  };
+  const before = {};
+  for (const key of KEYS) before[key] = await currentValue(key);
+
+  const save = async (key, value) => {
+    await page.goto(BASE + PREVIEW);
+    const markup = await page.eval('document.documentElement.outerHTML');
+    const fields = fieldsOf(markup, `value="${key}"`);
+    fields[key] = value;
+    return postAction(PREVIEW, fields, { cookie: adminCookie });
+  };
+  const home = async () => publicHtml('/');
+
+  /* --- start from genuinely empty --------------------------------------- */
+  for (const key of KEYS) await save(key, '');
+  await new Promise((r) => setTimeout(r, 500));
+  let html = await home();
+  check(!html.includes('ZZBAND'), 'control: with nothing supplied, neither band is on the page');
+
+  /* --- HALF a statistic must not appear ---------------------------------- */
+  await save('home.trust.1.value', '5000+');
+  await new Promise((r) => setTimeout(r, 500));
+  html = await home();
+  check(
+    !html.includes('5000+'),
+    'a figure with nothing naming it stays hidden',
+    'an unlabelled number reached the homepage',
+  );
+
+  /* --- the completed pair appears ---------------------------------------- */
+  await save('home.trust.1.label', 'ZZBAND students taught');
+  const shown = await waitForPublic('/', 'ZZBAND students taught');
+  check(shown.found, 'a completed figure appears', `after ${shown.attempt} anonymous request(s)`);
+  check((await home()).includes('5000+'), 'and it carries the number the teacher typed');
+
+  /* --- a heading with no points is not a band ---------------------------- */
+  await save('home.why.heading', 'ZZBAND Why this institute');
+  await new Promise((r) => setTimeout(r, 500));
+  check(
+    !(await home()).includes('ZZBAND Why this institute'),
+    'a why-us heading with no points under it stays hidden',
+  );
+
+  await save('home.why.1.title', 'ZZBAND Concept first');
+  const why = await waitForPublic('/', 'ZZBAND Concept first');
+  check(why.found, 'adding a point brings the band in', `after ${why.attempt} request(s)`);
+  check(
+    (await home()).includes('ZZBAND Why this institute'),
+    'and the heading comes with it',
+  );
+
+  /* --- clearing takes it away again -------------------------------------- */
+  for (const key of KEYS) await save(key, '');
+  await new Promise((r) => setTimeout(r, 700));
+  html = await home();
+  check(!html.includes('ZZBAND') && !html.includes('5000+'), 'clearing the fields removes both bands');
+
+  /* --- and the page is otherwise unharmed -------------------------------- */
+  check(html.includes('</footer>') && html.length > 5000, 'control: the homepage still renders');
+
+  // Put back whatever was stored.
+  for (const key of KEYS) {
+    const was = before[key];
+    if (was !== null && was !== undefined && was !== '') await save(key, was);
+  }
+}
+
 section('10. AN UNREGISTERED KEY IS REFUSED, NOT WRITTEN');
 {
   await page.goto(BASE + PREVIEW);
