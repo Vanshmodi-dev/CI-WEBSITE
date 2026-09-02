@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { isSameOrigin, rejectCrossOrigin } from '../src/lib/request-guard.ts';
+import { publicCsp, adminCsp, DEV_ONLY_SCRIPT_SRC } from '../src/lib/csp.ts';
 import { isValidRecordId, isSafePhotoPath } from '../src/lib/validation.ts';
 import { RETENTION, cutoff, DAY_MS } from '../src/lib/retention-policy.ts';
 import { MAX_PASSWORD_LENGTH, MAX_EMAIL_LENGTH } from '../src/lib/password.ts';
@@ -356,5 +357,93 @@ describe('burst limiter — checking is not the same as charging', () => {
     for (let i = 0; i < LIMITS.burst.max; i += 1) recordBurstHit('zztest-a');
     assert.equal(peekBurst('zztest-a').allowed, false);
     assert.equal(peekBurst('zztest-b').allowed, true);
+  });
+});
+
+describe("the dev-only 'unsafe-eval' exception cannot reach production", () => {
+  /**
+   * Phase 22. React's development build probes `eval()` while reading the RSC
+   * payload and logs a console error on every page when the CSP forbids it, so
+   * `src/lib/csp.ts` adds `'unsafe-eval'` for the dev server. These tests are
+   * the guard rail on that: the production form of both policies must not
+   * contain the token, and the dev form must differ by that token ALONE.
+   *
+   * The second half matters more than the first. It is easy to keep
+   * `'unsafe-eval'` out of production and still let the two policies drift in
+   * some other direction, and a dev server that runs a materially different
+   * policy from production is a dev server that cannot find CSP bugs.
+   */
+
+  const nonce = 'ZZTESTnonce0123456789ab==';
+
+  test('the public production baseline has no unsafe-eval', () => {
+    assert.equal(publicCsp({ dev: false }).includes('unsafe-eval'), false);
+  });
+
+  test('the admin production policy has no unsafe-eval', () => {
+    assert.equal(adminCsp(nonce, { dev: false }).includes('unsafe-eval'), false);
+  });
+
+  test('the dev forms do add it, so the exception actually works', () => {
+    assert.equal(publicCsp({ dev: true }).includes(DEV_ONLY_SCRIPT_SRC), true);
+    assert.equal(adminCsp(nonce, { dev: true }).includes(DEV_ONLY_SCRIPT_SRC), true);
+  });
+
+  test('dev differs from production by that one token and nothing else', () => {
+    for (const [name, prod, dev] of [
+      ['public', publicCsp({ dev: false }), publicCsp({ dev: true })],
+      ['admin', adminCsp(nonce, { dev: false }), adminCsp(nonce, { dev: true })],
+    ] as const) {
+      assert.equal(
+        dev.replace(` ${DEV_ONLY_SCRIPT_SRC}`, ''),
+        prod,
+        `the ${name} dev policy must be the production one plus ${DEV_ONLY_SCRIPT_SRC}`,
+      );
+    }
+  });
+
+  test('the relaxation lands in script-src and touches no other directive', () => {
+    // A token in the wrong directive would be a different, quieter mistake:
+    // `default-src` would hand it to every fetch destination at once.
+    const directives = adminCsp(nonce, { dev: true }).split('; ');
+    const carrying = directives.filter((d) => d.includes('unsafe-eval'));
+    assert.deepEqual(
+      carrying.map((d) => d.split(' ')[0]),
+      ['script-src'],
+    );
+  });
+
+  test("the admin keeps its nonce and strict-dynamic in dev", () => {
+    // 'strict-dynamic' makes a browser ignore 'self' and 'unsafe-inline' but
+    // NOT 'unsafe-eval'. If the dev exception had cost the nonce policy, the
+    // admin would be running a weaker shape than production while being
+    // reviewed, which is the thing this whole change exists to avoid.
+    const dev = adminCsp(nonce, { dev: true });
+    assert.equal(dev.includes(`'nonce-${nonce}'`), true);
+    assert.equal(dev.includes("'strict-dynamic'"), true);
+  });
+
+  test('both policies keep the directives the security suite asserts on', () => {
+    for (const policy of [publicCsp({ dev: false }), adminCsp(nonce, { dev: false })]) {
+      for (const directive of [
+        'default-src',
+        'script-src',
+        'style-src',
+        'img-src',
+        'font-src',
+        'connect-src',
+        'frame-src',
+        'object-src',
+        'base-uri',
+        'form-action',
+        'frame-ancestors',
+      ]) {
+        assert.equal(policy.includes(directive), true, `${directive} is missing`);
+      }
+      assert.equal(policy.includes("object-src 'none'"), true);
+      assert.equal(policy.includes("frame-ancestors 'none'"), true);
+      assert.equal(policy.includes("base-uri 'self'"), true);
+      assert.equal(policy.includes("form-action 'self'"), true);
+    }
   });
 });

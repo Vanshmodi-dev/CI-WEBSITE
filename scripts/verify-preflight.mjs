@@ -2006,10 +2006,31 @@ function checkConfiguration() {
     );
   }
 
+  /*
+    Phase 22 moved the CSP DIRECTIVE STRINGS out of src/proxy.ts and
+    next.config.ts and into src/lib/csp.ts, so both policies are assembled from
+    one set of parts and a directive meant to be shared can no longer drift in
+    one and not the other.
+
+    The two checks below assert the same properties they always did. What
+    changed is where the text lives, so they now read the builder as well as the
+    file that uses it. Each still requires the USING file to actually wire the
+    policy up, so moving the strings cannot make a check pass on its own.
+
+    The live-header equivalents are S-HDR-* in verify-production.mjs and section
+    13 of verify-security.mjs, which read what a browser is really sent.
+  */
+  const proxySrc = readIfExists('src/proxy.ts') ?? '';
+  const cspSrc = readIfExists('src/lib/csp.ts') ?? '';
+
   // -- P-CFG-05 --------------------------------------------------------------
   // The admin CSP must be a nonce policy, and the baseline must not be.
-  const proxySrc = readIfExists('src/proxy.ts') ?? '';
-  const hasNonce = /nonce-\$\{nonce\}/.test(proxySrc) && /strict-dynamic/.test(proxySrc);
+  const adminPolicySrc = proxySrc + cspSrc;
+  const hasNonce =
+    /nonce-\$\{nonce\}/.test(adminPolicySrc) &&
+    /strict-dynamic/.test(adminPolicySrc) &&
+    // The proxy must still be the thing that sets the header.
+    /Content-Security-Policy/.test(proxySrc);
   if (hasNonce) {
     pass(
       'P-CFG-05',
@@ -2020,14 +2041,19 @@ function checkConfiguration() {
     fail(
       'P-CFG-05',
       'the admin runs a nonce CSP',
-      'no nonce policy found in src/proxy.ts',
+      'no nonce policy found in src/proxy.ts or src/lib/csp.ts',
       'The admin holds the session cookie and every student record. It is where the strict policy belongs.',
     );
   }
 
   // -- P-CFG-06 --------------------------------------------------------------
   // The baseline must still exist as a fallback if the proxy fails to run.
-  if (/frame-ancestors 'none'/.test(nextConfig)) {
+  const baselineCovers =
+    /frame-ancestors 'none'/.test(nextConfig + cspSrc) &&
+    // ...and it must be attached to every route, not merely defined somewhere.
+    /Content-Security-Policy/.test(nextConfig) &&
+    /source: '\/:path\*'/.test(nextConfig);
+  if (baselineCovers) {
     pass(
       'P-CFG-06',
       'a baseline CSP covers every route including /admin',
@@ -2037,8 +2063,44 @@ function checkConfiguration() {
     fail(
       'P-CFG-06',
       'a baseline CSP covers every route including /admin',
-      'no baseline frame-ancestors directive',
+      'no baseline frame-ancestors directive on a catch-all route',
       'If the proxy ever fails to run, admin pages must fall back to a policy rather than to none.',
+    );
+  }
+
+  // -- P-CFG-05b -------------------------------------------------------------
+  /*
+    Phase 22 added a DEVELOPMENT-ONLY 'unsafe-eval' so React's dev build can
+    reconstruct server stacks without logging a CSP error on every page. This
+    check is the guard rail: the token may appear in the builder, but only ever
+    behind the `dev` flag, and neither policy file may hard-code it.
+
+    tests/security.test.ts proves the built strings; this proves nobody has
+    since typed it straight into a directive where the flag cannot gate it.
+
+    Comments are stripped first. All three files DISCUSS 'unsafe-eval' at
+    length, and a check that cannot tell prose from code would punish the
+    documentation that explains the decision.
+  */
+  const stripComments = (src) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const hardCodedEval =
+    /'unsafe-eval'/.test(stripComments(nextConfig)) ||
+    /'unsafe-eval'/.test(stripComments(proxySrc)) ||
+    // In csp.ts it is legitimate only as the named dev-only constant.
+    /(script|default)-src[^\n]*unsafe-eval/.test(stripComments(cspSrc));
+  if (!hardCodedEval) {
+    pass(
+      'P-CFG-05b',
+      "'unsafe-eval' is never hard-coded into a policy",
+      'the dev relaxation is gated behind the dev flag in src/lib/csp.ts',
+    );
+  } else {
+    fail(
+      'P-CFG-05b',
+      "'unsafe-eval' is never hard-coded into a policy",
+      "'unsafe-eval' appears in a directive rather than behind the dev flag",
+      'React needs eval only in development. A production CSP that allows it gives an injected script a second way to run.',
     );
   }
 

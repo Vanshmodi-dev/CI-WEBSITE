@@ -1,4 +1,6 @@
 import type { NextConfig } from 'next';
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
+import { publicCsp } from './src/lib/csp';
 
 /**
  * Security headers — Master Plan §19.
@@ -56,24 +58,22 @@ import type { NextConfig } from 'next';
  * NOTE ON 'unsafe-inline' FOR STYLES: Next.js injects inline <style> during
  * streaming SSR, so style-src needs it for the same reason. Pre-existing and
  * documented since Phase 3.
+ *
+ * PHASE 22 MOVED THE STRING, NOT THE POLICY. The directives now live in
+ * `src/lib/csp.ts`, which builds this baseline and the admin's from one place
+ * and adds `'unsafe-eval'` to `script-src` FOR THE DEV SERVER ONLY. React's
+ * development build probes `eval()` while reading the RSC payload and logs a
+ * console error on every page when a CSP forbids it; the measurement and the
+ * safety argument are in that file's header. Production is byte-for-byte the
+ * policy documented above.
+ *
+ * THE DEV FLAG COMES FROM THE CONFIG PHASE, NOT FROM `process.env.NODE_ENV`.
+ * `next build` always runs as PHASE_PRODUCTION_BUILD, so a stray
+ * `NODE_ENV=development` in someone's shell cannot bake the token into a
+ * production manifest — which is where these headers are resolved and from
+ * which `next start` serves them.
  */
-const csp = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://i.ytimg.com",
-  "font-src 'self'",
-  "connect-src 'self'",
-  // youtube-nocookie only — and only once a visitor clicks play (§14).
-  "frame-src 'self' https://www.youtube-nocookie.com https://www.google.com",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  'upgrade-insecure-requests',
-].join('; ');
-
-const securityHeaders = [
+const securityHeaders = (csp: string) => [
   { key: 'Content-Security-Policy', value: csp },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -161,10 +161,19 @@ const nextConfig: NextConfig = {
   },
 
   poweredByHeader: false,
-
-  async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
-  },
 };
 
-export default nextConfig;
+/**
+ * Config as a function, so the phase is available. Everything above is
+ * phase-independent; only the CSP asks which phase it is being built for.
+ */
+export default function config(phase: string): NextConfig {
+  const csp = publicCsp({ dev: phase === PHASE_DEVELOPMENT_SERVER });
+
+  return {
+    ...nextConfig,
+    async headers() {
+      return [{ source: '/:path*', headers: securityHeaders(csp) }];
+    },
+  };
+}

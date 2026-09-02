@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { randomBytes } from 'node:crypto';
+import { adminCsp as buildAdminCsp } from '@/lib/csp';
 
 /**
  * Admin route guard, and the admin's stricter Content Security Policy.
@@ -91,40 +92,39 @@ const SESSION_COOKIE = 'ci_admin_session';
  * streaming SSR, and a nonce cannot be attached to styles React emits itself.
  * That is the same documented compromise the baseline makes, and it is far less
  * dangerous than inline script.
+ *
+ * PHASE 22 MOVED THE DIRECTIVES to `src/lib/csp.ts`, which assembles this
+ * policy and the public baseline from one set of shared parts. The reasoning
+ * above is unchanged and is still the place to read it; what changed is that a
+ * directive both policies are meant to share can no longer drift in one and not
+ * the other, which is exactly how the i.ytimg.com bug above happened.
  */
 function adminCsp(nonce: string): string {
-  return [
-    "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'nonce-${nonce}' 'strict-dynamic'`,
-    "style-src 'self' 'unsafe-inline'",
-    /*
-      ⚠ i.ytimg.com IS DELIBERATE, AND ITS ABSENCE WAS A BUG.
+  /*
+    ⚠ 'unsafe-eval' IS ADDED FOR THE DEV SERVER ONLY, AND CANNOT SHIP.
 
-      The public CSP in `next.config.ts` has allowed YouTube's poster host since
-      Topic 9. The admin's did not — and the admin renders those posters in two
-      places that exist precisely to be looked at: the video list, so a teacher
-      can tell one video from another, and the form's live preview, whose own
-      comment says it "proves the link resolved to the video the teacher meant".
+    React's development build probes `eval()` when it reads the RSC payload and
+    logs a console error on every admin page if the policy forbids it. The
+    measurement behind that, and why it is not our code, is in src/lib/csp.ts.
 
-      Both were blocked by this line. The preview proved nothing, and every
-      thumbnail in the admin was a broken image. Found in Phase 21 by reading
-      the console on each admin route rather than by looking at the pages.
+    `process.env.NODE_ENV` is not read at runtime here. The bundler replaces it
+    with the literal "production" while building, so this call site is emitted
+    as `{dev: !1}` — a constant, not a lookup. Checked in the built output:
+    `.next/server/chunks/[root-of-the-server]__*.js` contains the call as
+    `(r,{dev:!1})`.
 
-      This admits ONE external image host, the same one the public site already
-      uses. Images do not execute; `script-src`, `object-src` and `frame-src`
-      are untouched, and `frame-src 'none'` still means no YouTube player can
-      ever load inside the admin.
-    */
-    "img-src 'self' data: blob: https://i.ytimg.com",
-    "font-src 'self'",
-    "connect-src 'self'",
-    "frame-src 'none'",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    'upgrade-insecure-requests',
-  ].join('; ');
+    To be exact about what that does and does not buy: the STRING
+    `'unsafe-eval'` is still present in that chunk, inside the builder's body,
+    because the builder itself is not inlined. It is unreachable, not absent.
+    The guarantee is that no production code path can pass `dev: true`, not that
+    the bytes are gone — and the header a browser actually receives is what
+    `scripts/verify-security.mjs` asserts on against a running production build.
+
+    `'strict-dynamic'` makes a browser ignore `'self'` and `'unsafe-inline'` in
+    script-src; it does NOT make it ignore `'unsafe-eval'`, which is why this
+    works here and why it would be a real weakening if it ever shipped.
+  */
+  return buildAdminCsp(nonce, { dev: process.env.NODE_ENV === 'development' });
 }
 
 export function proxy(request: NextRequest) {
