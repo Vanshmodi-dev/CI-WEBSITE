@@ -44,8 +44,6 @@ export type StudentRecord = ConsentFlags & {
   studentName: string;
   displayNameMode: DisplayNameModeValue;
   photoUrl?: string | null;
-  /** Pointer to the signed paperwork. Without it, nothing publishes. */
-  consentRef?: string | null;
   published: boolean;
 };
 
@@ -60,6 +58,22 @@ export type StudentPresentation = {
 
 /** Which permission authorises this KIND of content. */
 export type ContentKind = 'consentResult' | 'consentStory';
+
+/*
+  THE CONSENT-FORM REFERENCE IS NOT PART OF THIS MODULE ANY MORE.
+
+  Phase 23 removed it as a publishing condition for RESULTS and kept it for
+  STORIES, which needed a per-kind table here to express the difference. Phase
+  24 removed it for stories too, at the owner's request, so there is no
+  difference left to express and the table is gone with it.
+
+  ⚠ WHAT THIS DID NOT CHANGE, EITHER TIME. The reference was never a permission
+  — it is a pointer to where the paperwork is filed, and it never decided what
+  a visitor saw. `consentResult`, `consentName`, `consentPhoto` and
+  `consentStory` are the permissions; all four are unchanged and each is still
+  checked independently below. The column is still stored, still exported, and
+  still never sent to a browser.
+*/
 
 function nameParts(fullName: string): string[] {
   return fullName.trim().split(/\s+/).filter(Boolean);
@@ -87,14 +101,15 @@ export function partialName(fullName: string): string {
  * The base gate: may this record appear publicly at all?
  *
  * `requires` names the permission that authorises this kind of content —
- * `consentResult` for a topper or result, `consentStory` for a story. Both
- * also need the signed paperwork reference.
+ * `consentResult` for a topper or result, `consentStory` for a story. Two
+ * conditions, both of them decisions a person made about this record: it has
+ * been published, and the permission for this kind of content is held.
  */
 export function isPubliclyVisible(
   record: StudentRecord,
   requires: ContentKind = 'consentResult',
 ): boolean {
-  return Boolean(record.published && record.consentRef && record[requires]);
+  return Boolean(record.published && record[requires]);
 }
 
 /**
@@ -170,10 +185,6 @@ export function blockersForPublishing(
   requires: ContentKind = 'consentResult',
 ): string[] {
   const blockers: string[] = [];
-
-  if (!record.consentRef || record.consentRef.trim().length === 0) {
-    blockers.push('Add the consent form reference you hold on file.');
-  }
 
   if (requires === 'consentResult' && !record.consentResult) {
     blockers.push('Tick "Result" — permission to show this result publicly.');

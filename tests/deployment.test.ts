@@ -41,6 +41,8 @@ import {
   EXPECTED_FOREIGN_KEYS,
   CONTENT_TABLES,
   DANGEROUS_MIGRATION_PATTERNS,
+  REVIEWED_DESTRUCTIVE_MIGRATIONS,
+  isReviewedDestructive,
   SECRET_CONTENT_PATTERNS,
   CLIENT_BUNDLE_FORBIDDEN,
   ROUTES,
@@ -525,13 +527,59 @@ describe('migration files', () => {
     }
   });
 
-  test('no migration contains a destructive statement', () => {
+  test('no migration contains an UNREVIEWED destructive statement', () => {
     for (const name of migrationNames) {
       const sql = readFileSync(path.join(migrationDir, name, 'migration.sql'), 'utf8')
         .replace(/--[^\n]*/g, '')
         .replace(/\/\*[\s\S]*?\*\//g, '');
       for (const danger of DANGEROUS_MIGRATION_PATTERNS) {
-        assert.ok(!danger.pattern.test(sql), `${name} contains ${danger.label}: ${danger.why}`);
+        if (!danger.pattern.test(sql)) continue;
+        assert.ok(
+          isReviewedDestructive(name, danger.label),
+          `${name} contains ${danger.label}: ${danger.why} ` +
+            'If it is deliberate, record it in REVIEWED_DESTRUCTIVE_MIGRATIONS with the reason.',
+        );
+      }
+    }
+  });
+
+  test('every reviewed destructive exception still describes a real statement', () => {
+    // A stale entry is a standing exemption for a statement nobody can see any
+    // more, which is how an allowlist quietly becomes a blanket permission.
+    for (const entry of REVIEWED_DESTRUCTIVE_MIGRATIONS) {
+      assert.ok(
+        migrationNames.includes(entry.migration),
+        `reviewed exception names a migration that does not exist: ${entry.migration}`,
+      );
+      const sql = readFileSync(path.join(migrationDir, entry.migration, 'migration.sql'), 'utf8')
+        .replace(/--[^\n]*/g, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+      const danger = DANGEROUS_MIGRATION_PATTERNS.find((d) => d.label === entry.label);
+      assert.ok(danger, `reviewed exception names an unknown pattern: ${entry.label}`);
+      assert.ok(
+        danger.pattern.test(sql),
+        `${entry.migration} no longer contains ${entry.label} - remove the exception`,
+      );
+      assert.ok(entry.why.length > 60, 'a reviewed exception needs a reason, not a label');
+
+      /*
+        AND THE APPROVAL IS PER CONSTRAINT, NOT PER FILE.
+
+        One entry saying "a DROP CONSTRAINT here was reviewed" would approve
+        every drop the file ever grows. Both directions are checked: a name in
+        the SQL that nobody listed fails, and a listed name no longer in the SQL
+        fails too.
+      */
+      if (entry.label === 'DROP CONSTRAINT') {
+        const dropped = [...sql.matchAll(/DROP\s+CONSTRAINT\s+"([^"]+)"/gi)]
+          .map((m) => m[1])
+          .sort();
+        assert.deepEqual(
+          dropped,
+          [...(entry.constraints ?? [])].sort(),
+          `${entry.migration} drops constraints that its reviewed exception does not name ` +
+            '(or names ones it no longer drops). List every one in `constraints`.',
+        );
       }
     }
   });

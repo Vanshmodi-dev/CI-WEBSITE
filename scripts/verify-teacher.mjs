@@ -230,9 +230,16 @@ try {
     'the refusal explains what is missing rather than showing an error code',
   );
 
-  // Now with the paperwork recorded.
+  /*
+    Now with the RESULT PERMISSION ticked, which since Phase 23 is the whole of
+    what publishing a result requires. The consent-form reference field this
+    step used to fill in no longer exists on the form.
+  */
   await page.goto(`${BASE}/admin/students/${created.id}`);
-  await page.type('input[name=consentRef]', `${PREFIX}-CONSENT-001`);
+  check(
+    (await page.eval("document.querySelectorAll('input[name=consentRef]').length")) === 0,
+    'the consent-form-reference field is gone from the result form',
+  );
   await page.check('input[name=consentResult]', true);
   await page.check('input[name=published]', true);
   await page.submitForm('input[name=studentName]', 3500);
@@ -252,8 +259,8 @@ try {
   check(/91/.test(publicResults), 'the published result appears on /results');
   check(!publicResults.includes(NAME), 'the name is withheld without name consent');
   check(
-    !(await page.eval(`document.documentElement.outerHTML.includes('${PREFIX}-CONSENT-001')`)),
-    'the consent reference never reaches the public page',
+    !(await page.eval("document.documentElement.outerHTML.includes('consentRef')")),
+    'no consent field name reaches the public page',
   );
 
   // Grant name consent and watch the page change.

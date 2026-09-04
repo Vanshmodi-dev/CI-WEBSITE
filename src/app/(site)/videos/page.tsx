@@ -211,10 +211,10 @@ export default async function VideosPage({
         body={<>{content['page.videos.ctaBody']}</>}
         actions={
           <>
-            <Button href="/contact" size="lg">
+            <Button href="/contact" size="lg" variant="onBand">
               Plan a visit
             </Button>
-            <Button href={contact.telHref} variant="secondary" size="lg">
+            <Button href={contact.telHref} variant="onBandSecondary" size="lg">
               Call {contact.phonePrimaryDisplay}
             </Button>
           </>
@@ -248,7 +248,7 @@ function FilterLink({
       aria-current={active ? 'true' : undefined}
       className={
         active
-          ? 'inline-flex min-h-11 items-center rounded-full border border-navy-800 bg-navy-800 px-4 text-small font-medium text-white'
+          ? 'inline-flex min-h-11 items-center rounded-full border border-navy-700 bg-navy-700 px-4 text-small font-medium text-white'
           : 'inline-flex min-h-11 items-center rounded-full border border-rule px-4 text-small font-medium text-text transition-colors hover:border-navy-600/50 hover:bg-selected'
       }
     >

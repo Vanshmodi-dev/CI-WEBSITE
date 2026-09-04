@@ -103,7 +103,6 @@ export async function saveStudentResult(
   const yearRaw = String(formData.get('year') ?? '').trim();
   const highlight = String(formData.get('highlight') ?? '').trim().slice(0, 160);
   const photoUrl = String(formData.get('photoUrl') ?? '').trim().slice(0, 500);
-  const consentRef = String(formData.get('consentRef') ?? '').trim().slice(0, 200);
 
   const consentResult = formData.get('consentResult') === 'on';
   const consentName = formData.get('consentName') === 'on';
@@ -166,7 +165,6 @@ export async function saveStudentResult(
       studentName,
       displayNameMode,
       photoUrl: photoUrl.length > 0 ? photoUrl : null,
-      consentRef: consentRef.length > 0 ? consentRef : null,
       consentResult,
       consentName,
       consentPhoto,
@@ -193,7 +191,15 @@ export async function saveStudentResult(
       : null,
     year,
     highlight: highlight.length > 0 ? highlight : null,
-    consentRef: consentRef.length > 0 ? consentRef : null,
+    /*
+      `consentRef` IS DELIBERATELY ABSENT FROM THIS PAYLOAD (Phase 23).
+
+      The field is gone from the form and is no longer required to publish. It
+      is NOT written as null either: the column is retained, some rows carry a
+      reference the institute recorded before this change, and an update that
+      wrote null would erase that paperwork trail on the next unrelated save.
+      Omitting the key leaves whatever is stored exactly as it is.
+    */
     consentResult,
     consentName,
     consentPhoto,

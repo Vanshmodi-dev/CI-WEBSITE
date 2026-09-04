@@ -138,14 +138,14 @@ export default async function ReviewsPage() {
         body={<>{content['page.reviews.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
             <Button
               href={whatsappLink(contact.whatsappNumber)}
               external
               size="lg"
-              variant="secondary"
+              variant="onBandSecondary"
             >
               WhatsApp us
             </Button>

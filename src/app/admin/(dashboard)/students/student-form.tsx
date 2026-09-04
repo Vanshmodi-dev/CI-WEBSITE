@@ -31,7 +31,6 @@ export type StudentValues = {
   board?: string;
   year?: string;
   highlight?: string;
-  consentRef?: string;
   consentResult?: boolean;
   consentName?: boolean;
   consentPhoto?: boolean;
@@ -71,7 +70,6 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
     values.displayNameMode ?? 'INITIALS',
   );
   const [photoUrl, setPhotoUrl] = useState(values.photoUrl ?? '');
-  const [consentRef, setConsentRef] = useState(values.consentRef ?? '');
   const [consentResult, setConsentResult] = useState(values.consentResult ?? false);
   const [consentName, setConsentName] = useState(values.consentName ?? false);
   const [consentPhoto, setConsentPhoto] = useState(values.consentPhoto ?? false);
@@ -81,7 +79,6 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
     studentName: studentName || 'Student',
     displayNameMode,
     photoUrl: photoUrl || null,
-    consentRef: consentRef || null,
     consentResult,
     consentName,
     consentPhoto,
@@ -272,25 +269,17 @@ export function StudentForm({ values = {} }: { values?: StudentValues }) {
           to the others.
         </p>
 
-        <div className="mt-5">
-          <Field
-            name="consentRef"
-            label="Consent form reference"
-            hint="How you can find the signed form later, for example a file number."
-          >
-            {(props) => (
-              <input
-                {...props}
-                type="text"
-                maxLength={200}
-                value={consentRef}
-                onChange={(e) => setConsentRef(e.target.value)}
-                className={inputClass(false)}
-              />
-            )}
-          </Field>
-        </div>
+        {/*
+          THE "CONSENT FORM REFERENCE" FIELD WAS HERE, AND IS GONE (Phase 23).
 
+          It was labelled optional and was not: the publish panel below refused
+          to publish without it, so the screen contradicted itself and the only
+          way to find that out was to try. The owner removed the requirement
+          rather than the label — see REQUIRES_CONSENT_REF in student-display.ts.
+
+          The three permissions underneath are untouched. They are what decides
+          what a visitor sees; the reference never was.
+        */}
         <fieldset className="mt-5">
           <legend className="text-small font-medium text-text">
             What may we show?

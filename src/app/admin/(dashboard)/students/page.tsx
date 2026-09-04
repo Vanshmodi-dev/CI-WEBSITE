@@ -165,7 +165,6 @@ export default async function StudentsPage({
                       studentName: r.studentName,
                       displayNameMode: r.displayNameMode,
                       photoUrl: r.photoUrl,
-                      consentRef: r.consentRef,
                       consentResult: r.consentResult,
                       consentName: r.consentName,
                       consentPhoto: r.consentPhoto,

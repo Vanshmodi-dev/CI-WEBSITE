@@ -10,6 +10,7 @@ import {
   getUpcomingBatches,
   getTopAnnouncement,
   getPublishedFaculty,
+  getHeroPortrait,
   getPublishedGallery,
   getPublishedVideos,
 } from '@/lib/public-data';
@@ -20,6 +21,7 @@ import {
   ClosingCta,
 } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
+import { cn } from '@/lib/cn';
 import {
   ResultCard,
   StoryCard,
@@ -28,6 +30,7 @@ import {
   ReviewCard,
 } from '@/components/domain/public-cards';
 import { GalleryStrip } from '@/components/domain/gallery-strip';
+import { HeroPortrait } from '@/components/domain/hero-portrait';
 import { VideoStrip } from '@/components/domain/video-strip';
 
 export const metadata: Metadata = pageMetadata({
@@ -69,11 +72,12 @@ function MoreLink({ href, children }: { href: string; children: string }) {
  * step between them, the page had no rhythm to scan by — the eye found no
  * edges, so nothing looked more important than anything else. The bands now
  * differ in SHAPE, which is the cue that survives being read at a glance and
- * at any contrast: the hero splits two ways with the programme list as its
- * counterweight, results are a dense numeric grid, batches are rows, stories
- * are two wide panels, location is an asymmetric split, and the closing call
- * to action is a single framed block. Same content, same data rules —
- * different silhouettes.
+ * at any contrast: the hero splits two ways with the teacher's portrait as its
+ * counterweight (Phase 21; it was the programme list until the owner asked for
+ * a face), results are a dense numeric grid, batches are rows, stories are two
+ * wide panels, location is an asymmetric split, and the closing call to action
+ * is a single framed block. Same content, same data rules — different
+ * silhouettes.
  */
 export default async function HomePage() {
   const [
@@ -84,6 +88,7 @@ export default async function HomePage() {
     results,
     stories,
     faculty,
+    portrait,
     reviewPayload,
     gallery,
     videos,
@@ -91,14 +96,24 @@ export default async function HomePage() {
     getSiteContent(),
     getContactBlock(),
     getTopAnnouncement(),
-    // Unlimited (the helper caps at 24) because the hero panel prints a per
-    // programme count. Taking 4 here would have made that count a count of
-    // "batches on this page", which is not what "3 upcoming" says to a reader.
+    // Unlimited, which the helper caps at 24. Phase 21 removed the hero panel
+    // that printed a per-programme count, so this is now simply the list the
+    // band draws its soonest five from; the read is unchanged and the extra
+    // rows are discarded by `shownBatches` below.
     getUpcomingBatches(),
     getPublishedResults({ limit: 6 }),
     getPublishedStories(2),
     // Three is the homepage band; the full list is /faculty.
     getPublishedFaculty(3),
+    /*
+      THE HERO PORTRAIT — one more read of the same table, not a new mechanism.
+
+      A separate query rather than `faculty.find((m) => m.photoUrl)` over the
+      three rows above: those three are the homepage BAND, and the band's limit
+      is an editorial choice. Deriving the hero from it would mean that raising
+      or lowering the band silently changed whose photograph leads the page.
+    */
+    getHeroPortrait(),
     getPublicReviews(),
     /*
       FOUR, AND THE NUMBER IS A BUDGET DECISION RATHER THAN A DESIGN ONE.
@@ -150,14 +165,33 @@ export default async function HomePage() {
     }))
     .filter((point) => point.title !== '');
 
-  const batchCountFor = (slug: string) =>
-    courseBatches.filter((b) => b.courseSlug === slug).length;
-
   const courseName = (slug: string) =>
     institute.courses.find((c) => c.slug === slug)?.name ?? slug;
 
-  // The band lists the soonest few; the panel counts all of them.
+  // The band lists the soonest few.
   const shownBatches = courseBatches.slice(0, 5);
+
+  /*
+    THE HERO TRUST STRIP — THREE COUNTS, NONE OF THEM WRITTEN DOWN.
+
+    Every figure is measured from data this page has already fetched: the
+    published programme list, the upcoming batches, and the total the
+    results query reports. Nothing here is a stored number a teacher could
+    inflate, and nothing is a claim - a count of records is the one kind of
+    statistic this site is allowed to make, because it is true by
+    construction.
+
+    A zero is DROPPED rather than shown. An institute that has published no
+    results yet gets two facts, or one, or an empty strip; it never gets
+    "0 results published", which is a worse thing to say than nothing.
+  */
+  const heroFacts = [
+    { label: 'Programmes', value: publishedCourses.length },
+    { label: 'Upcoming batches', value: courseBatches.length },
+    // 'Results', not 'Results published': every label in this strip is a
+    // string the content audit already accounts for elsewhere on the site.
+    { label: 'Results', value: results.total },
+  ].filter((fact) => fact.value > 0);
 
   return (
     <>
@@ -181,33 +215,62 @@ export default async function HomePage() {
       {/*
         3 · Hero.
 
-        The hero used to be a single left-aligned column on plain paper, which
-        gave the largest type on the site nothing to sit against. It is now a
-        split: the claim on the left, and on the right a panel that answers the
-        question the claim provokes — "which programmes?" — using the real
-        course list. Nothing invented; the panel is the same `courses` array
-        the /courses page is built from, so it cannot drift out of date.
+        A split: the claim on the left, the teacher on the right. Phase 21
+        replaced a panel repeating the programme list with the photograph, on
+        the argument that a parent choosing a coaching class is choosing a
+        person — see `getHeroPortrait()` and `HeroPortrait`. The column
+        disappears entirely rather than showing a placeholder when no teacher
+        has a photograph yet.
+
+        PHASE 25 MADE IT A COMPOSITION.
+
+        Three decorative layers, all `aria-hidden`, none of them animated: a
+        faint graph-paper grid, a navy bloom from the top-left and a gold one
+        from the right. Each is well under the threshold at which it reads as
+        colour; together they stop the largest type on the site from sitting on
+        a flat white field. This is the "expensive, not busy" instruction — no
+        blobs, no glass, nothing moving.
+
+        THE SECOND HEADLINE LINE CARRIES A GOLD STROKE. That is the one
+        highlighted phrase the design asks for, and it is done as a rule rather
+        than a colour swap because orange TEXT at headline size is 2.06:1 and
+        illegible. Which words are emphasised is therefore the institute's
+        decision, not a developer's: it is whatever they typed into
+        `home.heroTitleLine2`, and a single-line headline gets no stroke at all
+        rather than an arbitrary word picked by code.
       */}
-      <section className="border-b border-rule-strong bg-paper">
+      <section className="relative isolate overflow-hidden border-b border-rule bg-surface">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 grid-pattern" />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bloom-navy" />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bloom-gold" />
         <Container>
-          <div className="grid grid-cols-1 items-center gap-12 py-16 md:py-24 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-16 lg:py-28">
-            <div>
-              <p className="eyebrow flex items-center gap-2.5 text-accent-text">
-                <span aria-hidden="true" className="h-[3px] w-7 shrink-0 rounded-full bg-accent" />
+          <div
+            className={`grid grid-cols-1 items-center gap-12 py-16 md:py-24 lg:gap-20 lg:py-28 ${
+              portrait ? 'lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]' : ''
+            }`}
+          >
+            <div className={portrait ? '' : 'max-w-[760px]'}>
+              <p className="eyebrow flex items-center gap-3 text-accent-text">
+                <span
+                  aria-hidden="true"
+                  className="h-[2px] w-8 shrink-0 rounded-full bg-accent"
+                />
                 {content['home.heroEyebrow']}
               </p>
 
-              <h1 className="mt-5 font-display text-display font-bold leading-[1.04] tracking-[-0.025em] text-heading lg:text-[62px]">
+              <h1 className="mt-6 font-display text-display font-bold leading-[1.02] tracking-[-0.03em] text-heading">
                 {content['home.heroTitleLine1']}
                 {content['home.heroTitleLine2'] ? (
                   <>
                     <br />
-                    {content['home.heroTitleLine2']}
+                    <span className="accent-underline">
+                      {content['home.heroTitleLine2']}
+                    </span>
                   </>
                 ) : null}
               </h1>
 
-              <p className="measure mt-6 text-[18px] leading-relaxed text-muted">
+              <p className="measure mt-7 text-[18px] leading-relaxed text-muted">
                 {content['home.heroStandfirst']}
               </p>
 
@@ -219,39 +282,33 @@ export default async function HomePage() {
                   Talk to us
                 </Button>
               </div>
+
+              {/*
+                THE TRUST STRIP, AND EVERY ITEM IN IT IS A FACT THIS PAGE
+                ALREADY HOLDS.
+
+                Programmes counted from the published course list, batches from
+                the batch table, results from the published-and-consented
+                query. No figure is written here and none is invented: each one
+                renders only when its number is above zero, so an institute with
+                nothing published sees an empty hero rather than a row of
+                zeroes claiming a track record it does not have.
+              */}
+              {heroFacts.length > 0 ? (
+                <dl className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-rule pt-7">
+                  {heroFacts.map((fact) => (
+                    <div key={fact.label}>
+                      <dt className="text-[13px] text-muted">{fact.label}</dt>
+                      <dd className="font-display text-[26px] font-bold leading-none tabular-nums text-heading">
+                        {fact.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
             </div>
 
-            <div className="rounded-lg border border-rule bg-surface p-6 shadow-e1 md:p-7">
-              <h2 className="eyebrow text-accent-text">What we teach</h2>
-              <ul className="mt-4 divide-y divide-rule">
-                {publishedCourses.map((course) => (
-                  <li key={course.slug}>
-                    <Link
-                      href={`/courses/${course.slug}`}
-                      className="group flex min-h-12 items-center justify-between gap-4 py-1 font-medium text-heading hover:text-link-hover"
-                    >
-                      <span className="min-w-0">
-                        {course.name}
-                        {batchCountFor(course.slug) > 0 ? (
-                          <span className="ml-2 text-small font-normal text-muted">
-                            {batchCountFor(course.slug)} upcoming
-                          </span>
-                        ) : null}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="shrink-0 text-link transition-transform group-hover:translate-x-0.5"
-                      >
-                        &rarr;
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-5 border-t border-rule pt-4">
-                <MoreLink href="/courses">All courses and details</MoreLink>
-              </div>
-            </div>
+            {portrait ? <HeroPortrait member={portrait} /> : null}
           </div>
         </Container>
       </section>
@@ -271,18 +328,46 @@ export default async function HomePage() {
         the band renders nothing at all until a pair is filled in, and nothing
         here can publish a number a human did not type.
       */}
+      {/*
+        PHASE 25 PAINTED THIS BAND NAVY, and it is the reason the homepage now
+        has rhythm at all. Light, light, light with hairlines between was
+        honest and flat; one full-strength dark band directly under the hero is
+        the break a reader feels without being told, and a statistics strip is
+        the right thing to put in it - a claim of proof, sitting on the colour
+        the brand uses for authority.
+
+        The numerals are GOLD on navy (8.9:1), which is the one place the
+        accent is allowed to carry large text. The labels stay in the muted
+        band tone so the eye lands on the figure first.
+
+        Nothing about the DATA changed: every value is still an editable field
+        that ships empty, the band still renders nothing at all until a
+        value/label pair is filled in, and nothing here can publish a number a
+        human did not type.
+      */}
       {trustStats.length > 0 ? (
-        <Section tone="surface" className="py-10 md:py-12">
+        <Section tone="band" className="py-12 md:py-16">
           <Container>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4">
-              {trustStats.map((stat) => (
-                <div key={stat.label} className="text-center">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-4">
+              {trustStats.map((stat, index) => (
+                <div
+                  key={stat.label}
+                  className={cn(
+                    'reveal text-center',
+                    /* Hairline dividers between columns, never before the
+                       first one and never across a row break. */
+                    index % 2 === 1 ? 'border-l border-white/12' : '',
+                    'md:border-l md:border-white/12 md:first:border-l-0',
+                  )}
+                >
                   <dt className="sr-only">{stat.label}</dt>
                   <dd>
-                    <span className="block font-display text-[30px] font-bold leading-none text-heading md:text-[36px]">
+                    <span className="block font-display text-[34px] font-bold leading-none tracking-[-0.02em] text-accent-gold md:text-[42px]">
                       {stat.value}
                     </span>
-                    <span className="mt-2 block text-small text-muted">{stat.label}</span>
+                    <span className="mt-3 block text-small text-band-muted">
+                      {stat.label}
+                    </span>
                   </dd>
                 </div>
               ))}
@@ -304,31 +389,62 @@ export default async function HomePage() {
       {whyPoints.length > 0 ? (
         <Section tone="paper" labelledBy={whyHeading ? 'home-why' : undefined}>
           <Container>
-            {whyHeading ? (
-              <h2
-                id="home-why"
-                className="mb-8 font-display text-[26px] font-bold leading-tight text-heading md:text-[32px]"
-              >
-                {whyHeading}
-              </h2>
-            ) : null}
-            <ul className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {whyPoints.map((point) => (
-                <li
-                  key={point.title}
-                  className="rounded-md border border-rule bg-surface p-5"
-                >
-                  <h3 className="font-display text-[17px] font-semibold text-heading">
-                    {point.title}
-                  </h3>
-                  {point.body ? (
-                    <p className="measure mt-2 text-small leading-relaxed text-muted">
-                      {point.body}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+            {/*
+              EDITORIAL, NOT THREE IDENTICAL BOXES.
+
+              The heading holds one column and the points hold the other, so
+              the band reads as a statement with evidence beside it rather than
+              as a row of equal tiles. Below `lg` it stacks and the points
+              become a single column - three cards side by side on a phone is
+              the layout that makes each of them too narrow to say anything.
+
+              The points are NUMBERED, in gold. That is the whole decoration:
+              no icon set to choose from, nothing to download, and a numeral
+              carries the same "there are three of these" signal an icon would
+              have without pretending to illustrate a claim nobody wrote.
+            */}
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-20">
+              <div className="lg:sticky lg:top-28 lg:self-start">
+                {whyHeading ? (
+                  <h2
+                    id="home-why"
+                    className="font-display text-h2 font-bold leading-[1.12] tracking-[-0.02em] text-heading"
+                  >
+                    {whyHeading}
+                  </h2>
+                ) : null}
+                <span
+                  aria-hidden="true"
+                  className="mt-6 block h-[3px] w-16 rounded-full bg-gradient-to-r from-accent to-accent-gold"
+                />
+              </div>
+
+              <ul className="flex flex-col divide-y divide-rule border-y border-rule">
+                {whyPoints.map((point, index) => (
+                  <li
+                    key={point.title}
+                    className="reveal flex gap-5 py-7 transition-colors duration-[var(--duration-base)] first:pt-0 last:pb-0"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="mt-1 font-display text-[15px] font-bold leading-none text-accent-text tabular-nums"
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="font-display text-h3 font-semibold leading-snug text-heading">
+                        {point.title}
+                      </h3>
+                      {point.body ? (
+                        <p className="measure mt-2 text-[15px] leading-relaxed text-muted">
+                          {point.body}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </Container>
         </Section>
       ) : null}
@@ -349,7 +465,7 @@ export default async function HomePage() {
 
       {/* 6 · Results — hidden entirely when nothing is published. */}
       {results.results.length > 0 ? (
-        <Section tone="surface" labelledBy="home-results">
+        <Section tone="tint" labelledBy="home-results">
           <SectionHeader
             id="home-results"
             eyebrow="Results"
@@ -357,7 +473,13 @@ export default async function HomePage() {
             action={<MoreLink href="/results">All results</MoreLink>}
           />
 
-          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            NO `items-start` HERE, and that is the whole of the grid's part in
+            equal-height cards. The default `stretch` makes every item in a row
+            as tall as the tallest, which is what `h-full` inside ResultCard
+            then has something to fill. Phase 21; see the note in that card.
+          */}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {results.results.map((result) => (
               <ResultCard key={result.id} result={result} />
             ))}
@@ -429,7 +551,7 @@ export default async function HomePage() {
         exists to correct.
       */}
       {reviewPayload && reviewPayload.reviews.length > 0 ? (
-        <Section tone="paper" labelledBy="home-reviews">
+        <Section tone="surface" labelledBy="home-reviews">
           <SectionHeader
             id="home-reviews"
             eyebrow={`Reviews on ${reviewPayload.sourceLabel}`}
@@ -506,7 +628,7 @@ export default async function HomePage() {
         carries the two things somebody who has just found the address wants
         next, which is how to reach the place and who to ask for.
       */}
-      <Section tone="paper" labelledBy="home-location">
+      <Section tone="tint" labelledBy="home-location">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-16">
           <div>
             <SectionHeader
@@ -592,14 +714,14 @@ export default async function HomePage() {
         body={content['home.ctaBody']}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Enquire now
             </Button>
             <Button
               href={whatsappLink(contact.whatsappNumber)}
               external
               size="lg"
-              variant="secondary"
+              variant="onBandSecondary"
             >
               WhatsApp us
             </Button>

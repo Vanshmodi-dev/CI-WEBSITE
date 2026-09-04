@@ -132,11 +132,25 @@ export async function getPublishedResults({
   };
   if (!isDatabaseConfigured()) return empty;
 
-  /** Published + consented. Everything else is a filter on top of this. */
+  /**
+   * Published + consented. Everything else is a filter on top of this.
+   *
+   * PHASE 23 REMOVED `consentRef: { not: null }` FROM THIS CLAUSE, and what is
+   * left is the whole of the gate: the institute has ticked "Result" for this
+   * record, and somebody has put it on the website. Both are decisions a person
+   * makes about one record; the reference was a filing pointer that decided
+   * nothing about what a visitor saw.
+   *
+   * Nothing already stored changes visibility because of this. The CHECK
+   * constraint made `published` without a reference impossible until now, so
+   * there is no existing row this clause was the only thing hiding.
+   *
+   * The NAME and PHOTOGRAPH gates are not here and never were — they are
+   * applied per row by `present()` below, and they are unchanged.
+   */
   const visible = {
     published: true,
     consentResult: true,
-    consentRef: { not: null },
   } as const;
 
   const where = {
@@ -165,7 +179,6 @@ export async function getPublishedResults({
           studentName: true,
           displayNameMode: true,
           photoUrl: true,
-          consentRef: true,
           consentResult: true,
           consentName: true,
           consentPhoto: true,
@@ -218,7 +231,6 @@ export async function getPublishedResults({
         studentName: row.studentName,
         displayNameMode: row.displayNameMode as DisplayNameModeValue,
         photoUrl: row.photoUrl,
-        consentRef: row.consentRef,
         consentResult: row.consentResult,
         consentName: row.consentName,
         consentPhoto: row.consentPhoto,
@@ -296,10 +308,19 @@ export type PublicStoriesPage = {
  */
 export const STORIES_PAGE_SIZE = 12;
 
+/**
+ * The same shape as `visible` in getPublishedResults(), with the story's own
+ * permission in place of the result's.
+ *
+ * Phase 23 dropped `consentRef: { not: null }` from the results clause and
+ * Phase 24 dropped it here, so the two are once again the same rule: published,
+ * and the permission for this kind of content is held. The story permission is
+ * NOT weakened — `consentStory` is still required, and a result grant still
+ * does not authorise a story.
+ */
 const STORY_VISIBLE = {
   published: true,
   consentStory: true,
-  consentRef: { not: null },
 } as const;
 
 const STORY_ORDER = [{ year: 'desc' as const }, { createdAt: 'desc' as const }];
@@ -325,7 +346,6 @@ const STORY_SELECT = {
   studentName: true,
   displayNameMode: true,
   photoUrl: true,
-  consentRef: true,
   consentStory: true,
   consentName: true,
   consentPhoto: true,
@@ -345,7 +365,6 @@ function presentStory(row: {
   studentName: string;
   displayNameMode: string;
   photoUrl: string | null;
-  consentRef: string | null;
   consentStory: boolean;
   consentName: boolean;
   consentPhoto: boolean;
@@ -362,7 +381,6 @@ function presentStory(row: {
       studentName: row.studentName,
       displayNameMode: row.displayNameMode as DisplayNameModeValue,
       photoUrl: row.photoUrl,
-      consentRef: row.consentRef,
       consentStory: row.consentStory,
       consentName: row.consentName,
       consentPhoto: row.consentPhoto,
@@ -580,7 +598,10 @@ export async function lastPublishedAt(): Promise<ContentFreshness> {
     const prisma = getPrisma();
     const [result, story, announcement, batch] = await Promise.all([
       prisma.topper.aggregate({
-        where: { published: true, consentResult: true, consentRef: { not: null } },
+        // The same gate as `visible` in getPublishedResults, kept in step with it
+        // by hand. tests/consent-removal.test.ts reads this file and fails if the
+        // two stop matching.
+        where: { published: true, consentResult: true },
         _max: { updatedAt: true },
       }),
       prisma.studentStory.aggregate({ where: STORY_VISIBLE, _max: { updatedAt: true } }),
@@ -673,6 +694,75 @@ export async function getPublishedFaculty(limit?: number): Promise<PublicFaculty
   }
 }
 
+/**
+ * THE ONE TEACHER THE HOMEPAGE HERO PUTS A FACE TO.
+ *
+ * Phase 21. The hero's right-hand column used to be a panel listing the
+ * programmes, which the owner asked to replace with a photograph of the person
+ * who teaches here. That is a media question before it is a layout one, and the
+ * answer this project already has is the faculty record: a teacher's photograph
+ * is uploaded once through the admin photo library, stored under `/media/<key>`
+ * and attached to a `Faculty` row. There is no second place a portrait can come
+ * from, and inventing one — a hard-coded path, a new CMS field pointing at a
+ * file nobody can replace — would be a photograph the institute cannot change
+ * without a developer.
+ *
+ * SO THE HERO READS THE FACULTY LIST, AND TAKES THE FIRST ONE WITH A PHOTO.
+ *
+ * `priority: 'desc'` is the ordering the /faculty page and the homepage band
+ * already use, and it is the ordering an administrator already understands:
+ * whoever is meant to lead the page is given the highest priority. The demo
+ * data has the Director at 100 for exactly that reason. So "who is Sir" is not
+ * a new decision encoded here — it is the decision the institute has already
+ * made in the admin, read one more time.
+ *
+ * `photoUrl: { not: null }` IS IN THE QUERY. A member of staff with no
+ * portrait renders a monogram everywhere else on this site, and a monogram is
+ * right in a grid of faces where it sits next to real ones. Alone, at hero
+ * size, a single navy tile with two letters in it is not a photograph of
+ * anybody — it is a placeholder the size of a door. So the hero asks for a row
+ * that HAS an image, and renders nothing at all when there is none, which is
+ * the same rule every band on that page already follows.
+ *
+ * The path is re-checked with `isSafePhotoPath` for the reason given above:
+ * a row that is already wrong must degrade to nothing rather than reach
+ * `next/image`. That check is why this returns `null` rather than a record
+ * with a `photoUrl` a component would have to test again.
+ */
+export async function getHeroPortrait(): Promise<PublicFaculty | null> {
+  if (!isDatabaseConfigured()) return null;
+
+  try {
+    const row = await getPrisma().faculty.findFirst({
+      where: { published: true, photoUrl: { not: null } },
+      orderBy: [{ priority: 'desc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        designation: true,
+        subject: true,
+        bio: true,
+        photoUrl: true,
+      },
+    });
+
+    if (!row?.photoUrl || !isSafePhotoPath(row.photoUrl)) return null;
+
+    return {
+      id: row.id,
+      name: row.name,
+      designation: row.designation,
+      subject: row.subject,
+      bio: row.bio,
+      photoUrl: row.photoUrl,
+      monogram: facultyInitials(row.name),
+    };
+  } catch (error) {
+    logUnexpected('public.heroPortrait.failed', error);
+    return null;
+  }
+}
+
 export type PublicGalleryItem = {
   id: string;
   imageUrl: string;
@@ -721,14 +811,17 @@ export async function getPublishedGallery(
         published: true,
         ...(options.category ? { category: options.category } : {}),
         /*
-          "Nobody identifiable in it" OR "consent is on file for the people in
-          it." Expressed as an OR rather than two queries so there is one
-          statement to read and one to get right.
+          "Nobody identifiable in it" OR "there is permission to publish a
+          photograph of the people in it." Expressed as an OR rather than two
+          queries so there is one statement to read and one to get right.
+
+          Phase 24 removed the second half of that AND, which also required a
+          consent-form reference. The photograph permission is what remains and
+          it is untouched: a picture of identifiable people without it is still
+          not returned by this query, and `isGalleryItemPublic` refuses it a
+          second time below.
         */
-        OR: [
-          { showsPeople: false },
-          { AND: [{ consentPhoto: true }, { consentRef: { not: null } }] },
-        ],
+        OR: [{ showsPeople: false }, { consentPhoto: true }],
       },
       orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
       ...(options.limit ? { take: options.limit } : {}),
@@ -739,7 +832,6 @@ export async function getPublishedGallery(
         caption: true,
         category: true,
         showsPeople: true,
-        consentRef: true,
         consentPhoto: true,
         published: true,
       },

@@ -291,7 +291,6 @@ describe('consent safety', () => {
     const plan = planFor([
       rowOf({
         ...valid,
-        consentRef: 'ZZTEST-CONSENT',
         consentResult: 'Yes',
         consentName: 'Yes',
         consentPhoto: 'Yes',
@@ -320,7 +319,6 @@ describe('consent safety', () => {
     const plan = planFor([
       rowOf({
         ...valid,
-        consentRef: 'ZZTEST-CONSENT',
         consentResult: 'Yes',
         consentName: 'Yes',
         photoPath: '/photos/zz.jpg',
@@ -356,14 +354,13 @@ describe('records that are already on the website', () => {
     consentResult: true,
     consentName: true,
     consentPhoto: false,
-    consentRef: 'ZZTEST-CONSENT',
     displayNameMode: 'FULL',
     photoUrl: null,
   };
 
   test('a correction is an update, not a duplicate', () => {
     const plan = planFor(
-      [rowOf({ ...valid, consentRef: 'ZZTEST-CONSENT', consentResult: 'Yes' })],
+      [rowOf({ ...valid, consentResult: 'Yes' })],
       [live],
     );
     assert.equal(plan.creates.length, 0);
@@ -372,21 +369,32 @@ describe('records that are already on the website', () => {
   });
 
   test('removing result permission from a live record is refused with an explanation', () => {
-    const plan = planFor([rowOf({ ...valid, consentRef: 'ZZTEST-CONSENT', consentResult: 'No' })], [live]);
+    const plan = planFor([rowOf({ ...valid, consentResult: 'No' })], [live]);
     assert.equal(plan.ok, false);
     assert.match(plan.problems[0]?.problem ?? '', /on the website now/i);
     assert.match(plan.problems[0]?.expected ?? '', /take the record off the website/i);
   });
 
-  test('blanking the consent reference on a live record is refused', () => {
+  /*
+    THIS TEST ASSERTED THE OPPOSITE UNTIL PHASE 23.
+
+    A row that left the consent-form reference blank while correcting a live
+    record used to be refused, because the database would have rejected the
+    write. That requirement is gone for results, the column is gone from the
+    template, and the row below is now simply a correction. Inverted rather than
+    deleted: a removed rule that quietly comes back is what a test like this
+    catches.
+  */
+  test('a correction no longer has to carry a consent-form reference', () => {
     const plan = planFor([rowOf({ ...valid, consentResult: 'Yes' })], [live]);
-    assert.equal(plan.ok, false);
-    assert.match(plan.problems[0]?.problem ?? '', /consent form reference blank/i);
+    assert.equal(plan.ok, true);
+    assert.deepEqual(plan.problems, []);
+    assert.equal(plan.updates.length, 1);
   });
 
   test('the preview of a live record reflects what is actually shown', () => {
     const plan = planFor(
-      [rowOf({ ...valid, consentRef: 'ZZTEST-CONSENT', consentResult: 'Yes', consentName: 'Yes', nameDisplay: 'Full name' })],
+      [rowOf({ ...valid, consentResult: 'Yes', consentName: 'Yes', nameDisplay: 'Full name' })],
       [live],
     );
     const view = plan.preview[0];
@@ -424,8 +432,7 @@ describe('the visibility preview', () => {
       board: null,
       year: 2026,
       highlight: null,
-      consentRef: 'ZZTEST-CONSENT',
-      consentResult: true,
+        consentResult: true,
       consentName: true,
       consentPhoto: false,
       subjects: [],

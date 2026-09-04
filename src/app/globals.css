@@ -5,194 +5,204 @@
    Canonical reference: docs/design/tokens.css (approved 21 Aug 2026)
    Source of truth for colour: assets/brand/commerce-insight-logo-master.jpg
 
-   ⚠ --accent (#EA853F, the logo orange) is 2.65:1 on white and FAILS AA for
-   text at any size. It is a FILL colour. For orange text use --accent-text.
+   PHASE 25 REBUILT THE PALETTE AROUND THE OWNER'S BRAND SPECIFICATION.
+   Navy #123B6D / #0B2748, orange #F29A2E, gold #E8A33A, ground #F8FAFC. The
+   ramps below are derived from those five, so every tint and shade is a
+   relative of the brand rather than an unrelated blue that happened to be to
+   hand. What did NOT change is the discipline the ramps were built with:
+
+   ⚠ --accent (#F29A2E) is 2.06:1 on white and FAILS AA for text at any size.
+   It is a FILL colour — a rule, a numeral on navy, a star, a badge. For orange
+   TEXT on a light ground use --accent-text, which is measured below.
    ========================================================================== */
 
 :root {
-  /* brand ramp · navy (h214 s100) */
-  --navy-950: #00142e;
-  --navy-900: #001d42;
-  --navy-800: #002d66; /* THE LOGO NAVY */
-  --navy-700: #003d8a;
-  --navy-600: #0051b8;
-  --navy-500: #0065e6;
-  --navy-300: #529eff;
-  --navy-100: #cce2ff;
-  --navy-50: #ebf4ff;
+  /* -------------------------------------------------------------- navy ---
+     Anchored on the two the brand specifies: 700 is the main navy (#123B6D)
+     and 900 is the deep navy the dark bands are painted in (#0B2748). 950 is
+     one step deeper again, for the foot of a gradient and for text on orange.
+     The lighter steps are tints of 700 rather than a separate hue, which is
+     what keeps a hover wash and a heading looking like the same colour. */
+  --navy-950: #071B33;
+  --navy-900: #0B2748; /* DEEP NAVY — bands, footer, final call to action */
+  --navy-800: #0E3059;
+  --navy-700: #123B6D; /* MAIN NAVY — headings, primary button, links */
+  --navy-600: #1A4E8A;
+  --navy-500: #2565A8;
+  --navy-300: #7FA8CF;
+  --navy-100: #CBDCEE;
+  --navy-50: #EEF4FA; /* NAVY TINT — the one tinted section ground */
 
-  /* brand ramp · orange (h25 s80) */
-  --accent-700: #a14c12;
-  --accent-600: #bc5915; /* AA-safe for TEXT on light — 4.59:1 */
-  --accent-500: #ea853f; /* THE LOGO ORANGE — fills only */
-  --accent-300: #f1ad7e;
-  --accent-100: #fae2d1;
-  --accent-50: #fcf0e8;
+  /* ------------------------------------------------------------ orange ---
+     500 is the brand orange and is a FILL. 600 and 700 are darkened for text;
+     both are measured against every ground they are allowed on. */
+  --accent-700: #8A4A0E;
+  --accent-600: #A75B12; /* AA-safe TEXT — 5.07:1 white, 4.57:1 navy tint */
+  --accent-500: #F29A2E; /* THE BRAND ORANGE — fills only */
+  --accent-400: #E8A33A; /* WARM GOLD — numerals on navy, premium accents */
+  --accent-300: #F6C27E;
+  --accent-100: #FFF6E8; /* SOFT ORANGE TINT */
+  --accent-50: #FFF9ED; /* SOFT GOLD TINT */
 
-  /* neutrals · biased to brand hue 214 at s22 — never pure grey */
-  --ink-950: #0b0e11;
-  --ink-900: #181e25;
-  --ink-800: #242d38;
-  --ink-700: #384557;
-  --ink-600: #50637c;
-  --ink-500: #6a81a0;
-  --ink-400: #8fa1b7;
-  --ink-300: #bbc5d3;
-  --ink-200: #dde2e9;
-  --ink-100: #eff2f5;
-  --ink-50: #f8f9fb;
+  /* ---------------------------------------------------------- neutrals ---
+     Slate, biased to the brand hue, never pure grey. 950 is the brand's main
+     text colour (#172B3A); 200 is the specified border (#E2E8F0); 50 is the
+     specified page ground (#F8FAFC). */
+  --ink-950: #0B1520;
+  --ink-900: #172B3A; /* MAIN TEXT */
+  --ink-800: #24384A;
+  --ink-700: #35506B;
+  --ink-600: #47637F;
+  --ink-500: #5C6B7F;
+  --ink-400: #94A3B8;
+  --ink-300: #CBD5E1;
+  --ink-200: #E2E8F0; /* BORDER */
+  --ink-100: #EEF2F6;
+  --ink-50: #F8FAFC; /* BACKGROUND */
 
   /* =========================================================================
      semantic · LIGHT (the complete palette lives here)
      =========================================================================
-     PHASE 15 REBALANCE. The palette was measured before it was changed:
+     PHASE 25 GAVE THE PAGE FOUR GROUNDS INSTEAD OF THREE, and the point of the
+     fourth is rhythm. Phase 15 measured the old paper/surface step at 1.05:1
+     and concluded, correctly, that you cannot build section rhythm out of a
+     background difference that small. Its answer was hairline rules and
+     spacing, which is still here.
 
-       paper vs surface   1.05:1
-       surface vs surface-2  1.07:1
+     The answer this phase adds is a DARK band in the middle of the page. White
+     -> navy -> white is a step no reader can miss, and it costs nothing in
+     contrast because the navy ground carries its own text tokens. The light
+     grounds stay deliberately close together (paper 1.00, surface 1.03, tint
+     1.09 against white) because they are breathing room, not signal.
 
-     Sections alternated between grounds five percent apart, which is why the
-     page read as one continuous field rather than a sequence of bands. Raising
-     them helps a little - 1.12:1 now - but the honest conclusion is that you
-     cannot build section rhythm out of a background step this small at the
-     light end of the scale.
-
-     So rhythm now comes from hairline rules (paper vs rule is 1.36:1, which IS
-     visible), from spacing, and from varying what a section contains. The
-     tinted surface is used occasionally rather than every other band.
-
-     The other change is `--text-heading`. It was navy, so every heading on
-     every page was blue - which, with navy links, a navy band and a navy
-     footer, is where "excessively blue" came from. Headings are now ink at
-     18.05:1, and navy is kept for the things that are actually navy: links,
-     the band, the primary button, active states. */
-  --paper: #ffffff;
-  --surface: #eef2f7;
-  --surface-2: #e2e8f0;
+     --text-heading is NAVY again, and only because the navy is now the brand's
+     own #123B6D rather than the saturated #002d66 that made every heading on
+     the site look like a link in Phase 15. Measured 9.73:1 on paper. */
+  --paper: #FFFFFF;
+  --surface: #F8FAFC;
+  --surface-2: #EEF2F6;
+  /** The one tinted section ground. Used once or twice per page, never twice
+      in a row — see the band order in src/app/(site)/page.tsx. */
+  --tint: #EEF4FA;
 
   /**
    * The wash behind a SELECTED or HOVERED control on a page surface.
    *
    * ⚠ THIS TOKEN EXISTS BECAUSE `bg-navy-50` WAS A BUG. The raw palette classes
    * do not change with the theme, but `text-heading` does. In dark mode an
-   * active filter chip was painting #7fb0ff text on a fixed #ebf4ff background
+   * active filter chip was painting light blue text on a fixed pale background
    * — 1.97:1, effectively invisible — which Lighthouse caught in Phase 9.
    * Any selected/hover state that sits under themed text must use this.
    */
-  --selected: #e4edfa;
-  --text: #1f2937;
-  --text-muted: #55627a;
-  /* INK, not navy. See the note above. 18.05:1 on paper, 16.05:1 on surface. */
-  --text-heading: #0f1720;
-  --link: var(--navy-600);
-  --link-hover: var(--navy-700);
-  --rule: #d6dee8;
-  --rule-strong: #b9c4d2;
+  --selected: #EAF1F9;
+  --text: #172B3A;
+  /* DERIVED, and deliberately one step darker than the #64748B in the brand
+     specification. That value measures 4.29:1 on the navy tint, which is below
+     AA for body text, and muted text on the tinted band is a combination this
+     site actually renders. #5C6B7F is the same colour family at 4.89:1 there,
+     5.42:1 on paper. Accessibility wins the tie; the specification says so. */
+  --text-muted: #5C6B7F;
+  --text-heading: #123B6D;
+  --link: var(--navy-700);
+  --link-hover: var(--navy-900);
+  --rule: #E2E8F0;
+  --rule-strong: #CBD5E1;
 
   --accent: var(--accent-500);
-  /* Darkened from #bc5915 to 5.47:1, so orange text clears AA on the tinted
-     surface as well as on paper - it previously only cleared it on white. */
-  --accent-text: #a9500f;
-  --accent-wash: var(--accent-50);
+  --accent-gold: var(--accent-400);
+  /* 5.07:1 on paper, 4.78:1 on the orange tint, 4.57:1 on the navy tint. */
+  --accent-text: var(--accent-600);
+  --accent-wash: var(--accent-100);
+  --gold-wash: var(--accent-50);
 
-  /* Deeper than the old #002d66 so the one band on the page reads as a
-     deliberate full-strength surface rather than a slightly darker blue. */
-  --band: #00224f;
-  --band-text: #ffffff;
-  --band-text-muted: #c3d6f2;
+  --band: #0B2748;
+  --band-2: #123B6D;
+  --band-text: #FFFFFF;
+  --band-text-muted: #B9CBE0;
 
-  --ok: #1a6449;
-  --ok-bg: #e6f2ec;
-  --warn: #8a5a00;
-  --warn-bg: #fbf0dc;
-  --danger: #a82a20;
-  --danger-bg: #faecea;
+  --ok: #15803D;
+  --ok-bg: #ECFDF3;
+  --warn: #B45309;
+  --warn-bg: #FFFBEB;
+  --danger: #B91C1C;
+  --danger-bg: #FEF2F2;
 
   --focus: var(--navy-600);
 
-  --shadow-1: 0 1px 2px rgb(0 45 102 / 0.07);
+  /* Barely-there elevation. A card should look like it is ON the page, not
+     floating above it — e3 is reserved for the hero portrait and the drawer. */
+  --shadow-1: 0 1px 2px rgb(18 59 109 / 0.06);
   --shadow-2:
-    0 2px 4px rgb(0 45 102 / 0.06), 0 8px 20px -10px rgb(0 45 102 / 0.18);
+    0 1px 2px rgb(18 59 109 / 0.05), 0 8px 24px -12px rgb(18 59 109 / 0.16);
   --shadow-3:
-    0 4px 8px rgb(0 45 102 / 0.07), 0 20px 40px -16px rgb(0 45 102 / 0.24);
+    0 2px 6px rgb(18 59 109 / 0.06), 0 24px 48px -20px rgb(11 39 72 / 0.28);
 }
 
-/* Default "system" viewers get no data-theme stamp, so only the media query
-   separates light from dark. Guarded so an explicit light choice still wins. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    /* Phase 15: paper/surface/surface-2 were 1.10 and 1.11 apart, so nothing
-       separated. Headings were #7fb0ff - bright blue text on a blue ground,
-       which is the worst of the "too blue" problem. Headings are near-white
-       now at 16.35:1, and blue is kept for links. */
-    --paper: #0b1017;
-    --surface: #131b25;
-    --surface-2: #1c2733;
-    --selected: #1c2733;
-    --text: #d2dce9;
-    --text-muted: #93a2b8;
-    --text-heading: #e8eef6;
-    --link: #8fbcff;
-    --link-hover: #b6d3ff;
-    --rule: #28323f;
-    --rule-strong: #3d4a5c;
+/* =============================================================================
+   THE OS PREFERENCE NO LONGER PICKS THE THEME. PHASE 25.
+   =============================================================================
+   This file used to open the dark palette inside
+   `@media (prefers-color-scheme: dark)`, so a visitor whose laptop was set to
+   dark got the night version of the site automatically. That block is gone,
+   and the reason is the brand rather than the code.
 
-    --accent: #ea853f;
-    --accent-text: #f0995f;
-    --accent-wash: #2a1c10;
+   Commerce Insight was specified as a LIGHT brand: white and off-white
+   grounds, navy for authority, orange as an accent, and a rhythm that runs
+   white -> navy -> white -> navy down the page. The instruction was explicit
+   that the site must not read as "entirely dark blue". A dark theme cannot
+   deliver that rhythm - every ground becomes a shade of navy and the one
+   dark band stops being a break at all - so on a dark-mode machine the
+   redesign was invisible. The owner met exactly that and reported it.
 
-    --band: #0a1930;
-    --band-text: #ffffff;
-    --band-text-muted: #c3d6f2;
-
-    --ok: #7fcca6;
-    --ok-bg: #0f241b;
-    --warn: #e0b25c;
-    --warn-bg: #241c0c;
-    --danger: #f0958e;
-    --danger-bg: #2c1613;
-
-    --focus: #7fb0ff;
-
-    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
-    --shadow-2: 0 2px 4px rgb(0 0 0 / 0.4), 0 8px 20px -10px rgb(0 0 0 / 0.65);
-    --shadow-3: 0 4px 8px rgb(0 0 0 / 0.45), 0 20px 40px -16px rgb(0 0 0 / 0.7);
-  }
-}
-
+   THE DARK PALETTE IS NOT DELETED. It is below, complete and maintained, and
+   it applies the moment anything stamps `data-theme="dark"` on the document.
+   That is the hook a future preference toggle would use; nothing sets it
+   today, so every visitor gets the brand as it was designed.
+   ========================================================================== */
 /* An explicit dark choice wins over a light OS setting. */
 :root[data-theme='dark'] {
-  --paper: #0b1017;
-  --surface: #131b25;
-  --surface-2: #1c2733;
-  --selected: #1c2733;
-  --text: #d2dce9;
-  --text-muted: #93a2b8;
-  --text-heading: #e8eef6;
-  --link: #8fbcff;
-  --link-hover: #b6d3ff;
-  --rule: #28323f;
-  --rule-strong: #3d4a5c;
+  /* PHASE 25. The dark theme is the same brand seen at night: the grounds
+     are the navy ramp rather than a neutral charcoal, so a dark viewer gets
+     Commerce Insight's blue rather than a generic dark mode. Headings stay
+     near-white — navy-on-navy is the mistake Phase 15 corrected and it would
+     come straight back if --text-heading followed its light value here. */
+  --paper: #0A1420;
+  --surface: #0F1D2E;
+  --surface-2: #16293F;
+  --tint: #12263B;
+  --selected: #16293F;
+  --text: #D6E0EC;
+  --text-muted: #97A9BE;
+  --text-heading: #EAF1F8;
+  --link: #8FBCFF;
+  --link-hover: #B6D3FF;
+  --rule: #22344A;
+  --rule-strong: #35506B;
 
-  --accent: #ea853f;
-  --accent-text: #f0995f;
-  --accent-wash: #2a1c10;
+  --accent: #F29A2E;
+  --accent-gold: #E8A33A;
+  --accent-text: #F0A857;
+  --accent-wash: #2A1B0C;
+  --gold-wash: #241C0C;
 
-  --band: #0a1930;
-  --band-text: #ffffff;
-  --band-text-muted: #c3d6f2;
+  --band: #071B33;
+  --band-2: #0B2748;
+  --band-text: #FFFFFF;
+  --band-text-muted: #B9CBE0;
 
-  --ok: #7fcca6;
-  --ok-bg: #0f241b;
-  --warn: #e0b25c;
-  --warn-bg: #241c0c;
-  --danger: #f0958e;
-  --danger-bg: #2c1613;
+  --ok: #7FCCA6;
+  --ok-bg: #0F241B;
+  --warn: #E0B25C;
+  --warn-bg: #241C0C;
+  --danger: #F0958E;
+  --danger-bg: #2C1613;
 
-  --focus: #7fb0ff;
+  --focus: #7FB0FF;
 
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
-  --shadow-2: 0 2px 4px rgb(0 0 0 / 0.4), 0 8px 20px -10px rgb(0 0 0 / 0.65);
-  --shadow-3: 0 4px 8px rgb(0 0 0 / 0.45), 0 20px 40px -16px rgb(0 0 0 / 0.7);
+  --shadow-2: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -12px rgb(0 0 0 / 0.65);
+  --shadow-3: 0 2px 6px rgb(0 0 0 / 0.45), 0 24px 48px -20px rgb(0 0 0 / 0.7);
+
 }
 
 /* -----------------------------------------------------------------------------
@@ -204,6 +214,7 @@
   --color-paper: var(--paper);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-tint: var(--tint);
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-heading: var(--text-heading);
@@ -213,10 +224,13 @@
   --color-rule-strong: var(--rule-strong);
 
   --color-accent: var(--accent);
+  --color-accent-gold: var(--accent-gold);
   --color-accent-text: var(--accent-text);
   --color-accent-wash: var(--accent-wash);
+  --color-gold-wash: var(--gold-wash);
 
   --color-band: var(--band);
+  --color-band-2: var(--band-2);
   --color-band-text: var(--band-text);
   --color-band-muted: var(--band-text-muted);
 
@@ -225,8 +239,12 @@
   --color-navy-800: var(--navy-800);
   --color-navy-700: var(--navy-700);
   --color-navy-600: var(--navy-600);
+  --color-navy-500: var(--navy-500);
+  --color-navy-300: var(--navy-300);
   --color-navy-100: var(--navy-100);
   --color-navy-50: var(--navy-50);
+  --color-accent-400: var(--accent-400);
+  --color-accent-300: var(--accent-300);
   --color-selected: var(--selected);
 
   --color-ok: var(--ok);
@@ -242,24 +260,45 @@
     'Segoe UI', sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, 'Cascadia Mono', monospace;
 
+  /* RESTRAINED. A 6px card corner reads as considered; a 24px one reads
+     as a consumer app. "lg" is the largest corner on the public site and
+     is used for the hero plate and the framed call to action only. */
   --radius-sm: 4px;
   --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-lg: 14px;
 
   --shadow-e1: var(--shadow-1);
   --shadow-e2: var(--shadow-2);
   --shadow-e3: var(--shadow-3);
 
-  /* Type scale — Master Plan §09. Mobile values; lg: variants set desktop. */
-  --text-display: 36px;
-  --text-h1: 30px;
-  --text-h2: 24px;
-  --text-h3: 18px;
+  /* -------------------------------------------------------------- type ---
+     PHASE 25 MADE THE HEADLINE SIZES FLUID. They were fixed mobile values
+     with an lg: override at every call site, so every heading jumped once,
+     at 1024px, and did nothing between 360px and 1023px - the range most
+     visitors are actually in. clamp() interpolates instead, and the call
+     sites no longer need to carry a second size each.
+
+     The floors are the old mobile values, so nothing is smaller at 320px
+     than what was already measured there. The ceilings arrive at 1280px. */
+  --text-display: clamp(2.25rem, 1.55rem + 3.1vw, 3.9rem);
+  --text-h1: clamp(1.875rem, 1.45rem + 1.9vw, 2.875rem);
+  --text-h2: clamp(1.5rem, 1.28rem + 1vw, 2.125rem);
+  --text-h3: clamp(1.125rem, 1.06rem + 0.3vw, 1.3125rem);
   --text-body: 16px;
   --text-small: 14px;
-  --text-label: 11px;
+  /* 12px, not 11. An uppercase tracked label is the smallest type on the
+     site and 11px put it under the floor a sweep of every public route flags;
+     the extra pixel costs no layout anywhere it is used. */
+  --text-label: 12px;
 
+  /* --------------------------------------------------- motion + rhythm ---
+     One easing curve and three durations for the whole public site. A hover
+     that takes 120ms next to a reveal that takes 700ms reads as two
+     products; these are the only values a component should reach for. */
   --ease-brand: cubic-bezier(0.2, 0.6, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
 }
 
 @layer base {
@@ -270,6 +309,10 @@
   }
 
   html {
+    /* Without this a dark-mode machine still paints the scrollbar, the
+       select menus and the date pickers dark, against a white page. The
+       page decides now, so it has to say which one it is. */
+    color-scheme: light;
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
   }
@@ -344,6 +387,240 @@
     max-width: 68ch;
   }
 
+
+  /* ---------------------------------------------------------------------
+     PHASE 25 — the four decorative primitives, and why they are CSS.
+
+     Each of these could be a component with an absolutely-positioned <span>
+     inside it. As utilities they cost one class on an element that already
+     exists, ship no markup, and cannot be nested wrongly. There are four
+     because four is what the design uses; a fifth would need an argument.
+     --------------------------------------------------------------------- */
+
+  /**
+   * The one highlighted phrase in a headline.
+   *
+   * A brand rule rather than a colour swap: the words stay navy and legible
+   * (orange TEXT at 2.06:1 would fail AA outright at headline size), and the
+   * emphasis comes from a gold stroke under them. `0.12em` thick, sitting a
+   * little below the baseline so descenders clear it.
+   */
+  .accent-underline {
+    background-image: linear-gradient(var(--accent-gold), var(--accent-gold));
+    background-repeat: no-repeat;
+    background-size: 100% 0.12em;
+    background-position: 0 88%;
+    padding-bottom: 0.06em;
+  }
+
+  /**
+   * A faint squared grid — graph paper, which is what a commerce classroom
+   * runs on. 44px cells at 0.5 alpha of the rule colour: visible as texture at
+   * arm's length, invisible as lines. Masked so it fades out rather than
+   * ending on a hard edge.
+   */
+  .grid-pattern {
+    background-image:
+      linear-gradient(to right, var(--rule) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--rule) 1px, transparent 1px);
+    background-size: 44px 44px;
+    opacity: 0.5;
+    -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 20%, transparent 75%);
+  }
+
+  /** A soft navy bloom. Low enough to be felt rather than seen. */
+  .bloom-navy {
+    background-image: radial-gradient(
+      45rem 28rem at 15% 0%,
+      color-mix(in srgb, var(--navy-700) 9%, transparent),
+      transparent 70%
+    );
+  }
+
+  /** The same, in gold, for the corner opposite. */
+  .bloom-gold {
+    background-image: radial-gradient(
+      34rem 22rem at 95% 10%,
+      color-mix(in srgb, var(--accent-gold) 13%, transparent),
+      transparent 70%
+    );
+  }
+
+  /* ---------------------------------------------------------------------
+     SCROLL REVEAL, WITH NO JAVASCRIPT AND NO LAYOUT RISK.
+
+     `animation-timeline: view()` drives the animation from the element's own
+     position in the scrollport, so there is no observer, no state, and nothing
+     shipped to the browser but this rule. Where it is unsupported the
+     animation simply never runs and the element is in its final state, which
+     is why the resting style is the VISIBLE one and the keyframe moves away
+     from it rather than towards it.
+
+     The whole block is inside `no-preference`: a reader who has asked for less
+     motion gets a page that never moves, rather than one that moves for
+     0.01ms. Six pixels and 400ms — enough to feel deliberate, not enough to
+     make anybody wait for content they can already read.
+     --------------------------------------------------------------------- */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .reveal {
+        animation: reveal-in linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 42%;
+      }
+    }
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+
+  /* ---------------------------------------------------------------------
+     THE CARD INTERACTION, AS ONE CLASS RATHER THAN NINE UTILITIES.
+
+     This is a BUDGET decision as much as a design one. The Tailwind version of
+     the rule below is about 130 characters, it appeared on every card on the
+     site, and Next.js serialises the whole markup a second time into the RSC
+     payload inside the same document - so each card was paying for it twice.
+     Measured on /results, which renders 24 of them: the uncompressed HTML went
+     over the 150 KB tripwire in `scripts/verify-budget.mjs`. As one class it
+     costs ten characters per card and the rule itself compresses once.
+
+     It is also the thing that makes a result card, a course card, a story and
+     a review feel like one system: they now share a definition rather than a
+     copied string that someone will eventually edit in only three places.
+     --------------------------------------------------------------------- */
+  .card-lift {
+    transition-property: border-color, box-shadow, transform;
+    transition-duration: var(--duration-base);
+    transition-timing-function: var(--ease-brand);
+  }
+
+  .card-lift:hover {
+    border-color: var(--navy-300);
+    box-shadow: var(--shadow-2);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .card-lift:hover {
+      transform: translateY(-2px);
+    }
+  }
+
+
+  /* ---------------------------------------------------------------------
+     FIVE MORE COMPONENT CLASSES, FOR THE SAME REASON `.card-lift` EXISTS.
+
+     Each of these was a utility string repeated between six and a hundred and
+     twenty times in one document, and Next.js serialises the markup twice -
+     once as HTML, once as the RSC payload - so every repetition was charged
+     for twice. Together they took /results from 158 KB of uncompressed HTML to
+     under the 150 KB tripwire, and the homepage back under its 20 KB
+     compressed one. The measurements are in the Phase 25 report.
+
+     They are ordinary CSS rather than Tailwind @apply so that they stay
+     readable, and because each one is a genuine component of the design
+     system: a page gutter, a navigation link, a subject row, a media tile, a
+     link on the navy band.
+     --------------------------------------------------------------------- */
+
+  /** The one page gutter. 1200px cap, 20/32/48 gutters (Master Plan §09). */
+  .container-page {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 1200px;
+    padding-inline: 1.25rem;
+  }
+
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-page {
+      padding-inline: 3rem;
+    }
+  }
+
+  /** A primary-navigation link. The active underline stays in the component. */
+  .nav-link {
+    position: relative;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    border-radius: var(--radius-md);
+    padding-inline: 0.875rem;
+    font-size: 15px;
+    transition: color var(--duration-fast) var(--ease-brand),
+      background-color var(--duration-fast) var(--ease-brand);
+  }
+
+  /**
+   * One subject and its mark, inside a result card.
+   *
+   * The heaviest string on the site by total bytes: /results renders 24 cards
+   * with up to five of these each. `overflow-wrap: anywhere` on the subject is
+   * load-bearing rather than cosmetic - it is free text a teacher typed, so it
+   * can be one unbroken run, and at 320px that widened the document.
+   */
+  .subject-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .subject-row > dt {
+    min-width: 0;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .subject-row > dd {
+    flex-shrink: 0;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  /** A photograph or video thumbnail that is itself a link. */
+  .tile-link {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--rule);
+    transition: border-color var(--duration-base) var(--ease-brand),
+      box-shadow var(--duration-base) var(--ease-brand);
+  }
+
+  .tile-link:hover {
+    border-color: var(--navy-300);
+    box-shadow: var(--shadow-2);
+  }
+
+  /** A link on the navy band: footer columns, and anything else on --band. */
+  .band-link {
+    color: var(--band-text-muted);
+    transition: color var(--duration-fast) var(--ease-brand);
+  }
+
+  .band-link:hover {
+    color: var(--band-text);
+  }
+
   /* Uppercase mono eyebrow used for section labels. */
   .eyebrow {
     font-family: var(--font-mono);
@@ -351,6 +628,55 @@
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+  }
+
+  /* -----------------------------------------------------------------------
+     A scroll region inside a panel that is already the height of the viewport
+     — today, the admin sidebar. Tailwind gives the behaviour (`overflow-y-auto`
+     on a `min-h-0 flex-1` child); this gives it a scrollbar that belongs to
+     the design system instead of the OS default slab.
+
+     The thumb is a token, so it follows the theme in both directions: a
+     hairline against `--paper` in light, and against the navy grounds in dark.
+     The track is transparent for the same reason — a painted track reads as a
+     second border next to the panel's own `border-rule`.
+
+     `scrollbar-width` / `scrollbar-color` is the standard pair (Firefox, and
+     Chromium 121+, which is the path actually taken here — measured at a 10px
+     gutter, `thin`, not the 8px below). The `::-webkit-` block covers Safari
+     and older Chromium, where the thumb is inset with a transparent border so
+     an 8px gutter still draws a 4px hairline. Both paths are styled, because
+     which one a browser picks is not something this file gets to decide.
+     Everything is scoped to the class: the page's own scrollbar is left
+     exactly as the browser drew it.
+
+     Overlay scrollbars (macOS default, mobile) sit ON the content rather than
+     taking layout width; classic ones take the gutter out of the content box,
+     which the 14rem panel absorbs — no label wraps or clips at any width
+     measured.
+     ----------------------------------------------------------------------- */
+  .scroll-panel {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rule-strong) transparent;
+  }
+
+  .scroll-panel::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scroll-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-panel::-webkit-scrollbar-thumb {
+    background-color: var(--rule-strong);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 4px;
+  }
+
+  .scroll-panel:hover::-webkit-scrollbar-thumb {
+    background-color: var(--text-muted);
   }
 
   /* -----------------------------------------------------------------------

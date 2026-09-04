@@ -53,6 +53,8 @@ import {
   CONTENT_TABLES,
   OPERATIONAL_TABLES,
   DANGEROUS_MIGRATION_PATTERNS,
+  REVIEWED_DESTRUCTIVE_MIGRATIONS,
+  isReviewedDestructive,
   CONSENT_COLUMNS,
   FORBIDDEN_TRACKED_FILES,
   SECRET_CONTENT_PATTERNS,
@@ -949,12 +951,26 @@ function checkMigrations() {
   // -- P-MIG-04 --------------------------------------------------------------
   // Dangerous statements. Not banned; they BLOCK pending a human reading them.
   const dangers = [];
+  /*
+    A statement recorded in REVIEWED_DESTRUCTIVE_MIGRATIONS has been read by a
+    person and is reported rather than blocking. Everything else still blocks -
+    including a different destructive pattern inside a migration that appears on
+    that list. See the note on the list itself.
+  */
   for (const [name, sql] of sqlByMigration) {
     for (const d of DANGEROUS_MIGRATION_PATTERNS) {
       // Strip comments first: a comment mentioning DROP TABLE is not a DROP.
       const code = sql.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-      if (d.pattern.test(code)) dangers.push(`${name}: ${d.label} - ${d.why}`);
+      if (!d.pattern.test(code)) continue;
+      if (!isReviewedDestructive(name, d.label)) {
+        dangers.push(`${name}: ${d.label} - ${d.why}`);
+      }
     }
+  }
+  // Printed every run, so an approved exception stays visible rather than
+  // disappearing the moment somebody writes it down.
+  for (const entry of REVIEWED_DESTRUCTIVE_MIGRATIONS) {
+    console.log(`      reviewed: ${entry.migration} (${entry.label}) - ${entry.why}`);
   }
   if (dangers.length === 0) {
     pass(

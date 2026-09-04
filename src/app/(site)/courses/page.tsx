@@ -27,6 +27,16 @@ export default async function CoursesPage() {
   const countFor = (slug: string) =>
     batches.filter((b) => b.courseSlug === slug).length;
 
+  /*
+    The soonest published start for a programme, or null.
+
+    `getUpcomingBatches()` already returns them in date order and filtered to
+    the future, so the first match IS the next one - no second query, and no
+    date arithmetic here that could disagree with the band on the homepage.
+  */
+  const nextStartFor = (slug: string) =>
+    batches.find((b) => b.courseSlug === slug)?.startsAt ?? null;
+
   return (
     <>
       <PageHeader
@@ -46,6 +56,7 @@ export default async function CoursesPage() {
               slug={course.slug}
               name={course.name}
               batchCount={countFor(course.slug)}
+              nextStart={nextStartFor(course.slug)}
             />
           ))}
         </div>
@@ -57,14 +68,14 @@ export default async function CoursesPage() {
         body={<>{content['page.courses.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Ask about a course
             </Button>
             <Button
               href={whatsappLink(contact.whatsappNumber)}
               external
               size="lg"
-              variant="secondary"
+              variant="onBandSecondary"
             >
               WhatsApp us
             </Button>

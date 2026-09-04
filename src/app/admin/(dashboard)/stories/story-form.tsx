@@ -26,7 +26,6 @@ export type StoryValues = {
   journey?: string;
   outcome?: string;
   quote?: string;
-  consentRef?: string;
   consentStory?: boolean;
   consentName?: boolean;
   consentPhoto?: boolean;
@@ -54,7 +53,6 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
     values.displayNameMode ?? 'INITIALS',
   );
   const [photoUrl, setPhotoUrl] = useState(values.photoUrl ?? '');
-  const [consentRef, setConsentRef] = useState(values.consentRef ?? '');
   const [consentStory, setConsentStory] = useState(values.consentStory ?? false);
   const [consentName, setConsentName] = useState(values.consentName ?? false);
   const [consentPhoto, setConsentPhoto] = useState(values.consentPhoto ?? false);
@@ -65,7 +63,6 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
       studentName: studentName || 'Student',
       displayNameMode,
       photoUrl: photoUrl || null,
-      consentRef: consentRef || null,
       consentStory,
       consentName,
       consentPhoto,
@@ -243,25 +240,14 @@ export function StoryForm({ values = {} }: { values?: StoryValues }) {
           story.
         </p>
 
-        <div className="mt-5">
-          <Field
-            name="consentRef"
-            label="Consent form reference"
-            hint="How you can find the signed form later."
-          >
-            {(props) => (
-              <input
-                {...props}
-                type="text"
-                maxLength={200}
-                value={consentRef}
-                onChange={(e) => setConsentRef(e.target.value)}
-                className={inputClass(false)}
-              />
-            )}
-          </Field>
-        </div>
+        {/*
+          THE "CONSENT FORM REFERENCE" FIELD WAS HERE, AND IS GONE (Phase 24).
 
+          Same removal, same reason as the result form in Phase 23: it was
+          presented as an ordinary optional field and the publish panel below
+          then refused to publish without it. The permissions underneath are
+          untouched - they are what decides what a visitor sees.
+        */}
         <fieldset className="mt-5">
           <legend className="text-small font-medium text-text">
             What may we show?

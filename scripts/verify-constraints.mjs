@@ -138,15 +138,31 @@ try {
       data: topper({ published: true, publishedAt: NOW }),
     }),
   );
-  await mustReject('published with consentResult but NO consent reference', () =>
-    prisma.topper.create({
-      data: topper({ published: true, publishedAt: NOW, consentResult: true }),
-    }),
+  /*
+    ACCEPTED SINCE PHASE 23, AND IT USED TO BE REJECTED.
+
+    A result no longer needs a consent-form reference to be published - see
+    20260902120000_result_publish_without_consent_ref. The row still needs
+    consentResult, which the two assertions either side of this one prove.
+    Kept as an assertion rather than deleted, because the interesting thing
+    about this row is that the database now allows it on purpose.
+  */
+  await mustAccept(
+    'published with consentResult and NO consent reference',
+    () =>
+      prisma.topper.create({
+        data: topper({ published: true, publishedAt: NOW, consentResult: true }),
+      }),
+    (created) => prisma.topper.delete({ where: { id: created.id } }),
   );
+  // THE RULE THAT REPLACED IT: result permission alone decides this now.
   await mustReject('published with a consent reference but NO result permission', () =>
     prisma.topper.create({
       data: topper({ published: true, publishedAt: NOW, consentRef: CONSENT }),
     }),
+  );
+  await mustReject('published with NEITHER permission nor reference', () =>
+    prisma.topper.create({ data: topper({ published: true, publishedAt: NOW }) }),
   );
   await mustReject('published without publishedAt', () =>
     prisma.topper.create({
@@ -262,6 +278,24 @@ try {
       }),
     (r) => prisma.studentStory.delete({ where: { id: r.id } }),
   );
+  /*
+    ACCEPTED SINCE PHASE 24, AND IT USED TO BE REJECTED - the same removal
+    20260902120000 made for results, extended to stories. The story permission
+    is still required, which the first assertion in this section proves.
+  */
+  await mustAccept(
+    'STORY published with story permission and NO consent reference',
+    () =>
+      prisma.studentStory.create({
+        data: story({ published: true, publishedAt: NOW, consentStory: true }),
+      }),
+    (r) => prisma.studentStory.delete({ where: { id: r.id } }),
+  );
+  await mustReject('STORY published with a reference but NO story permission', () =>
+    prisma.studentStory.create({
+      data: story({ published: true, publishedAt: NOW, consentRef: CONSENT }),
+    }),
+  );
 
   console.log('\n=== 6. UPDATES ARE GATED TOO, NOT JUST INSERTS ===');
   const draft = await prisma.topper.create({ data: topper() });
@@ -285,8 +319,12 @@ try {
       }),
     null,
   );
-  await mustReject('removing the consent reference from a published row', () =>
-    prisma.topper.update({ where: { id: draft.id }, data: { consentRef: null } }),
+  // Phase 23: allowed now. The reference is no longer part of what makes a
+  // published result legal, so blanking it is an ordinary edit.
+  await mustAccept(
+    'removing the consent reference from a published row',
+    () => prisma.topper.update({ where: { id: draft.id }, data: { consentRef: null } }),
+    null,
   );
   await mustReject('revoking result permission on a published row', () =>
     prisma.topper.update({ where: { id: draft.id }, data: { consentResult: false } }),

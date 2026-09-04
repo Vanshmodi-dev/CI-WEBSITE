@@ -178,7 +178,7 @@ export default async function ContactPage() {
         body={<>{content['page.contact.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
           </>

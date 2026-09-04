@@ -34,9 +34,9 @@ export function VideoStrip({ videos }: { videos: readonly PublicVideo[] }) {
         <li key={video.id} className="min-w-0">
           <Link
             href="/videos"
-            className="group block w-full min-w-0 overflow-hidden rounded-md border border-rule bg-paper transition-colors hover:border-navy-600/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+            className="tile-link group bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
           >
-            <span className="relative block aspect-video w-full bg-navy-800">
+            <span className="relative block aspect-video w-full bg-navy-700">
               <Image
                 src={thumbnailUrl(video.youtubeId)}
                 /*

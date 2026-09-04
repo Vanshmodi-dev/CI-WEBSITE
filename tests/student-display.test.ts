@@ -30,7 +30,6 @@ function record(overrides: Partial<StudentRecord> = {}): StudentRecord {
     studentName: 'Sample Testcase',
     displayNameMode: 'FULL',
     photoUrl: '/photos/zz-test.jpg',
-    consentRef: 'ZZ-TEST-CONSENT-001',
     consentResult: true,
     consentName: true,
     consentPhoto: true,
@@ -68,14 +67,29 @@ describe('the base gate', () => {
     assert.equal(p.monogram, 'ST');
   });
 
-  test('missing consentRef reveals nothing, even if published', () => {
-    const p = present(record({ consentRef: null }));
-    assert.equal(p.name, null);
-    assert.equal(p.photoUrl, null);
+  /*
+    THE CONSENT-FORM REFERENCE IS NOT PART OF THIS MODULE ANY MORE.
+
+    Until Phase 23 nothing could be published or shown without one. That phase
+    removed the requirement for results and this file kept a test pinning it for
+    stories; Phase 24 removed it for stories too, so the field is gone from
+    `StudentRecord` and there is nothing left here to assert about it.
+
+    What must stay true is asserted below and in tests/consent-removal.test.ts:
+    publication needs the PERMISSION for the kind of content, and nothing else
+    stands in for it.
+  */
+  test('a published, permitted record with no reference anywhere is shown', () => {
+    const p = present(record());
+    assert.equal(p.name, 'Sample Testcase');
+    assert.equal(p.photoUrl, '/photos/zz-test.jpg');
+    assert.deepEqual(blockersForPublishing(record()), []);
   });
 
-  test('a blank consentRef is caught by the admin publish check', () => {
-    assert.ok(blockersForPublishing(record({ consentRef: '   ' })).length > 0);
+  test('a STORY needs its own permission, and that is the whole gate', () => {
+    assert.equal(isPubliclyVisible(record({ consentStory: true }), 'consentStory'), true);
+    assert.equal(isPubliclyVisible(record({ consentStory: false }), 'consentStory'), false);
+    assert.equal(present(record({ consentStory: false }), 'consentStory').name, null);
   });
 
   test('without result permission, a result reveals nothing', () => {
@@ -161,9 +175,14 @@ describe('blockersForPublishing — what the admin shows the teacher', () => {
     assert.deepEqual(blockersForPublishing(record()), []);
   });
 
-  test('missing consent reference is reported', () => {
-    const b = blockersForPublishing(record({ consentRef: null }));
-    assert.ok(b.some((m) => m.includes('consent form reference')));
+  test('no blocker mentions a consent form reference, for either kind', () => {
+    const all = [
+      ...blockersForPublishing(record({ consentResult: false })),
+      ...blockersForPublishing(record({ consentStory: false }), 'consentStory'),
+      ...blockersForPublishing(record({ consentName: false, displayNameMode: 'FULL' })),
+      ...blockersForPublishing(record({ consentPhoto: false })),
+    ].join(' ');
+    assert.ok(!/consent form reference/i.test(all));
   });
 
   test('missing result permission is reported', () => {
@@ -210,12 +229,13 @@ describe('blockersForPublishing — what the admin shows the teacher', () => {
   test('every blocker is written for a person, not a database', () => {
     const b = blockersForPublishing(
       record({
-        consentRef: null,
         consentResult: false,
         consentName: false,
         consentPhoto: false,
       }),
     );
+    // Three: result, name, photograph. A fourth, the consent-form reference,
+    // was removed in Phase 23 for results and Phase 24 for stories.
     assert.ok(b.length >= 3);
     for (const message of b) {
       for (const jargon of ['null', 'NULL', 'constraint', 'CHECK', 'boolean', 'column']) {
@@ -238,8 +258,7 @@ describe('blockersForPublishing — what the admin shows the teacher', () => {
  * This enumerates all of them and asserts the INVARIANTS instead: whatever the
  * inputs, a name may only appear with name permission, a photograph only with
  * photograph permission, and neither may appear at all unless the record is
- * published, has its paperwork reference, and holds the permission for this
- * KIND of content.
+ * published and holds the permission for this KIND of content.
  *
  * The database was verified the same way in Phase 14: 192 combinations of the
  * fields the CHECK constraints mention, all agreeing with the constraint
@@ -258,7 +277,6 @@ describe('the consent matrix, exhaustively', () => {
     visit: (record: StudentRecord, kind: ContentKind, label: string) => void,
   ) {
     for (const published of bools)
-      for (const hasRef of bools)
         for (const consentResult of bools)
           for (const consentStory of bools)
             for (const consentName of bools)
@@ -270,7 +288,6 @@ describe('the consent matrix, exhaustively', () => {
                         studentName: 'Sample Testcase',
                         displayNameMode,
                         photoUrl: hasPhoto ? '/sample.jpg' : null,
-                        consentRef: hasRef ? 'REF-1' : null,
                         consentResult,
                         consentStory,
                         consentName,
@@ -278,7 +295,7 @@ describe('the consent matrix, exhaustively', () => {
                         published,
                       };
                       const label =
-                        `published=${published} ref=${hasRef} result=${consentResult} ` +
+                        `published=${published} result=${consentResult} ` +
                         `story=${consentStory} name=${consentName} photo=${consentPhoto} ` +
                         `photoUrl=${hasPhoto} mode=${displayNameMode} kind=${kind}`;
                       visit(record, kind, label);
@@ -304,9 +321,9 @@ describe('the consent matrix, exhaustively', () => {
     });
   });
 
-  test('nothing at all appears unless published, referenced and permitted', () => {
+  test('nothing at all appears unless published and permitted', () => {
     everyCombination((record, kind, label) => {
-      const gated = !record.published || record.consentRef === null || record[kind] !== true;
+      const gated = !record.published || record[kind] !== true;
       if (gated) {
         const view = present(record, kind);
         assert.equal(view.name, null, `name leaked while gated: ${label}`);

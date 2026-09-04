@@ -13,7 +13,7 @@ export function Container({
   className?: string;
 }) {
   return (
-    <div className={cn('mx-auto w-full max-w-[1200px] px-5 md:px-8 lg:px-12', className)}>
+    <div className={cn('container-page', className)}>
       {children}
     </div>
   );
@@ -53,17 +53,29 @@ export function Section({
 }: {
   children: ReactNode;
   className?: string;
-  tone?: 'paper' | 'surface' | 'band';
+  tone?: 'paper' | 'surface' | 'tint' | 'band';
   rule?: boolean;
   id?: string;
   labelledBy?: string;
 }) {
+  /*
+    FOUR GROUNDS, AND ONLY ONE OF THEM IS A STATEMENT.
+
+    paper and surface are 1.03:1 apart and tint is 1.09:1 - all three are
+    breathing room, and Phase 15 was right that you cannot build rhythm out of
+    a step that small. band is the one that does the work: a full-strength navy
+    section between two light ones is a break nobody can miss, which is why the
+    homepage uses it exactly twice and never twice in a row.
+  */
   const tones = {
     paper: 'bg-paper text-text',
     surface: 'bg-surface text-text',
+    tint: 'bg-tint text-text',
     band: 'bg-band text-band-text',
   } as const;
 
+  /* A hairline belongs BETWEEN two light grounds. Against navy it would be
+     invisible, and next to navy it is redundant - the colour is the edge. */
   const showRule = rule ?? tone !== 'band';
 
   return (
@@ -71,7 +83,9 @@ export function Section({
       id={id}
       aria-labelledby={labelledBy}
       className={cn(
-        'py-16 md:py-24 lg:py-28',
+        /* Section rhythm. Generous, and one step more so on desktop than the
+           old 64/96/112, because the type above it grew with clamp(). */
+        'py-16 md:py-24 lg:py-32',
         showRule && 'border-t border-rule',
         tones[tone],
         className,
@@ -123,18 +137,25 @@ export function SectionHeader({
       {eyebrow ? (
         <p
           className={cn(
-            'eyebrow mb-3 flex items-center gap-2.5',
-            onBand ? 'text-accent' : 'text-accent-text',
+            'eyebrow mb-4 flex items-center gap-3',
+            /* On navy the brand orange is a 6.4:1 text colour and is used as
+               one; on light it would be 2.06:1, so the darkened token is. */
+            onBand ? 'text-accent-gold' : 'text-accent-text',
           )}
         >
-          <span aria-hidden="true" className="h-[3px] w-7 shrink-0 rounded-full bg-accent" />
+          <span
+            aria-hidden="true"
+            className="h-[2px] w-8 shrink-0 rounded-full bg-accent"
+          />
           {eyebrow}
         </p>
       ) : null}
       <h2
         id={id}
         className={cn(
-          'font-display text-h2 font-bold leading-[1.15] tracking-[-0.015em] lg:text-[34px]',
+          /* No lg: size any more - --text-h2 is a clamp() and interpolates
+             across the whole range instead of stepping once at 1024px. */
+          'font-display text-h2 font-bold leading-[1.12] tracking-[-0.02em]',
           onBand ? 'text-band-text' : 'text-heading',
         )}
       >
@@ -154,13 +175,13 @@ export function SectionHeader({
   );
 
   if (!action) {
-    return <header className={cn('mb-10 md:mb-14', className)}>{heading}</header>;
+    return <header className={cn('mb-10 md:mb-16', className)}>{heading}</header>;
   }
 
   return (
     <header
       className={cn(
-        'mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 md:mb-14',
+        'mb-10 flex flex-wrap items-end justify-between gap-x-6 gap-y-4 md:mb-16',
         className,
       )}
     >
@@ -195,16 +216,30 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <section className="border-b border-rule-strong bg-paper">
+    /*
+      THE MASTHEAD IS A COMPOSITION NOW, not a stack on plain paper.
+
+      A soft navy bloom from the top-left and a gold one from the top-right,
+      both far below the threshold where they read as colour, over a faint grid
+      that fades out before it reaches the type. Three decorative layers, no
+      markup a screen reader can find, and nothing that moves.
+    */
+    <section className="relative isolate overflow-hidden border-b border-rule bg-surface">
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 grid-pattern" />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bloom-navy" />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bloom-gold" />
       <Container>
-        <div className="max-w-3xl py-16 md:py-20">
+        <div className="max-w-3xl py-16 md:py-24">
           {eyebrow ? (
-            <p className="eyebrow flex items-center gap-2.5 text-accent-text">
-              <span aria-hidden="true" className="h-[3px] w-7 shrink-0 rounded-full bg-accent" />
+            <p className="eyebrow flex items-center gap-3 text-accent-text">
+              <span
+                aria-hidden="true"
+                className="h-[2px] w-8 shrink-0 rounded-full bg-accent"
+              />
               {eyebrow}
             </p>
           ) : null}
-          <h1 className="mt-4 font-display text-h1 font-bold leading-[1.1] tracking-[-0.02em] text-heading lg:text-[46px]">
+          <h1 className="mt-5 font-display text-h1 font-bold leading-[1.08] tracking-[-0.025em] text-heading">
             {title}
           </h1>
           {standfirst ? (
@@ -249,17 +284,42 @@ export function ClosingCta({
 }) {
   return (
     <Section tone="paper" labelledBy={id}>
-      <div className="flex flex-col gap-8 rounded-lg border border-rule-strong bg-surface p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
-        <div>
-          <h2
-            id={id}
-            className="font-display text-h2 font-bold leading-[1.15] tracking-[-0.015em] text-heading lg:text-[34px]"
-          >
-            {title}
-          </h2>
-          <p className="measure mt-3 text-[17px] leading-relaxed text-muted">{body}</p>
+      {/*
+        PHASE 25 PAINTED THIS BLOCK NAVY, and the Phase 15 argument for not
+        doing so still holds - it just no longer applies. That argument was
+        that a navy call to action bled into the navy footer below it, so the
+        single most important element on the page became the least
+        distinguishable. What has changed is that the block is now INSET on a
+        light section with its own margin above and below, so there is white
+        between it and the footer. It reads as a plate, not as the start of the
+        footer, and the page ends light -> navy plate -> light -> navy footer.
+
+        The frame carries a gold hairline along its top edge: the one place on
+        the page where the accent runs the full width of anything.
+      */}
+      <div className="relative isolate overflow-hidden rounded-lg bg-band text-band-text shadow-e2">
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent via-accent-gold to-accent/0"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 opacity-70 [background-image:radial-gradient(38rem_24rem_at_15%_120%,color-mix(in_srgb,var(--navy-600)_60%,transparent),transparent_70%)]"
+        />
+        <div className="flex flex-col gap-8 p-8 md:p-12 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
+          <div>
+            <h2
+              id={id}
+              className="font-display text-h2 font-bold leading-[1.12] tracking-[-0.02em] text-band-text"
+            >
+              {title}
+            </h2>
+            <p className="measure mt-4 text-[17px] leading-relaxed text-band-muted">
+              {body}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">{actions}</div>
         </div>
-        <div className="flex shrink-0 flex-col gap-3 sm:flex-row">{actions}</div>
       </div>
     </Section>
   );

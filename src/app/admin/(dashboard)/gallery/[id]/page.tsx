@@ -52,7 +52,6 @@ export default async function EditGalleryItemPage({
           priority: record.priority,
           published: record.published,
           showsPeople: record.showsPeople,
-          consentRef: record.consentRef ?? '',
           consentPhoto: record.consentPhoto,
           editedAt: editToken(record.updatedAt),
         }}

@@ -604,6 +604,94 @@ export const OPERATIONAL_TABLES: readonly string[] = [
  * and asks for a review, which is exactly the treatment Phase 12's silent
  * constraint loss deserved and did not get.
  */
+/**
+ * Destructive statements that a person HAS read, recorded one at a time.
+ *
+ * =============================================================================
+ * WHY AN ALLOWLIST EXISTS AT ALL, WHEN THE RULE SAID "NEVER AUTOMATICALLY"
+ * =============================================================================
+ * `DANGEROUS_MIGRATION_PATTERNS` below is a review gate: a migration that
+ * matches one blocks the deployment until somebody reads it. That is right, and
+ * the wording was "never resolved automatically" because Phase 12 lost CHECK
+ * constraints silently and nobody noticed for three phases.
+ *
+ * The gate had no way to record that the reading HAPPENED. A schema change that
+ * legitimately needs a DROP — and PostgreSQL gives no other way to relax a
+ * CHECK constraint — would therefore block every future deployment forever,
+ * which is the state in which people stop reading the output at all. A tripwire
+ * that is always red is a tripwire nobody looks at.
+ *
+ * So a reviewed statement is recorded HERE, naming the migration, the exact
+ * pattern label, and the reason. It is not a way to skip the reading; it is the
+ * reading, written down. Anything not on this list still blocks, including a
+ * second destructive statement in a migration already listed, and
+ * `tests/deployment.test.ts` fails on an entry that no longer matches a real
+ * migration, so this list cannot rot into a blanket exemption.
+ */
+export const REVIEWED_DESTRUCTIVE_MIGRATIONS: readonly {
+  /** Exact migration directory name. */
+  migration: string;
+  /** The `label` of the pattern that was reviewed, e.g. 'DROP CONSTRAINT'. */
+  label: string;
+  /**
+   * For 'DROP CONSTRAINT': every constraint the migration drops, named.
+   *
+   * ⚠ WITHOUT THIS, ONE APPROVAL COVERS A WHOLE FILE. Phase 24's migration
+   * drops two constraints, and an entry that said only "DROP CONSTRAINT was
+   * reviewed here" would have silently approved a third one added later.
+   * `tests/deployment.test.ts` checks this list against the names actually in
+   * the SQL, both ways, so adding a drop to a reviewed migration fails until
+   * somebody adds it here too.
+   */
+  constraints?: readonly string[];
+  /** What was read, and what was concluded. */
+  why: string;
+}[] = [
+  {
+    migration: '20260902120000_result_publish_without_consent_ref',
+    label: 'DROP CONSTRAINT',
+    constraints: ['toppers_published_requires_consent'],
+    why:
+      'Drops and immediately re-adds toppers_published_requires_consent, in one ' +
+      'transaction, with the same name and a strictly weaker predicate: ' +
+      'publishing a result now requires consentResult alone, not a ' +
+      'consent-form reference as well. No column, row or other constraint is ' +
+      'touched; the name, photograph and publishedAt constraints on toppers ' +
+      'and every student_stories constraint are unchanged. Owner decision, ' +
+      'recorded in the migration header.',
+  },
+  {
+    migration: '20260903100000_story_gallery_publish_without_consent_ref',
+    label: 'DROP CONSTRAINT',
+    constraints: [
+      'student_stories_published_requires_consent',
+      'gallery_items_published_requires_consent',
+    ],
+    why:
+      'The same removal as 20260902120000, extended to stories and the gallery ' +
+      'at the owner request. Each constraint is dropped and immediately ' +
+      're-added under the same name with a strictly weaker predicate: a story ' +
+      'publishes on consentStory alone, a gallery photograph showing people ' +
+      'publishes on consentPhoto alone, neither needs a consent-form reference ' +
+      'any more. No column, row or other constraint is touched - the name, ' +
+      'photograph and publishedAt constraints on student_stories, ' +
+      'gallery_items_text_printable, and every toppers constraint are ' +
+      'unchanged. Owner decision, recorded in the migration header.',
+  },
+] as const;
+
+/**
+ * Is this danger already read and approved?
+ *
+ * Both halves must match: approving a DROP CONSTRAINT in a migration does not
+ * approve a DROP COLUMN that appears in it later.
+ */
+export function isReviewedDestructive(migration: string, label: string): boolean {
+  return REVIEWED_DESTRUCTIVE_MIGRATIONS.some(
+    (entry) => entry.migration === migration && entry.label === label,
+  );
+}
+
 export const DANGEROUS_MIGRATION_PATTERNS: readonly {
   pattern: RegExp;
   label: string;

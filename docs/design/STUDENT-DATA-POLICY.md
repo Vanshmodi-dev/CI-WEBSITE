@@ -44,16 +44,72 @@ Every model that can identify a student carries:
 
 | Field | Purpose |
 | --- | --- |
-| `consentRef` | Pointer to the signed authorisation the institute holds. **Not nullable on a published record.** |
+| `consentRef` | Pointer to the signed authorisation the institute holds. **Not a publishing condition anywhere** — see "Phase 23" and "Phase 24" below. Retained, with its data. |
 | `consentResult` / `consentName` / `consentPhoto` / `consentStory` | The four independent permissions. All default to `false`. |
 | `published` | Defaults to `false`. Never defaults to true on create. |
 | `displayNameMode` | `full` \| `initials` \| `firstNameOnly` — defaults to the most private. |
 
 The publish action is gated: a record cannot move to `published: true` without
-a `consentRef` and the permissions covering what is actually on screen. This is
-enforced in the mutation, not merely in the form, so it cannot be bypassed by a
-direct call — and again by database CHECK constraints, so it cannot be bypassed
-by a direct query either.
+the permissions covering what is actually on screen. This is enforced in the
+mutation, not merely in the form, so it cannot be bypassed by a direct call —
+and again by database CHECK constraints, so it cannot be bypassed by a direct
+query either.
+
+#### Phase 23 — the consent-form reference is no longer a publishing condition for RESULTS
+
+It was, for both results and stories. The owner removed it for results, and the
+reason is worth recording: the result form labelled the field *optional* while
+the publish panel refused to publish without it, so the screen contradicted
+itself and the only way to discover the rule was to be stopped by it.
+
+What changed, exactly:
+
+* A result publishes on `consentResult` alone. `toppers_published_requires_consent`
+  now reads `CHECK (NOT published OR consentResult)`.
+* Stories and gallery photographs were **left alone at the time**, and Phase 24
+  below extended the removal to them.
+* **No permission was weakened.** The reference was a filing pointer, never a
+  permission — it never decided what a visitor saw. `consentResult`,
+  `consentName` and `consentPhoto` still gate the result, the name and the
+  photograph independently, and each is still enforced in the mutation, in the
+  read path, and by a CHECK constraint.
+* The **column is retained on every model**, with its data. It records
+  permissions held for named children; a UI no longer reading it is not a reason
+  to destroy it. The results export still carries it, marked read-only.
+* The result form no longer has the field, and the results import template no
+  longer has the column.
+
+#### Phase 24 — the same removal, for STORIES and GALLERY photographs
+
+The owner extended the decision to the two features that still had the field.
+Both had the same contradiction the result form had: an ordinary-looking
+optional field that the publish panel then refused to publish without.
+
+What changed:
+
+* A **story** publishes on `consentStory` alone.
+  `student_stories_published_requires_consent` now reads
+  `CHECK (NOT published OR consentStory)`.
+* A **gallery photograph** showing identifiable people publishes on
+  `consentPhoto` alone. `gallery_items_published_requires_consent` now reads
+  `published = false OR showsPeople = false OR consentPhoto = true`.
+* **No permission was weakened, again.** `consentStory` is still required for a
+  story and a result grant still does not authorise one; `consentPhoto` is still
+  required for any photograph, in a story or in the gallery, and is still never
+  implied by anything else; `consentName` still governs the name; `showsPeople`
+  is still the only way past the gallery permission.
+* `student_stories_photo_requires_photo_consent`,
+  `student_stories_name_requires_name_consent`,
+  `student_stories_published_at_set` and `gallery_items_text_printable` are
+  untouched. The last of those still mentions `consentRef`, deliberately: it is
+  about control characters in stored text, and the column is still stored.
+* The **columns are retained on all three models**. The stories export still
+  carries its one, marked read-only; there is no gallery export.
+
+There is no longer any per-kind rule to hold: `REQUIRES_CONSENT_REF` was deleted
+along with the requirement, and `consentRef` is gone from `StudentRecord` and
+`GalleryRecord` altogether, so no caller can pass a value that means anything.
+`tests/consent-removal.test.ts` is the regression suite for both phases.
 
 ### The four permissions
 

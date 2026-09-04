@@ -153,7 +153,7 @@ export default async function StoriesPage({
         body={<>{content['page.stories.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
           </>

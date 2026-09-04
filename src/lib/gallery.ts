@@ -34,18 +34,23 @@ import { isSafePhotoPath } from './validation.ts';
  *
  *   - "Assume publication is NOT authorised until a specific record says
  *     otherwise."
- *   - `consentRef` is "not nullable on a published record".
  *   - `consentPhoto` authorises "showing a photograph - never implied by
  *     anything else".
  *
- * Those three sentences are the whole of the rule below.
+ * Those two sentences are the whole of the rule below.
+ *
+ * A THIRD ONE USED TO BE HERE: `consentRef` was "not nullable on a published
+ * record", so a photograph of identifiable people needed a filing reference as
+ * well as the permission. Phase 24 removed that condition here, in the stories
+ * form and in the database, at the owner's request - the same removal Phase 23
+ * made for results. The photograph permission is untouched and is still the
+ * thing that decides whether a picture of people can be published.
  */
 
 /** The stored shape this module needs. Deliberately not the Prisma type. */
 export type GalleryRecord = {
   imageUrl: string | null;
   showsPeople: boolean;
-  consentRef: string | null;
   consentPhoto: boolean;
   published: boolean;
 };
@@ -99,8 +104,9 @@ export function isGalleryItemPublic(record: GalleryRecord): boolean {
   // A photograph with nobody in it needs no student's permission.
   if (!record.showsPeople) return true;
 
-  const ref = record.consentRef?.trim() ?? '';
-  return ref.length > 0 && record.consentPhoto;
+  // And one with people in it needs the photograph permission. That is the
+  // whole of it since Phase 24; see the note at the top of this file.
+  return record.consentPhoto;
 }
 
 /**
@@ -123,15 +129,8 @@ export function galleryBlockers(record: GalleryRecord): string[] {
     blockers.push('That is not a photo on this website. Use the Choose photo button.');
   }
 
-  if (record.showsPeople) {
-    if (!record.consentRef || record.consentRef.trim().length === 0) {
-      blockers.push(
-        'Add the consent form reference you hold on file for the people in this photograph.',
-      );
-    }
-    if (!record.consentPhoto) {
-      blockers.push('Tick "Permission to publish this photograph".');
-    }
+  if (record.showsPeople && !record.consentPhoto) {
+    blockers.push('Tick "Permission to publish this photograph".');
   }
 
   return blockers;

@@ -47,8 +47,31 @@ export async function SiteFooter() {
   const whatsappHref = () => whatsappLink(contact.whatsappNumber);
 
   return (
-    <footer className="bg-band text-band-text">
-      <div className="mx-auto w-full max-w-[1200px] px-5 py-16 md:px-8 md:py-20 lg:px-12">
+    /*
+      PHASE 25. The footer is the deepest navy on the site and the only place a
+      gradient appears: a slow wash from --band to --band-2 across the whole
+      block, which stops 300px of flat colour from reading as a dead zone. The
+      gold hairline along the top edge is the same one the closing call to
+      action carries, so the two navy surfaces at the foot of the page are
+      visibly the same family rather than two different blues.
+
+      ⚠ THE SOLID `bg-band` IS DECLARED AS WELL AS THE GRADIENT, AND IT IS
+      NOT REDUNDANT.
+      A gradient is a background-IMAGE, so an element carrying only one has a
+      computed background-COLOR of transparent. Anything resolving a background
+      by walking the tree - a contrast checker, and this project has one in
+      scripts/verify-ux.mjs - then walks straight past the footer to the white
+      page behind it and measures white text on white. It reported exactly that
+      on all thirteen public routes. The solid colour underneath is both the
+      honest answer to that question and the fallback if the gradient ever
+      fails to paint.
+    */
+    <footer className="relative isolate bg-band bg-gradient-to-b from-band to-band-2 text-band-text">
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-accent/0 via-accent-gold/60 to-accent/0"
+      />
+      <div className="container-page py-16 md:py-24">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)] lg:gap-8">
           {/* Identity */}
           <div>
@@ -62,7 +85,7 @@ export async function SiteFooter() {
               was simply missed. It is `footer.description` now, and the
               fallback is the sentence that shipped.
             */}
-            <p className="mt-5 max-w-xs text-small leading-relaxed text-band-muted">
+            <p className="mt-6 max-w-xs text-small leading-relaxed text-band-muted">
               {content['footer.description']}
             </p>
           </div>
@@ -72,16 +95,16 @@ export async function SiteFooter() {
             <nav key={group.heading} aria-labelledby={`f-${group.heading}`}>
               <h2
                 id={`f-${group.heading}`}
-                className="eyebrow font-sans text-accent"
+                className="eyebrow font-sans text-accent-gold"
               >
                 {group.heading}
               </h2>
-              <ul className="mt-4 flex flex-col gap-2.5">
+              <ul className="mt-5 flex flex-col gap-3">
                 {group.links.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="text-small text-band-muted transition-colors hover:text-band-text"
+                      className="band-link text-small"
                     >
                       {link.label}
                     </Link>
@@ -93,21 +116,21 @@ export async function SiteFooter() {
         </div>
 
         {/* Contact — the NAP block. Single source: src/config/institute.ts */}
-        <div className="mt-14 grid grid-cols-1 gap-8 border-t border-white/15 pt-10 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid grid-cols-1 gap-10 border-t border-white/12 pt-12 sm:grid-cols-2 lg:grid-cols-3">
           <div>
-            <h2 className="eyebrow font-sans text-accent">{content['footer.visit.heading']}</h2>
+            <h2 className="eyebrow font-sans text-accent-gold">{content['footer.visit.heading']}</h2>
             <address className="mt-3 text-small leading-relaxed text-band-muted not-italic">
               {contact.addressLine}
             </address>
           </div>
 
           <div>
-            <h2 className="eyebrow font-sans text-accent">{content['footer.talk.heading']}</h2>
+            <h2 className="eyebrow font-sans text-accent-gold">{content['footer.talk.heading']}</h2>
             <ul className="mt-3 flex flex-col gap-2 text-small">
               <li>
                 <a
                   href={contact.telHref}
-                  className="text-band-muted hover:text-band-text"
+                  className="band-link"
                 >
                   {contact.phonePrimaryDisplay}
                 </a>
@@ -117,7 +140,7 @@ export async function SiteFooter() {
                   href={whatsappHref()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-band-muted hover:text-band-text"
+                  className="band-link"
                 >
                   WhatsApp
                 </a>
@@ -128,7 +151,7 @@ export async function SiteFooter() {
                 <li>
                   <a
                     href={`mailto:${contact.email}`}
-                    className="text-band-muted hover:text-band-text"
+                    className="band-link"
                   >
                     {contact.email}
                   </a>
@@ -142,7 +165,7 @@ export async function SiteFooter() {
               somebody to a locked door. */}
           {contact.hours.length > 0 ? (
             <div>
-              <h2 className="eyebrow font-sans text-accent">{content['footer.hours.heading']}</h2>
+              <h2 className="eyebrow font-sans text-accent-gold">{content['footer.hours.heading']}</h2>
               <ul className="mt-3 flex flex-col gap-2 text-small text-band-muted">
                 {contact.hours.map((line) => (
                   <li key={line}>{line}</li>
@@ -154,7 +177,7 @@ export async function SiteFooter() {
           {/* Social block renders only when an account actually exists (§32) */}
           {hasSocial ? (
             <div>
-              <h2 className="eyebrow font-sans text-accent">{content['footer.follow.heading']}</h2>
+              <h2 className="eyebrow font-sans text-accent-gold">{content['footer.follow.heading']}</h2>
               <ul className="mt-3 flex flex-col gap-2 text-small">
                 {contact.social.youtube ? (
                   <li>
@@ -162,7 +185,7 @@ export async function SiteFooter() {
                       href={contact.social.youtube}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-band-muted hover:text-band-text"
+                      className="band-link"
                     >
                       YouTube
                     </a>
@@ -174,7 +197,7 @@ export async function SiteFooter() {
                       href={contact.social.instagram}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-band-muted hover:text-band-text"
+                      className="band-link"
                     >
                       Instagram
                     </a>
@@ -185,7 +208,7 @@ export async function SiteFooter() {
           ) : null}
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-white/15 pt-6 text-[13px] text-band-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-14 flex flex-col gap-3 border-t border-white/12 pt-8 text-[13px] text-band-muted sm:flex-row sm:items-center sm:justify-between">
           <p>
             &copy; {year} {institute.legalEntityName ?? institute.name}. All rights reserved.
           </p>

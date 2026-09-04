@@ -139,7 +139,6 @@ export function planDigest(plan: ImportPlan): string {
         r.score,
         r.scoreUnit,
         r.highlight ?? '',
-        r.consentRef ?? '',
         r.consentResult ? 1 : 0,
         r.consentName ? 1 : 0,
         r.consentPhoto ? 1 : 0,
@@ -196,7 +195,6 @@ export async function planImport(text: string): Promise<PlanOutcome> {
             consentResult: true,
             consentName: true,
             consentPhoto: true,
-            consentRef: true,
             displayNameMode: true,
             photoUrl: true,
           },
@@ -235,7 +233,9 @@ function toRow(record: PlannedRecord) {
     board: (record.board ?? null) as never,
     year: record.year,
     highlight: record.highlight,
-    consentRef: record.consentRef,
+    // No `consentRef`: the column is retained but nothing writes it any more,
+    // and an update that wrote null would erase a reference recorded before
+    // Phase 23. Omitting the key leaves what is stored alone.
     consentResult: record.consentResult,
     consentName: record.consentName,
     consentPhoto: record.consentPhoto,

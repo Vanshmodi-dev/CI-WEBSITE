@@ -42,7 +42,6 @@ import {
 const LIMITS = {
   alt: 200,
   caption: 300,
-  consentRef: 200,
   photoUrl: 500,
   maxPriority: 1000,
 } as const;
@@ -51,7 +50,7 @@ export type GalleryFormState = {
   status: 'idle' | 'error';
   message?: string;
   errors?: Partial<
-    Record<'imageUrl' | 'alt' | 'caption' | 'category' | 'priority' | 'consentRef', string>
+    Record<'imageUrl' | 'alt' | 'caption' | 'category' | 'priority', string>
   >;
   /** Consent blockers, listed so the teacher knows which box to tick. */
   blockers?: string[];
@@ -94,7 +93,6 @@ export async function saveGalleryItem(
   const caption = clean(formData.get('caption'), LIMITS.caption);
   const categoryRaw = String(formData.get('category') ?? '').trim();
   const priorityRaw = String(formData.get('priority') ?? '0').trim();
-  const consentRef = clean(formData.get('consentRef'), LIMITS.consentRef);
 
   const showsPeople = formData.get('showsPeople') === 'on';
   const consentPhoto = formData.get('consentPhoto') === 'on';
@@ -148,7 +146,7 @@ export async function saveGalleryItem(
       status: 'error',
       message: 'Please check the highlighted fields.',
       errors,
-      values: { alt, caption, category: categoryRaw, priority: priorityRaw, consentRef, showsPeople: showsPeople ? 'on' : '', consentPhoto: consentPhoto ? 'on' : '', published: publishRequested ? 'on' : '' },
+      values: { alt, caption, category: categoryRaw, priority: priorityRaw, showsPeople: showsPeople ? 'on' : '', consentPhoto: consentPhoto ? 'on' : '', published: publishRequested ? 'on' : '' },
     };
   }
 
@@ -174,7 +172,6 @@ export async function saveGalleryItem(
   const consentState = {
     imageUrl,
     showsPeople,
-    consentRef: consentRef.length > 0 ? consentRef : null,
     consentPhoto,
     published: publishRequested,
   };
@@ -190,7 +187,11 @@ export async function saveGalleryItem(
     priority,
     published,
     showsPeople,
-    consentRef: consentRef.length > 0 ? consentRef : null,
+    /*
+      No `consentRef`. The column is retained and carries references recorded
+      before Phase 24; writing null here would erase one on the next save of an
+      entry that has nothing to do with it.
+    */
     consentPhoto,
   };
 

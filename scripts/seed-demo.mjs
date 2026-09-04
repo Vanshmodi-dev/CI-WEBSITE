@@ -451,8 +451,8 @@ function galleryItems() {
     { image: 8, category: 'CELEBRATIONS', alt: `${P} synthetic tile standing in for a festival decoration in the corridor.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: true, published: true, priority: 0 },
 
     // --- people, consent incomplete: MUST stay hidden ------------------------
-    { image: 9, category: 'STUDENTS', alt: `${P} synthetic tile: reference on file, photograph permission NOT ticked. Must never be public.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: false, published: false, priority: 0 },
-    { image: 10, category: 'STUDENTS', alt: `${P} synthetic tile: photograph permission ticked but NO reference on file. Must never be public.`, caption: null, showsPeople: true, consentRef: null, consentPhoto: true, published: false, priority: 0 },
+    { image: 9, category: 'STUDENTS', alt: `${P} synthetic tile: photograph permission NOT ticked. Must never be public.`, caption: null, showsPeople: true, consentRef: REF, consentPhoto: false, published: false, priority: 0 },
+    { image: 10, category: 'STUDENTS', alt: `${P} synthetic tile: photograph permission ticked, no reference on file, still a draft. Not public until published.`, caption: null, showsPeople: true, consentRef: null, consentPhoto: true, published: false, priority: 0 },
     { image: 11, category: 'STUDENTS', alt: `${P} synthetic tile: no permission recorded at all. Must never be public.`, caption: null, showsPeople: true, consentRef: null, consentPhoto: false, published: false, priority: 0 },
 
     // --- people, full consent, still a draft ---------------------------------

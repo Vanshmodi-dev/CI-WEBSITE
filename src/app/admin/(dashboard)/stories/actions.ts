@@ -107,7 +107,6 @@ export async function saveStory(
   const outcome = String(formData.get('outcome') ?? '').trim().slice(0, 2000);
   const quote = String(formData.get('quote') ?? '').trim().slice(0, 600);
   const photoUrl = String(formData.get('photoUrl') ?? '').trim().slice(0, 500);
-  const consentRef = String(formData.get('consentRef') ?? '').trim().slice(0, 200);
   const displayNameModeRaw = String(formData.get('displayNameMode') ?? 'INITIALS');
 
   const consentStory = formData.get('consentStory') === 'on';
@@ -173,7 +172,6 @@ export async function saveStory(
         studentName,
         displayNameMode,
         photoUrl: photoUrl.length > 0 ? photoUrl : null,
-        consentRef: consentRef.length > 0 ? consentRef : null,
         consentStory,
         consentName,
         consentPhoto,
@@ -220,7 +218,14 @@ export async function saveStory(
     journey,
     outcome,
     quote: quote.length > 0 ? quote : null,
-    consentRef: consentRef.length > 0 ? consentRef : null,
+    /*
+      `consentRef` IS DELIBERATELY ABSENT FROM THIS PAYLOAD (Phase 24).
+
+      The field is gone from the form and is no longer required to publish. It
+      is NOT written as null either: the column is retained, some stories carry
+      a reference recorded before this change, and an update that wrote null
+      would erase that on the next unrelated save.
+    */
     consentStory,
     consentName,
     consentPhoto,

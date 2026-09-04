@@ -59,12 +59,23 @@ const BUDGET = {
    */
   requests: 20,
   /**
-   * The logo, and nothing else.
+   * The logo, and nothing else — EXCEPT ON THE HOMEPAGE, WHICH IS TWO.
    *
-   * It is the LCP element on every route, so it SHOULD be eager. A second
-   * eager image means something below the fold stopped being deferred.
+   * The logo is eager on every route because it is the LCP element there, and
+   * a second eager image normally means something below the fold stopped being
+   * deferred. That is still the rule, and it is still one everywhere but "/".
+   *
+   * PHASE 21 PUT A PHOTOGRAPH IN THE HOMEPAGE HERO. It is above the fold, it is
+   * the largest thing in the viewport, and it is therefore the LCP element on
+   * that route — the 40px logo is not. Marking the LCP image lazy to satisfy a
+   * count would move the cost from this budget onto the visitor's LCP, and
+   * Lighthouse would report it as "LCP image was lazily loaded", which is the
+   * same regression written down somewhere else.
+   *
+   * So the allowance is per route, and the tripwire keeps its teeth: a THIRD
+   * eager image on the homepage fails, and a second anywhere else still fails.
    */
-  eagerImages: 1,
+  eagerImages: { '/': 2, default: 1 },
 };
 
 /**
@@ -165,18 +176,20 @@ for (const route of ROUTES) {
     `requests` counts the images a browser fetches on load, which is the right
     thing to measure — and it would be trivially satisfiable by marking
     everything eager, or by having no images at all. These two assertions close
-    that door: exactly one image may load eagerly (the logo, which is the LCP
-    element and should be eager), and a page carrying a gallery or a set of
-    portraits must be deferring them.
+    that door: only the LCP image of a route may load eagerly — the logo
+    everywhere, and on the homepage the hero portrait as well (Phase 21; see
+    the allowance above) — and a page carrying a gallery or a set of portraits
+    must be deferring them.
 
     Before Phase 19 this budget counted every `<img>` in the document and had
     been failing on three routes since the database first had content in it —
     reported as "pre-existing" three phases running. It was measuring an
     experience no visitor has.
   */
+  const eagerAllowance = BUDGET.eagerImages[route] ?? BUDGET.eagerImages.default;
   assert(
-    m.eagerImageCount <= BUDGET.eagerImages,
-    `${route} loads at most ${BUDGET.eagerImages} image eagerly`,
+    m.eagerImageCount <= eagerAllowance,
+    `${route} loads at most ${eagerAllowance} image${eagerAllowance === 1 ? '' : 's'} eagerly`,
     `${m.eagerImageCount} eager`,
   );
   if (m.lazyImageCount + m.eagerImageCount > 3) {

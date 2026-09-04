@@ -26,7 +26,7 @@ export async function WhatsAppButton() {
       href={whatsappLink(contact.whatsappNumber)}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-navy-800 text-white shadow-e3 transition-colors hover:bg-navy-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+      className="fixed bottom-5 right-5 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-navy-700 text-white shadow-e3 transition-colors hover:bg-navy-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
       /*
         ⚠ THE NAME IS READ, NOT SPELLED OUT.
 

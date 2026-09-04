@@ -42,7 +42,6 @@ export default async function EditStudentPage({
           board: record.board ?? '',
           year: String(record.year),
           highlight: record.highlight ?? '',
-          consentRef: record.consentRef ?? '',
           consentResult: record.consentResult,
           consentName: record.consentName,
           consentPhoto: record.consentPhoto,

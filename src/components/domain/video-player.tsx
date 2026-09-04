@@ -48,7 +48,7 @@ export function VideoPlayer({ video }: { video: PublicVideo }) {
 
   return (
     <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-md border border-rule bg-paper">
-      <div className="relative aspect-video w-full bg-navy-800">
+      <div className="relative aspect-video w-full bg-navy-700">
         {playing ? (
           /*
             THE `allow` LIST IS THE MINIMUM THAT PLAYS A VIDEO.

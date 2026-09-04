@@ -180,10 +180,22 @@ export function AdminShell({
       </header>
 
       <div className="mx-auto flex w-full max-w-[1400px]">
-        {/* Sidebar — desktop */}
+        {/*
+          Sidebar — desktop.
+
+          The panel is exactly the viewport minus the 4rem header, and it is a
+          FLEX COLUMN rather than a block so that NavList inside it can take
+          `flex-1 min-h-0` and scroll on its own. `min-h-0` is the load-bearing
+          half: a flex child's default `min-height: auto` refuses to shrink
+          below its content, which is what turns an `overflow-y-auto` into a
+          box that silently grows instead of scrolling.
+
+          `px-3 py-6` stays on the panel, not on the scroll region, so the
+          padding is fixed frame rather than something that scrolls away.
+        */}
         <nav
           aria-label="Admin sections"
-          className="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 border-r border-rule bg-paper px-3 py-6 lg:block"
+          className="sticky top-16 hidden h-[calc(100vh-4rem)] w-56 shrink-0 flex-col border-r border-rule bg-paper px-3 py-6 lg:flex"
         >
           <NavList pathname={pathname} />
         </nav>
@@ -258,40 +270,55 @@ export function AdminShell({
 
 function NavList({ pathname }: { pathname: string }) {
   return (
-    <div className="flex flex-col gap-6">
-      {NAV.map((group, index) => (
-        <div key={group.heading ?? `group-${index}`}>
-          {/* The heading is a real <h2>, not a styled <span>: a screen-reader
-              user navigating this sidebar by heading gets the same four-way
-              split a sighted user gets from the gaps. */}
-          {group.heading ? (
-            <h2 className="eyebrow px-3 pb-2 text-muted">{group.heading}</h2>
-          ) : null}
-          <ul className="flex flex-col gap-0.5">
-            {group.items.map((item) => {
-              const active = item.exact
-                ? pathname === item.href
-                : pathname.startsWith(item.href);
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'flex min-h-11 items-center rounded-sm px-3 text-small transition-colors',
-                      active
-                        ? 'bg-selected font-medium text-heading'
-                        : 'text-muted hover:bg-surface hover:text-heading',
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+    /*
+      The scrolling half of the sidebar, shared by the desktop panel and the
+      mobile drawer — both are flex columns, so both get independent scrolling
+      from the one class list.
+
+      Until this existed the desktop panel was `h-[calc(100vh-4rem)]` with the
+      default `overflow: visible`, so once the list outgrew a short viewport
+      the items below the fold were painted past the bottom of a STUCK sticky
+      element: scrolling the page moved the main content and left them exactly
+      where they were. `overscroll-contain` is the other half of the fix —
+      without it, reaching the end of this list hands the remaining scroll to
+      the page and the main content jumps.
+    */
+    <div className="scroll-panel min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="flex flex-col gap-6">
+        {NAV.map((group, index) => (
+          <div key={group.heading ?? `group-${index}`}>
+            {/* The heading is a real <h2>, not a styled <span>: a screen-reader
+                user navigating this sidebar by heading gets the same four-way
+                split a sighted user gets from the gaps. */}
+            {group.heading ? (
+              <h2 className="eyebrow px-3 pb-2 text-muted">{group.heading}</h2>
+            ) : null}
+            <ul className="flex flex-col gap-0.5">
+              {group.items.map((item) => {
+                const active = item.exact
+                  ? pathname === item.href
+                  : pathname.startsWith(item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex min-h-11 items-center rounded-sm px-3 text-small transition-colors',
+                        active
+                          ? 'bg-selected font-medium text-heading'
+                          : 'text-muted hover:bg-surface hover:text-heading',
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

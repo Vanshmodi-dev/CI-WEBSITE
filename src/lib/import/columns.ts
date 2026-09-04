@@ -45,7 +45,6 @@ export type ColumnKey =
   | 'scoreUnit'
   | 'highlight'
   | 'subjects'
-  | 'consentRef'
   | 'consentResult'
   | 'consentName'
   | 'consentPhoto'
@@ -159,16 +158,20 @@ export const COLUMNS: readonly ColumnSpec[] = [
     example: 'Accountancy:95; Business Studies:92; Economics:88',
     affectsVisibility: true,
   },
-  {
-    key: 'consentRef',
-    header: 'Consent Form Reference',
-    required: false,
-    meaning:
-      'Where the signed permission form is filed. Nothing can be published without one, so leaving it blank keeps the record private.',
-    accepted: 'Up to 200 characters, or blank.',
-    example: 'ZZTEST-CONSENT-001',
-    affectsVisibility: true,
-  },
+  /*
+    "CONSENT FORM REFERENCE" WAS A COLUMN HERE AND IS GONE (Phase 23).
+
+    Its `meaning` above read "Nothing can be published without one", which was
+    the rule the owner removed from results. Leaving the column with that
+    sentence corrected would have left the template collecting a value that no
+    screen in the admin shows any more, into a database column nothing reads —
+    a write-only field is worse than an absent one.
+
+    A spreadsheet that still carries the old heading imports cleanly: unknown
+    headers are ignored (see buildPlan), and the column was never required. The
+    references already stored are untouched and still come out in the results
+    export.
+  */
   {
     key: 'consentResult',
     header: 'Permission: Show Result',

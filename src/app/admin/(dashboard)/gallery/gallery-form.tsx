@@ -26,7 +26,6 @@ export type GalleryValues = {
   priority?: number;
   published?: boolean;
   showsPeople?: boolean;
-  consentRef?: string;
   consentPhoto?: boolean;
   /** The row's `updatedAt`, for the lost-update guard. Absent when creating. */
   editedAt?: string;
@@ -67,7 +66,6 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
 
   const [imageUrl, setImageUrl] = useState(values.imageUrl ?? '');
   const [showsPeople, setShowsPeople] = useState(values.showsPeople ?? true);
-  const [consentRef, setConsentRef] = useState(values.consentRef ?? '');
   const [consentPhoto, setConsentPhoto] = useState(values.consentPhoto ?? false);
 
   const editing = Boolean(values.id);
@@ -84,7 +82,6 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
   const blockers = galleryBlockers({
     imageUrl: imageUrl.length > 0 ? imageUrl : null,
     showsPeople,
-    consentRef: consentRef.length > 0 ? consentRef : null,
     consentPhoto,
     published: true,
   });
@@ -236,30 +233,16 @@ export function GalleryForm({ values = {} }: { values?: GalleryValues }) {
           />
 
           {/*
-            The consent fields stay MOUNTED when `showsPeople` is unticked, and
-            are only visually hidden, so their values still submit. A teacher
-            who unticks the box by mistake and re-ticks it does not silently
-            lose the reference they already typed.
+            The permission stays MOUNTED when `showsPeople` is unticked and is
+            only visually hidden, so its value still submits. A teacher who
+            unticks the box by mistake and re-ticks it does not silently lose
+            what they had already set.
+
+            The "Consent form reference" field was here until Phase 24, removed
+            for the reason given in src/lib/gallery.ts. The permission below it
+            is untouched.
           */}
           <div className={showsPeople ? 'flex flex-col gap-5' : 'hidden'}>
-            <Field
-              name="consentRef"
-              label="Consent form reference"
-              hint="Where the signed permission is filed, for example a form number or a folder name."
-              error={state.errors?.consentRef}
-            >
-              {(props) => (
-                <input
-                  {...props}
-                  type="text"
-                  maxLength={200}
-                  value={consentRef}
-                  onChange={(e) => setConsentRef(e.target.value)}
-                  className={inputClass(Boolean(state.errors?.consentRef))}
-                />
-              )}
-            </Field>
-
             <Checkbox
               id="g-consentPhoto"
               name="consentPhoto"

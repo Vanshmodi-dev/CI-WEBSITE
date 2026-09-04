@@ -138,7 +138,9 @@ export const CODE_OWNED_COPY: readonly CodeOwnedString[] = [
   { text: '← Previous', why: 'control' },
   { text: 'Address', why: 'label' },
   { text: 'All', why: 'control' },
-  { text: 'All courses and details', why: 'cta' },
+  /* 'All courses and details' was the hero panel's own "more" link, and left
+     with it in Phase 21. The programme list is still reachable from the
+     "Explore courses" button directly under the headline. */
   { text: 'All programmes', why: 'section' },
   { text: 'All results', why: 'cta' },
   { text: 'All reviews', why: 'cta' },
@@ -214,7 +216,8 @@ export const CODE_OWNED_COPY: readonly CodeOwnedString[] = [
   { text: 'TradyPerch', why: 'credit' },
   { text: 'Upcoming batches', why: 'section' },
   { text: 'Videos', why: 'section' },
-  { text: 'View programme →', why: 'cta' },
+  /* The arrow is a separate span now, so the scan sees the words alone. */
+  { text: 'View programme', why: 'cta' },
   { text: 'Visit us', why: 'cta' },
   { text: 'Watch on YouTube', why: 'platform' },
   { text: 'We are putting this page together', why: 'empty' },
@@ -250,7 +253,17 @@ export const CODE_OWNED_COPY: readonly CodeOwnedString[] = [
   },
   { text: 'Website', why: 'form' },
   { text: 'What changed', why: 'card' },
-  { text: 'What we teach', why: 'section' },
+  /*
+    'What we teach' WAS HERE, as the homepage hero panel's heading. Phase 21
+    replaced that panel with the teacher's portrait at the owner's request, so
+    the string is no longer rendered by any public component — and the test
+    below fails on a code-owned entry that is no longer on the site, correctly:
+    this list is only useful while every line of it is still true.
+
+    The words survive elsewhere and are EDITABLE in both places: the /about
+    section heading (`about.whatWeTeachHeading`) and the /courses page title,
+    which is why they also left SHARED_WORDING at the foot of this file.
+  */
   { text: 'WhatsApp', why: 'platform' },
   { text: 'WhatsApp us', why: 'cta' },
   {
@@ -293,5 +306,4 @@ export const SHARED_WORDING: readonly string[] = [
   'Talk to us',
   'Upcoming batches',
   'Videos',
-  'What we teach',
 ];

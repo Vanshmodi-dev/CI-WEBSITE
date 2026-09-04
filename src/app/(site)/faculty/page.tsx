@@ -115,14 +115,14 @@ export default async function FacultyPage() {
         body={<>{content['page.faculty.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
             <Button
               href={whatsappLink(contact.whatsappNumber)}
               external
               size="lg"
-              variant="secondary"
+              variant="onBandSecondary"
             >
               WhatsApp us
             </Button>

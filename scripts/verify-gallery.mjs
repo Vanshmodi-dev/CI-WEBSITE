@@ -217,7 +217,6 @@ async function fillGallery({
   category = 'CLASSROOMS',
   priority = null,
   showsPeople = true,
-  consentRef = null,
   consentPhoto = false,
   publish = false,
 }) {
@@ -226,7 +225,6 @@ async function fillGallery({
   await page.eval(setSelect('[name="category"]', category));
   if (priority !== null) await page.eval(setField('[name="priority"]', String(priority)));
   await page.eval(setCheckbox('g-showsPeople', showsPeople));
-  if (consentRef !== null) await page.eval(setField('[name="consentRef"]', consentRef));
   await page.eval(setCheckbox('g-consentPhoto', consentPhoto));
   await page.eval(setCheckbox('g-published', publish));
 }
@@ -334,7 +332,6 @@ section('1. CONSENT IS ENFORCED AT THE MUTATION BOUNDARY');
     alt: `${P} people with no permission recorded.`,
     category: 'STUDENTS',
     showsPeople: true,
-    consentRef: '',
     consentPhoto: false,
     publish: true,
   });
@@ -367,16 +364,16 @@ section('1. CONSENT IS ENFORCED AT THE MUTATION BOUNDARY');
   );
 
   /*
-    HALF CONSENT IS NOT CONSENT.
+    THE PHOTOGRAPH BOX IS THE WHOLE OF THE CONSENT NOW.
 
-    A reference on file with the photograph box unticked, and the box ticked
-    with no reference. The policy is explicit that the permissions are
-    independent questions rather than a ladder, so each of these alone must
-    fail.
+    This loop used to run two cases: a reference on file with the box unticked,
+    and the box ticked with no reference. Phase 24 removed the reference, so the
+    second case is the ordinary publishing path and only the first is a refusal.
+    Kept as a loop because the case that remains is the one that matters, and
+    because a third case is one line away if a permission is ever added.
   */
-  for (const [label, ref, tick] of [
-    ['a reference on file but the photograph box unticked', REF, false],
-    ['the photograph box ticked but no reference on file', '', true],
+  for (const [label, tick] of [
+    ['a photograph of people with the permission box unticked', false],
   ]) {
     await page.goto(`${BASE}/admin/gallery/new`);
     const u = await attachPhoto(photoA);
@@ -384,12 +381,11 @@ section('1. CONSENT IS ENFORCED AT THE MUTATION BOUNDARY');
       check(false, `control: upload for "${label}"`, u.message);
       continue;
     }
-    const alt = `${P} half consent ${tick ? 'tick' : 'ref'} only.`;
+    const alt = `${P} half consent ${tick ? 'tick' : 'no tick'}.`;
     await fillGallery({
       alt,
       category: 'STUDENTS',
       showsPeople: true,
-      consentRef: ref,
       consentPhoto: tick,
       publish: true,
     });
@@ -415,11 +411,15 @@ section('1b. THE DATABASE REFUSES THE ILLEGAL STATE TOO');
     category: 'STUDENTS',
   };
 
+  /*
+    PHASE 24 MOVED TWO OF THESE FROM "REFUSED" TO "ACCEPTED", and that is the
+    change: a published photograph of people needs the PERMISSION, and no
+    longer a consent-form reference as well. "Tick only" and "whitespace
+    reference" were refusals; they are positive controls below now.
+  */
   const illegal = [
     ['no consent at all', { ...base, published: true }],
-    ['reference only', { ...base, published: true, consentRef: REF }],
-    ['tick only', { ...base, published: true, consentPhoto: true }],
-    ['whitespace reference', { ...base, published: true, consentRef: '   ', consentPhoto: true }],
+    ['a reference on file but no permission', { ...base, published: true, consentRef: REF }],
   ];
   for (const [label, data] of illegal) {
     let refused = false;
@@ -437,7 +437,8 @@ section('1b. THE DATABASE REFUSES THE ILLEGAL STATE TOO');
   // POSITIVE CONTROLS: the constraint is not simply rejecting everything.
   for (const [label, data] of [
     ['nobody in it', { ...base, published: true, showsPeople: false }],
-    ['full consent', { ...base, published: true, consentRef: REF, consentPhoto: true }],
+    ['the photograph permission', { ...base, published: true, consentPhoto: true }],
+    ['the permission and no reference at all', { ...base, published: true, consentPhoto: true, consentRef: null }],
   ]) {
     let accepted = false;
     try {
@@ -464,7 +465,6 @@ section('2. WITHDRAWING CONSENT TAKES THE PHOTOGRAPH DOWN');
     alt,
     category: 'EVENTS',
     showsPeople: true,
-    consentRef: REF,
     consentPhoto: true,
     publish: true,
   });
@@ -532,7 +532,6 @@ section('3. A STALE FORM CANNOT RESTORE A WITHDRAWN PHOTOGRAPH');
       alt: `${P} stale edit subject.`,
       category: 'EVENTS',
       showsPeople: true,
-      consentRef: REF,
       consentPhoto: true,
       published: true,
     },
@@ -1223,7 +1222,7 @@ section('10. THE PUBLIC PAGE UNDER ATTACK');
   // Not one hidden photograph leaks through any of them.
   const hidden = await prisma.galleryItem.findMany({
     where: { alt: { startsWith: P } },
-    select: { alt: true, imageUrl: true, published: true, showsPeople: true, consentRef: true, consentPhoto: true },
+    select: { alt: true, imageUrl: true, published: true, showsPeople: true, consentPhoto: true },
   });
   const mustNotAppear = hidden.filter((r) => !isGalleryItemPublic(r));
   /*
@@ -1244,7 +1243,7 @@ section('10. THE PUBLIC PAGE UNDER ATTACK');
     (
       await prisma.galleryItem.findMany({
         where: { alt: { startsWith: P } },
-        select: { alt: true, imageUrl: true, published: true, showsPeople: true, consentRef: true, consentPhoto: true },
+        select: { alt: true, imageUrl: true, published: true, showsPeople: true, consentPhoto: true },
       })
     )
       .filter((r) => isGalleryItemPublic(r))

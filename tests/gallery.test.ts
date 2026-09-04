@@ -21,8 +21,10 @@ import {
  * `docs/design/STUDENT-DATA-POLICY.md` is the specification being tested:
  *
  *   - publication is not authorised until a specific record says otherwise
- *   - a published record cannot have a null consent reference
  *   - photograph permission is never implied by anything else
+ *
+ * A third bullet was here until Phase 24 - a published record could not have a
+ * null consent reference - and the rule it described has been removed.
  */
 
 const VALID = '/media/' + 'a'.repeat(32) + '.jpg';
@@ -31,7 +33,6 @@ function record(over: Partial<GalleryRecord> = {}): GalleryRecord {
   return {
     imageUrl: VALID,
     showsPeople: true,
-    consentRef: 'CI-2026-014',
     consentPhoto: true,
     published: true,
     ...over,
@@ -49,27 +50,26 @@ describe('isGalleryItemPublic', () => {
     assert.equal(isGalleryItemPublic(record({ published: false })), false);
   });
 
-  test('a photograph of people with no consent reference is not public', () => {
-    assert.equal(isGalleryItemPublic(record({ consentRef: null })), false);
-  });
-
-  test('a blank or whitespace consent reference is not a consent reference', () => {
-    assert.equal(isGalleryItemPublic(record({ consentRef: '' })), false);
-    assert.equal(isGalleryItemPublic(record({ consentRef: '   ' })), false);
-    assert.equal(isGalleryItemPublic(record({ consentRef: '\t\n ' })), false);
-  });
-
-  test('photograph permission is never implied by having a reference on file', () => {
-    // The policy is explicit that the four permissions are independent
-    // questions rather than a ladder. Holding a form is not permission.
+  /*
+    THREE TESTS HERE USED TO PIN THE CONSENT-FORM REFERENCE, and Phase 24
+    removed the rule they pinned. What replaces them is the assertion that
+    matters now: the PERMISSION is the whole of the gate for a photograph of
+    people, and it has not been weakened.
+  */
+  test('a photograph of people without photograph permission is NOT public', () => {
     assert.equal(isGalleryItemPublic(record({ consentPhoto: false })), false);
+  });
+
+  test('and that stays true whatever else is set', () => {
+    assert.equal(
+      isGalleryItemPublic(record({ consentPhoto: false, published: true, showsPeople: true })),
+      false,
+    );
   });
 
   test('a photograph with nobody in it needs no consent at all', () => {
     assert.equal(
-      isGalleryItemPublic(
-        record({ showsPeople: false, consentRef: null, consentPhoto: false }),
-      ),
+      isGalleryItemPublic(record({ showsPeople: false, consentPhoto: false })),
       true,
     );
   });
@@ -121,18 +121,17 @@ describe('galleryBlockers', () => {
 
   test('a people-free photograph has no blockers without consent', () => {
     assert.deepEqual(
-      galleryBlockers(record({ showsPeople: false, consentRef: null, consentPhoto: false })),
+      galleryBlockers(record({ showsPeople: false, consentPhoto: false })),
       [],
     );
   });
 
-  test('a missing reference and a missing tick are reported separately', () => {
-    const blockers = galleryBlockers(record({ consentRef: null, consentPhoto: false }));
-    assert.equal(blockers.length, 2);
-    // Each names the control to use, because a teacher cannot act on a
-    // constraint name.
-    assert.ok(blockers.some((b) => /consent form reference/i.test(b)));
+  test('the missing permission is the one blocker, and it names the control', () => {
+    // Two, until Phase 24: the other was the consent-form reference.
+    const blockers = galleryBlockers(record({ consentPhoto: false }));
+    assert.equal(blockers.length, 1);
     assert.ok(blockers.some((b) => /permission to publish/i.test(b)));
+    assert.ok(!blockers.some((b) => /consent form reference/i.test(b)));
   });
 
   test('a missing photograph is a blocker in its own right', () => {
@@ -149,7 +148,7 @@ describe('galleryBlockers', () => {
   test('no blocker text leaks a constraint name or a column name', () => {
     // A teacher should never meet `gallery_items_published_requires_consent`.
     const all = [
-      ...galleryBlockers(record({ consentRef: null, consentPhoto: false })),
+      ...galleryBlockers(record({ consentPhoto: false })),
       ...galleryBlockers(record({ imageUrl: null })),
       ...galleryBlockers(record({ imageUrl: '/media/x.svg' })),
     ].join(' ');
@@ -167,9 +166,7 @@ describe('describeVisibility', () => {
   });
 
   test('a people-free public photograph says why it needs no consent', () => {
-    const v = describeVisibility(
-      record({ showsPeople: false, consentRef: null, consentPhoto: false }),
-    );
+    const v = describeVisibility(record({ showsPeople: false, consentPhoto: false }));
     assert.equal(v.public, true);
     assert.match(v.summary, /nobody identifiable/i);
   });

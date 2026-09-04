@@ -53,7 +53,6 @@ export type PlannedRecord = {
   board: string | null;
   year: number;
   highlight: string | null;
-  consentRef: string | null;
   consentResult: boolean;
   consentName: boolean;
   consentPhoto: boolean;
@@ -105,7 +104,6 @@ export type ExistingRecord = {
   consentResult: boolean;
   consentName: boolean;
   consentPhoto: boolean;
-  consentRef: string | null;
   displayNameMode: string;
   photoUrl: string | null;
 };
@@ -341,10 +339,8 @@ export function buildPlan({ headers, rows, existing }: PlanInput): ImportPlan {
     else subjects = subjectResult.subjects;
 
     // ---- consent ----------------------------------------------------------------
-    const consentRefRaw = get(row, 'consentRef');
-    if (consentRefRaw.length > 200) fail('consentRef', 'This is longer than 200 characters.');
-    const consentRef = isBlank(consentRefRaw) ? null : consentRefRaw;
-
+    // No consent-form-reference column since Phase 23. The three permissions
+    // below are the whole of what a spreadsheet may record about consent.
     const readFlag = (key: ColumnKey): boolean => {
       const raw = get(row, key);
       if (isBlank(raw)) return false;
@@ -420,7 +416,6 @@ export function buildPlan({ headers, rows, existing }: PlanInput): ImportPlan {
       board,
       year,
       highlight: isBlank(highlight) ? null : highlight,
-      consentRef,
       consentResult,
       consentName,
       consentPhoto,
@@ -447,15 +442,13 @@ export function buildPlan({ headers, rows, existing }: PlanInput): ImportPlan {
         });
         return;
       }
-      if (!consentRef) {
-        problems.push({
-          line,
-          column: headerFor('consentRef'),
-          problem: 'This record is on the website now, and this row leaves the consent form reference blank.',
-          expected: 'Fill in the reference, or take the record off the website first in Students.',
-        });
-        return;
-      }
+      /*
+        THE SECOND RULE HERE WAS ABOUT THE CONSENT FORM REFERENCE, and it went
+        with the requirement (Phase 23). A live record whose row blanks the
+        reference is no longer a problem, because the database no longer refuses
+        that write — `toppers_published_requires_consent` is now about
+        `consentResult` alone.
+      */
     }
 
     if (record.action === 'update') updates.push(record);
@@ -492,7 +485,6 @@ export function buildPreview(record: PlannedRecord): VisibilityPreview {
     studentName: record.studentName,
     displayNameMode: record.displayNameMode,
     photoUrl: record.photoUrl,
-    consentRef: record.consentRef,
     consentResult: record.consentResult,
     consentName: record.consentName,
     consentPhoto: record.consentPhoto,
@@ -502,7 +494,7 @@ export function buildPreview(record: PlannedRecord): VisibilityPreview {
   };
 
   const view = present(asStored);
-  const resultVisible = record.currentlyPublished && Boolean(record.consentRef) && record.consentResult;
+  const resultVisible = record.currentlyPublished && record.consentResult;
 
   const reasons: string[] = [];
   if (!record.currentlyPublished) {

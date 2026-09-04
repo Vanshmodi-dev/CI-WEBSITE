@@ -84,7 +84,6 @@ export default async function StoriesPage({
                     studentName: s.studentName,
                     displayNameMode: s.displayNameMode,
                     photoUrl: s.photoUrl,
-                    consentRef: s.consentRef,
                     consentStory: s.consentStory,
                     consentName: s.consentName,
                     consentPhoto: s.consentPhoto,

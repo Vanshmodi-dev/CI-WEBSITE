@@ -94,7 +94,7 @@ export function MapPanel({
             />
             <span
               aria-hidden="true"
-              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-navy-800 text-white transition-transform duration-200 motion-safe:group-hover:scale-110 motion-reduce:transition-none"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-navy-700 text-white transition-transform duration-200 motion-safe:group-hover:scale-110 motion-reduce:transition-none"
             >
               <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current">
                 <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />

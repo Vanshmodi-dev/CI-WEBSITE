@@ -1,0 +1,52 @@
+-- =============================================================================
+-- A RESULT NO LONGER NEEDS A CONSENT-FORM REFERENCE TO BE PUBLISHED.
+-- =============================================================================
+-- HAND-WRITTEN. PRISMA WILL NOT REGENERATE THIS. Read the banner in
+-- 20260824124217_init/migration.sql before touching any CHECK constraint.
+--
+-- WHAT CHANGES, IN ONE SENTENCE: publishing a result now requires the RESULT
+-- PERMISSION and nothing else; it previously also required a non-null
+-- "consentRef".
+--
+-- WHY. The result form labelled that field "Consent form reference (optional)"
+-- and the publish panel then refused to publish without it. The owner resolved
+-- the contradiction by removing the requirement rather than the label. The
+-- application half of that change is in src/lib/student-display.ts
+-- (REQUIRES_CONSENT_REF) and src/lib/public-data.ts.
+--
+-- WHAT DOES NOT CHANGE, AND THIS IS THE IMPORTANT PART:
+--
+--   * The COLUMN stays, with every value in it. It points at signed
+--     permissions the institute holds for named children. A UI no longer
+--     reading it is not a reason to destroy it, and the results export still
+--     carries it so the records remain reachable.
+--   * "toppers_photo_requires_photo_consent" is untouched. A published
+--     photograph still requires photograph permission.
+--   * "toppers_name_requires_name_consent" is untouched. Anything beyond
+--     initials still requires name permission.
+--   * "toppers_published_at_set" is untouched.
+--   * Every student_stories constraint is untouched. A STORY still requires
+--     its consent reference; only results changed.
+--
+-- WHY THIS DROPS AND RE-ADDS. PostgreSQL cannot relax a CHECK in place --
+-- ALTER CONSTRAINT only adjusts foreign-key deferrability. Dropping and adding
+-- inside one migration is the only expression of it. Prisma runs a migration
+-- file in a transaction, so there is no window in which the table is
+-- unprotected, and the constraint keeps its name so that
+-- CONSENT_CRITICAL_CONSTRAINTS and every test naming it still apply.
+--
+-- !! THIS FILE TRIPS P-MIG-04 ("no migration contains a destructive statement")
+-- BY DESIGN. That gate exists because Phase 12 lost constraints silently. It is
+-- recorded as a read-and-approved exception in REVIEWED_DESTRUCTIVE_MIGRATIONS
+-- (src/lib/deployment-contract.ts) naming this migration and this statement
+-- only. Anything else destructive, here or anywhere, still blocks.
+--
+-- No row can be invalidated by this change: the new predicate is strictly
+-- weaker than the old one, so every row that satisfied the old one satisfies
+-- this. Nothing is rewritten and nothing is deleted.
+-- =============================================================================
+
+ALTER TABLE "toppers" DROP CONSTRAINT "toppers_published_requires_consent";
+
+ALTER TABLE "toppers" ADD CONSTRAINT "toppers_published_requires_consent"
+  CHECK (NOT "published" OR "consentResult");

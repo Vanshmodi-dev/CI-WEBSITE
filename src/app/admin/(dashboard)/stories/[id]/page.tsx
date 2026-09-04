@@ -42,7 +42,6 @@ export default async function EditStoryPage({
           journey: story.journey,
           outcome: story.outcome,
           quote: story.quote ?? '',
-          consentRef: story.consentRef ?? '',
           consentStory: story.consentStory,
           consentName: story.consentName,
           consentPhoto: story.consentPhoto,

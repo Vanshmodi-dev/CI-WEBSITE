@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDrawer } from '@/components/primitives/use-drawer';
 import { cn } from '@/lib/cn';
 import { institute } from '@/config/institute';
@@ -58,6 +58,30 @@ export function SiteHeader({
   const dialogRef = useRef<HTMLDivElement>(null);
 
   /*
+    ELEVATION ON SCROLL, AND THE CHEAPEST POSSIBLE VERSION OF IT.
+
+    At the top of a page the header is part of the page: a hairline, no shade,
+    nothing separating it from the section it sits on. Once the page moves it
+    becomes a surface floating over content, and it says so with a shadow.
+
+    This is the only scroll listener on the public site, so it is written the
+    way one should be: passive, reading a number nobody can make expensive, and
+    setting state ONLY when the boolean actually flips - so a full scroll of a
+    long page schedules two renders, not two hundred. 8px rather than 0 keeps
+    a trackpad's elastic overscroll from flickering it.
+  */
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => {
+      const past = window.scrollY > 8;
+      setScrolled((current) => (current === past ? current : past));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  /*
     Escape closes and returns focus; Tab stays inside; the page behind does not
     scroll. The implementation moved to `primitives/use-drawer.ts` in Topic 11
     so the ADMIN drawer could have it too - it had none of this, which nobody
@@ -75,8 +99,16 @@ export function SiteHeader({
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-rule bg-paper/95 backdrop-blur-sm">
-        <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-4 px-5 md:px-8 lg:h-20 lg:px-12">
+      <header
+        className={cn(
+          'sticky top-0 z-50 border-b bg-paper/85 backdrop-blur-md',
+          'transition-[border-color,box-shadow,background-color] duration-[var(--duration-base)] ease-brand',
+          scrolled
+            ? 'border-rule shadow-e1 bg-paper/95'
+            : 'border-transparent shadow-none',
+        )}
+      >
+        <div className="container-page flex h-16 items-center justify-between gap-4 lg:h-[76px]">
           <LogoLockup priority />
 
           {/* Desktop navigation — appears at lg, per §21 */}
@@ -91,10 +123,10 @@ export function SiteHeader({
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
-                        'relative inline-flex min-h-11 items-center rounded-sm px-3 text-[15px] transition-colors',
+                        'nav-link',
                         active
-                          ? 'text-heading font-medium'
-                          : 'text-muted hover:text-heading',
+                          ? 'font-semibold text-heading'
+                          : 'font-medium text-muted hover:bg-surface hover:text-heading',
                       )}
                     >
                       {item.label}
@@ -104,7 +136,7 @@ export function SiteHeader({
                       {active ? (
                         <span
                           aria-hidden="true"
-                          className="absolute inset-x-3 -bottom-px h-0.5 rounded-full bg-accent"
+                          className="absolute inset-x-3.5 bottom-1.5 h-[2px] rounded-full bg-accent"
                         />
                       ) : null}
                     </Link>
@@ -119,7 +151,7 @@ export function SiteHeader({
               number is reachable from every page at every breakpoint. */}
             <a
               href={telHref}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted transition-colors hover:bg-surface hover:text-heading lg:px-4"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-muted transition-colors duration-[var(--duration-fast)] hover:bg-surface hover:text-heading lg:px-4"
               aria-label={`Call ${institute.name} on ${phoneDisplay}`}
             >
               <PhoneIcon />

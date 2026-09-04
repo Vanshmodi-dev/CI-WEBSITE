@@ -149,7 +149,7 @@ export default async function AboutPage() {
         body={<>{content['page.about.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
             {/*
@@ -158,7 +158,7 @@ export default async function AboutPage() {
               hours and the map — not a bare hand-off to Google. The label is
               corrected so it stops promising directions it does not give.
             */}
-            <Button href="/contact" size="lg" variant="secondary">
+            <Button href="/contact" size="lg" variant="onBandSecondary">
               Find us
             </Button>
           </>

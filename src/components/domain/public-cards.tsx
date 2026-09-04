@@ -35,7 +35,7 @@ function Monogram({ text, size = 'md' }: { text: string; size?: 'md' | 'lg' }) {
     <span
       aria-hidden="true"
       className={cn(
-        'flex shrink-0 items-center justify-center rounded-full bg-navy-800 font-display font-bold text-white',
+        'flex shrink-0 items-center justify-center rounded-full bg-navy-700 font-display font-bold text-white',
         size === 'lg' ? 'h-16 w-16 text-[22px]' : 'h-12 w-12 text-[17px]',
       )}
     >
@@ -83,58 +83,99 @@ export function ResultCard({ result }: { result: PublicResult }) {
   */
   const heading = result.name ?? `${institute.name} student`;
 
+  /*
+    =========================================================================
+    EQUAL HEIGHT, AND WHY THIS REVERSES AN EARLIER DECISION
+    =========================================================================
+    Phase 15 deliberately let these cards take their natural height. The
+    reasoning is worth keeping because it was not wrong: a result carries
+    anything from no subject rows to five, so stretching every card in a row to
+    the tallest one leaves the short ones with empty space in the middle. That
+    phase chose a ragged bottom edge over a hollow middle.
+
+    PHASE 21: the owner looked at the built page and chose the other way, and
+    seeing it settles it. Ragged is defensible in the abstract; on a grid of six
+    numeric cards it reads as a rendering fault, because nothing about a card's
+    height corresponds to anything a visitor cares about — it is a count of how
+    many subject rows a teacher happened to type.
+
+    HOW IT IS DONE, AND WHAT IT REFUSES TO DO.
+
+    The card is `h-full` in a stretching grid: CSS grid already makes every item
+    in a row the height of the tallest, so the height comes from the row, not
+    from a number written here. There is NO fixed or minimum pixel height
+    anywhere in this component — one would clip a five-subject card at 320px, or
+    pad a one-line card at 1440px, and both are worse than the problem.
+
+    Inside, the card is a column with the content in a `flex-1` block and the
+    student's identity below it. The identity strip therefore sits on the
+    bottom edge of every card in the row and the strips line up across the grid;
+    the slack, wherever a card has less content than its neighbour, collects in
+    one place above that strip instead of pushing the portrait up.
+
+    NOTHING IS HIDDEN, TRUNCATED OR SCROLLED to achieve this. The one thing that
+    WAS truncated — a long subject name, cut with an ellipsis by `truncate` —
+    now wraps, because a card that is allowed to be as tall as its row has no
+    reason to cut a word off. `[overflow-wrap:anywhere]` for the same reason
+    the announcement card carries it: the subject is free text a teacher typed,
+    so it can be one unbroken 40-character run, and at 320px that widens the
+    document rather than the card.
+  */
   return (
-    <article className="flex flex-col rounded-md border border-rule bg-paper p-5 transition-shadow hover:shadow-e2">
-      <div className="flex items-baseline gap-1">
-        <span className="font-display text-[34px] font-bold leading-none tabular-nums text-heading">
-          {result.score}
-          {result.scoreUnit === 'percent' ? '%' : ''}
-        </span>
-        {result.scoreUnit !== 'percent' ? (
-          <span className="text-small text-muted">marks</span>
+    <article className="group flex h-full flex-col rounded-md border border-rule bg-paper p-6 card-lift">
+      <div className="flex-1">
+        <div className="flex items-baseline gap-1">
+          {/* The score is the reason this card exists, so it is the one
+              number on a light ground allowed to be orange - at 5.07:1 the
+              darkened accent clears AA at any size. */}
+          <span className="font-display text-[38px] font-bold leading-none tracking-[-0.02em] tabular-nums text-accent-text">
+            {result.score}
+            {result.scoreUnit === 'percent' ? '%' : ''}
+          </span>
+          {result.scoreUnit !== 'percent' ? (
+            <span className="text-small text-muted">marks</span>
+          ) : null}
+        </div>
+
+        <p className="mt-3 text-small text-muted">
+          {PROGRAMME_LABELS[result.programme] ?? result.programme}
+          {result.board ? ` · ${BOARD_LABELS[result.board] ?? result.board}` : ''}
+          {' · '}
+          {result.year}
+        </p>
+
+        {result.highlight ? (
+          /* NOT orange. The score above it already is, and two oranges in one
+             card is how an accent stops being an accent. */
+          <p className="mt-3 text-small font-medium leading-relaxed text-text [overflow-wrap:anywhere]">
+            {result.highlight}
+          </p>
+        ) : null}
+
+        {/* Subject marks, where the institute entered them. A commerce result is
+            more persuasive broken down: "Accounts 99" says more than "96%". */}
+        {result.subjects.length > 0 ? (
+          <dl className="mt-5 flex flex-col gap-1.5 border-t border-rule pt-4 text-small">
+            {result.subjects.map((s) => (
+              <div key={s.subject} className="subject-row">
+                <dt>{s.subject}</dt>
+                <dd>{s.score}</dd>
+              </div>
+            ))}
+          </dl>
         ) : null}
       </div>
 
-      <p className="mt-3 text-small text-muted">
-        {PROGRAMME_LABELS[result.programme] ?? result.programme}
-        {result.board ? ` · ${BOARD_LABELS[result.board] ?? result.board}` : ''}
-        {' · '}
-        {result.year}
-      </p>
-
-      {result.highlight ? (
-        <p className="mt-2 text-small font-medium text-accent-text">
-          {result.highlight}
-        </p>
-      ) : null}
-
-      {/* Subject marks, where the institute entered them. A commerce result is
-          more persuasive broken down: "Accounts 99" says more than "96%". */}
-      {result.subjects.length > 0 ? (
-        <dl className="mt-4 flex flex-col gap-1 border-t border-rule pt-3 text-small">
-          {result.subjects.map((s) => (
-            <div key={s.subject} className="flex items-baseline justify-between gap-3">
-              <dt className="truncate text-muted">{s.subject}</dt>
-              <dd className="shrink-0 font-medium tabular-nums text-text">{s.score}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-
-      {/* Attribution sits directly under the content, not pinned to the foot
-          of a stretched card. A result carries anything from no subject rows
-          to five, so stretching every card in a row to the tallest one and
-          pushing the portrait to the bottom opened a void in the middle of the
-          short cards. The grid uses `items-start` instead: each card is as
-          tall as what is in it, and the row is ragged along the bottom rather
-          than hollow in the middle. */}
+      {/* The identity strip, on the bottom edge of the card. See above. */}
       <div className="mt-5 flex items-center gap-3 border-t border-rule pt-4">
         <Portrait
           photoUrl={result.photoUrl}
           monogram={result.monogram}
           alt={result.name ? `${result.name}` : 'Student'}
         />
-        <span className="min-w-0 font-medium text-text">{heading}</span>
+        <span className="min-w-0 font-medium text-text [overflow-wrap:anywhere]">
+          {heading}
+        </span>
       </div>
     </article>
   );
@@ -144,7 +185,7 @@ export function ResultCard({ result }: { result: PublicResult }) {
 
 export function StoryCard({ story }: { story: PublicStory }) {
   return (
-    <article className="flex flex-col rounded-md border border-rule bg-paper p-6">
+    <article className="flex flex-col rounded-md border border-rule bg-paper p-7 card-lift md:p-8">
       <div className="flex items-center gap-4">
         <Portrait
           photoUrl={story.photoUrl}
@@ -163,7 +204,7 @@ export function StoryCard({ story }: { story: PublicStory }) {
       </div>
 
       {story.quote ? (
-        <blockquote className="mt-5 border-l-2 border-accent pl-4 text-[17px] leading-relaxed text-text">
+        <blockquote className="mt-6 border-l-2 border-accent pl-5 font-display text-[19px] leading-relaxed text-heading">
           {story.quote}
         </blockquote>
       ) : null}
@@ -238,10 +279,10 @@ export function BatchList({
   courseName: (slug: string) => string;
 }) {
   return (
-    <ul className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-paper">
+    <ul className="divide-y divide-rule overflow-hidden rounded-md border border-rule bg-paper shadow-e1">
       {batches.map((batch) => (
         <li key={batch.id}>
-          <div className="flex flex-col gap-x-6 gap-y-2 px-5 py-5 sm:flex-row sm:items-center sm:px-6">
+          <div className="flex flex-col gap-x-6 gap-y-2 px-5 py-5 transition-colors duration-[var(--duration-fast)] hover:bg-surface sm:flex-row sm:items-center sm:px-6">
             <p className="font-display text-[19px] font-semibold leading-tight text-heading sm:w-[34%] sm:shrink-0">
               {courseName(batch.courseSlug)}
             </p>
@@ -273,24 +314,65 @@ export function CourseCard({
   slug,
   name,
   batchCount,
+  nextStart,
 }: {
   slug: string;
   name: string;
   batchCount: number;
+  /** The soonest published start date for this programme, if there is one. */
+  nextStart?: Date | null;
 }) {
   return (
     <Link
       href={`/courses/${slug}`}
-      className="group flex flex-col rounded-md border border-rule bg-paper p-6 transition-colors hover:border-navy-600/50 hover:bg-selected"
+      className="group relative flex flex-col overflow-hidden rounded-md border border-rule bg-paper p-7 card-lift"
     >
-      <h3 className="font-display text-[20px] font-semibold text-heading">{name}</h3>
-      <p className="mt-2 flex-1 text-small text-muted">
-        {batchCount > 0
-          ? `${batchCount} upcoming ${batchCount === 1 ? 'batch' : 'batches'}`
-          : 'Batch dates will be announced here.'}
-      </p>
-      <span className="mt-4 text-small font-medium text-link group-hover:text-link-hover">
-        View programme &rarr;
+      {/*
+        A gold rule along the top edge, drawn only on hover. It is the same
+        gesture the closing call to action and the footer use, which is what
+        makes five plain cards feel like part of one system rather than five
+        boxes - and it costs one transform rather than a second border.
+      */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-gradient-to-r from-accent to-accent-gold transition-transform duration-[var(--duration-base)] ease-brand group-hover:scale-x-100"
+      />
+      <h3 className="font-display text-h3 font-semibold leading-snug text-heading">
+        {name}
+      </h3>
+
+      {/*
+        THE METADATA IS THE BATCH, and it is read from the batch table rather
+        than written anywhere. "1 upcoming batch" alone told a parent almost
+        nothing; the date it starts is the thing they are actually deciding
+        around. Both disappear when the institute has published no batch for
+        this programme - the card then says so plainly rather than inventing a
+        schedule.
+      */}
+      <div className="mt-3 flex-1">
+        <p className="text-small text-muted">
+          {batchCount > 0
+            ? `${batchCount} upcoming ${batchCount === 1 ? 'batch' : 'batches'}`
+            : 'Batch dates will be announced here.'}
+        </p>
+        {nextStart ? (
+          <p className="mt-2 text-small text-text">
+            Starts{' '}
+            <strong className="font-semibold text-heading">
+              {IST_DATE.format(nextStart)}
+            </strong>
+          </p>
+        ) : null}
+      </div>
+
+      <span className="mt-6 inline-flex items-center gap-1.5 text-small font-semibold text-link group-hover:text-link-hover">
+        View programme
+        <span
+          aria-hidden="true"
+          className="transition-transform duration-[var(--duration-fast)] group-hover:translate-x-0.5"
+        >
+          &rarr;
+        </span>
       </span>
     </Link>
   );
@@ -365,15 +447,16 @@ export function AnnouncementCard({
 export function FacultyCard({ member }: { member: PublicFaculty }) {
   return (
     /*
-      `h-full` so every card in a row is the same height.
+      `h-full` so every card in a row is the same height. The portraits are
+      identical squares, so a short card next to a tall one reads as a rendering
+      fault rather than as variation. Equal heights, ragged text.
 
-      The results grid deliberately lets cards take their natural height,
-      because a result with five subject rows and one with none are genuinely
-      different amounts of content. Faculty cards are not like that: the
-      portraits are identical squares, so a short card next to a tall one reads
-      as a rendering fault rather than as variation. Equal heights, ragged text.
+      Phase 21 note: the result cards now do this too — see ResultCard, where
+      the argument for letting them stay ragged is recorded along with the
+      owner's decision to overrule it. This paragraph used to cite that as the
+      contrast.
     */
-    <article className="flex h-full flex-col overflow-hidden rounded-md border border-rule bg-paper">
+    <article className="group flex h-full flex-col overflow-hidden rounded-md border border-rule bg-paper card-lift">
       <div className="aspect-square w-full bg-surface-2">
         {member.photoUrl ? (
           <Image
@@ -388,19 +471,19 @@ export function FacultyCard({ member }: { member: PublicFaculty }) {
             width={640}
             height={640}
             sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 92vw"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-[var(--duration-slow)] ease-brand motion-safe:group-hover:scale-[1.03]"
           />
         ) : (
           <span
             aria-hidden="true"
-            className="flex h-full w-full items-center justify-center bg-navy-800 font-display text-[44px] font-bold text-white"
+            className="flex h-full w-full items-center justify-center bg-navy-700 font-display text-[44px] font-bold text-white"
           >
             {member.monogram}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-6">
         <h3 className="font-display text-[19px] font-semibold leading-tight text-heading">
           {member.name}
         </h3>
@@ -480,11 +563,11 @@ export function ReviewCard({ review }: { review: SafeReview }) {
       width up to 768px. Nothing in the payload is under our control, so the
       layout has to survive text nobody would choose to write.
     */
-    <article className="flex h-full min-w-0 flex-col rounded-md border border-rule bg-paper p-5">
+    <article className="flex h-full min-w-0 flex-col rounded-md border border-rule bg-paper p-6 card-lift">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-800 font-display text-[15px] font-bold text-white"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-navy-700 font-display text-[15px] font-bold text-white"
         >
           {review.initials}
         </span>
@@ -498,7 +581,7 @@ export function ReviewCard({ review }: { review: SafeReview }) {
             `h3` sits under the `h2` that titles whichever band holds the card,
             on both /reviews and the homepage.
           */}
-          <h3 className="truncate font-medium text-text">
+          <h3 className="truncate font-semibold text-heading">
             {review.authorName ?? 'A Google reviewer'}
           </h3>
           {review.date ? (

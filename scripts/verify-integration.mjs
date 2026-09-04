@@ -166,7 +166,7 @@ try {
     studentName: NAME, programme: 'CLASS_12', board: 'CBSE', year: '2026',
     score: '88', scoreUnit: 'percent', highlight: 'ZZTEST highlight',
     subjectName: 'ZZTEST Accounts', subjectScore: '95',
-    consentRef: '', photoUrl: '', displayNameMode: 'INITIALS',
+    photoUrl: '', displayNameMode: 'INITIALS',
   });
 
   let row = await prisma.topper.findFirst({
@@ -187,14 +187,22 @@ try {
     id: row.id, studentName: NAME, programme: 'CLASS_12', board: 'CBSE', year: '2026',
     score: '88', scoreUnit: 'percent', highlight: 'ZZTEST highlight',
     subjectName: 'ZZTEST Accounts', subjectScore: '95',
-    consentRef: '', photoUrl: '', displayNameMode: 'INITIALS',
+    photoUrl: '', displayNameMode: 'INITIALS',
     published: 'on',
   });
   const refusedHtml = await refused.text();
   row = await prisma.topper.findFirst({ where: { studentName: NAME } });
   check(row?.published === false, 'publishing WITHOUT consent was refused');
-  check(/consent form reference/i.test(refusedHtml),
-        'the refusal explains what is missing, in plain words');
+  /*
+    PHASE 23: this asserted the refusal named the CONSENT FORM REFERENCE. That
+    requirement is gone, so the refusal now names the permission that is
+    actually missing - and the refusal itself must still happen, which the line
+    above checks.
+  */
+  check(/permission to show this result/i.test(refusedHtml),
+        'the refusal names the missing RESULT permission, in plain words');
+  check(!/consent form reference/i.test(refusedHtml),
+        'the refusal does NOT ask for a consent form reference any more');
 
   // Now publish properly.
   await post(`/admin/students/${row.id}`, {
@@ -202,7 +210,7 @@ try {
     id: row.id, studentName: NAME, programme: 'CLASS_12', board: 'CBSE', year: '2026',
     score: '88', scoreUnit: 'percent', highlight: 'ZZTEST highlight',
     subjectName: 'ZZTEST Accounts', subjectScore: '95',
-    consentRef: REF, photoUrl: '', displayNameMode: 'INITIALS',
+    photoUrl: '', displayNameMode: 'INITIALS',
     consentResult: 'on', published: 'on',
   });
   row = await prisma.topper.findFirst({ where: { studentName: NAME } });
@@ -238,7 +246,7 @@ try {
     id: row.id, studentName: NAME, programme: 'CLASS_12', board: 'CBSE', year: '2026',
     score: '93', scoreUnit: 'percent', highlight: 'ZZTEST highlight',
     subjectName: 'ZZTEST Accounts', subjectScore: '97',
-    consentRef: REF, photoUrl: '', displayNameMode: 'INITIALS',
+    photoUrl: '', displayNameMode: 'INITIALS',
     consentResult: 'on', published: 'on',
   });
   publicResults = await publicHtml('/results');
@@ -266,7 +274,7 @@ try {
     ...fieldsOf(await html(`/admin/students/${row.id}`), 'studentName'),
     id: row.id, studentName: NAME, programme: 'CLASS_12', board: 'CBSE', year: '2026',
     score: '93', scoreUnit: 'percent', highlight: 'ZZTEST highlight',
-    consentRef: REF, photoUrl: '', displayNameMode: 'FULL',
+    photoUrl: '', displayNameMode: 'FULL',
     consentResult: 'on', consentName: 'on', published: 'on',
   });
   publicResults = await publicHtml('/results');
@@ -298,7 +306,7 @@ try {
     challenge: 'ZZTEST challenge text long enough.',
     journey: 'ZZTEST journey text long enough.',
     outcome: 'ZZTEST outcome text long enough.',
-    quote: '', photoUrl: '', consentRef: REF, displayNameMode: 'FULL',
+    quote: '', photoUrl: '', displayNameMode: 'FULL',
     consentStory: 'on', consentName: 'on', published: 'on',
   });
   const story = await prisma.studentStory.findFirst({ where: { studentName: STORY } });
@@ -321,7 +329,7 @@ try {
       challenge: 'ZZTEST challenge text long enough.',
       journey: 'ZZTEST journey text long enough.',
       outcome: 'ZZTEST outcome text long enough.',
-      quote: '', photoUrl: '', consentRef: REF, displayNameMode: 'FULL',
+      quote: '', photoUrl: '', displayNameMode: 'FULL',
       consentStory: 'on', consentName: 'on',
       // published omitted — an unticked box is simply absent
     });
@@ -340,7 +348,7 @@ try {
       challenge: `ZZTEST challenge ${attempt} long enough.`,
       journey: `ZZTEST journey ${attempt} long enough.`,
       outcome: `ZZTEST outcome ${attempt} long enough.`,
-      quote: '', photoUrl: '', consentRef: '', displayNameMode: 'INITIALS',
+      quote: '', photoUrl: '', displayNameMode: 'INITIALS',
     });
   }
   const dupes = await prisma.studentStory.findMany({ where: { studentName: dupName } });
@@ -448,7 +456,7 @@ try {
     ...fieldsOf(photoFresh, 'studentName'),
     studentName: 'ZZTEST Photo Child', programme: 'CLASS_12', year: '2026',
     score: '93', scoreUnit: 'percent', displayNameMode: 'FULL', board: '',
-    photoUrl: PHOTO, highlight: 'ZZTEST photo highlight', consentRef: REF,
+    photoUrl: PHOTO, highlight: 'ZZTEST photo highlight',
     consentResult: 'on', consentName: 'on', consentPhoto: 'on', published: 'on',
   });
   const photoRec = await prisma.topper.findFirst({ where: { studentName: 'ZZTEST Photo Child' } });

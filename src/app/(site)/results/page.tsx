@@ -170,7 +170,11 @@ export default async function ResultsPage({
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Stretching, like the homepage grid: the card is `h-full`
+                    and the row decides the height. A card that behaved one way
+                    on the homepage and another here would be the same defect
+                    the owner asked to fix, one page further down. */}
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                   {data.results.map((result) => (
                     <ResultCard key={result.id} result={result} />
                   ))}
@@ -221,7 +225,7 @@ export default async function ResultsPage({
         body={<>{content['page.results.ctaBody']}</>}
         actions={
           <>
-            <Button href="/admissions" size="lg">
+            <Button href="/admissions" size="lg" variant="onBand">
               Send an enquiry
             </Button>
           </>

@@ -122,7 +122,20 @@ export async function buildExport(kind: ExportKind): Promise<ExportResult> {
           header: header('subjects'),
           value: (r) => r.subjectScores.map((s) => `${s.subject}:${String(s.score)}`).join('; '),
         },
-        { header: header('consentRef'), value: (r) => r.consentRef ?? '' },
+        /*
+          READ-ONLY, AND THE ONLY WAY LEFT TO READ THESE.
+
+          Phase 23 removed the consent-form-reference from the result form, from
+          the publishing rule and from the import template. The COLUMN was kept:
+          it holds the institute's pointer to signed permissions for named
+          children, which is exactly the kind of record you do not delete
+          because a UI stopped using it.
+
+          Kept here so that data is still reachable. The heading says read-only
+          for the same reason "On Website Now" does — the import ignores it, so
+          editing this cell in a spreadsheet changes nothing.
+        */
+        { header: 'Consent Form Reference (read only)', value: (r) => r.consentRef ?? '' },
         { header: header('consentResult'), value: (r) => YES_NO(r.consentResult) },
         { header: header('consentName'), value: (r) => YES_NO(r.consentName) },
         { header: header('consentPhoto'), value: (r) => YES_NO(r.consentPhoto) },
@@ -166,7 +179,9 @@ export async function buildExport(kind: ExportKind): Promise<ExportResult> {
         { header: 'What Changed', value: (r) => r.journey },
         { header: 'The Outcome', value: (r) => r.outcome },
         { header: 'Quote', value: (r) => r.quote ?? '' },
-        { header: 'Consent Form Reference', value: (r) => r.consentRef ?? '' },
+        // Read-only historical, exactly as on the results sheet above: the
+        // column is retained and the import ignores this heading.
+        { header: 'Consent Form Reference (read only)', value: (r) => r.consentRef ?? '' },
         { header: 'Permission: Publish Story', value: (r) => YES_NO(r.consentStory) },
         { header: 'Permission: Show Name', value: (r) => YES_NO(r.consentName) },
         { header: 'Permission: Show Photograph', value: (r) => YES_NO(r.consentPhoto) },

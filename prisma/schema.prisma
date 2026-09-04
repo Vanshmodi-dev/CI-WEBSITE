@@ -125,8 +125,22 @@ model Enquiry {
 //   consentPhoto   may we show a photograph?
 //   consentStory   may we publish a written story about them?
 //
-// `consentRef` still points at the signed paperwork and is still required
-// before anything is published.
+// `consentRef` points at the signed paperwork. It is NOT a permission and it
+// never decided what a visitor sees.
+//
+// IT IS NOT A PUBLISHING CONDITION ANYWHERE ANY MORE. Phase 23 removed it for
+// RESULTS and Phase 24 for STORIES and GALLERY photographs, both at the owner's
+// request: every one of those forms called the field optional while its publish
+// panel refused to publish without it. The three constraints that enforced it
+// were relaxed in 20260902120000_result_publish_without_consent_ref and
+// 20260903100000_story_gallery_publish_without_consent_ref.
+//
+// What publishing needs is the PERMISSION for the kind of content, and that is
+// unchanged: consentResult for a result, consentStory for a story, consentPhoto
+// for a photograph of identifiable people.
+//
+// The COLUMN is retained on every model, with its data. It records permissions
+// held for named children; the results and stories exports still carry it.
 
 enum DisplayNameMode {
   INITIALS
@@ -173,7 +187,11 @@ model Topper {
 
   // ---- publication control ---------------------------------------------
   /// Reference to the signed authorisation the institute holds on file.
-  /// A published row cannot have this null — enforced by CHECK constraint.
+  ///
+  /// NOT REQUIRED TO PUBLISH since Phase 23 - see the note above the enums.
+  /// Retained, written by nothing, still exported, still never sent to a
+  /// browser. `toppers_published_requires_consent` now checks `consentResult`
+  /// alone.
   consentRef    String?   @db.VarChar(200)
   consentResult Boolean   @default(false)
   consentName   Boolean   @default(false)
@@ -240,6 +258,9 @@ model StudentStory {
   outcome   String  @db.VarChar(2000)
   quote     String? @db.VarChar(600)
 
+  /// As on Topper: retained paperwork pointer, NOT a publishing condition since
+  /// Phase 24. `student_stories_published_requires_consent` now checks
+  /// `consentStory` alone.
   consentRef   String?   @db.VarChar(200)
   consentStory Boolean   @default(false)
   consentName  Boolean   @default(false)
@@ -577,10 +598,13 @@ enum GalleryCategory {
 ///
 /// So `blockersForPublishing()` in src/lib/student-display.ts cannot be reused -
 /// it needs a name and a display mode that do not exist here. What IS reused is
-/// the POLICY: a photograph needs its own permission, that permission is never
-/// implied by anything else, and a published record cannot have a null
-/// `consentRef`. `galleryBlockers()` applies exactly those rules to the shape
-/// this model actually has.
+/// the POLICY: a photograph needs its own permission, and that permission is
+/// never implied by anything else. `galleryBlockers()` applies exactly that
+/// rule to the shape this model actually has.
+///
+/// A third rule used to be here - a published record could not have a null
+/// `consentRef` - and Phase 24 removed it, along with the equivalent rules on
+/// results and stories.
 ///
 /// =============================================================================
 /// `showsPeople` DEFAULTS TO TRUE, AND THE DEFAULT IS THE POINT
@@ -627,7 +651,10 @@ model GalleryItem {
   showsPeople Boolean @default(true)
 
   /// Reference to the signed authorisation the institute holds on file.
-  /// A published photograph of people cannot have this null - CHECK constraint.
+  ///
+  /// NOT a publishing condition since Phase 24: a photograph showing people
+  /// needs `consentPhoto`, and that is all. Retained with its data, and still
+  /// covered by `gallery_items_text_printable`.
   consentRef String? @db.VarChar(200)
 
   /// Permission to publish a photograph. Never implied by anything else -

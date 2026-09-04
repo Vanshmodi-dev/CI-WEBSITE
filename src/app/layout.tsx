@@ -78,10 +78,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFFFF' },
-    { media: '(prefers-color-scheme: dark)', color: '#0A121C' },
-  ],
+  /*
+    ONE COLOUR, BECAUSE THERE IS ONE THEME. The pair used to mirror the CSS,
+    which followed the OS; the site is light for everybody now, so a dark
+    entry would tint the phone's browser chrome navy above a white page.
+  */
+  themeColor: '#FFFFFF',
 };
 
 export default function RootLayout({

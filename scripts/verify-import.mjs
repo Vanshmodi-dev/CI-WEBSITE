@@ -136,15 +136,19 @@ async function cleanup() {
 }
 
 /** Build a CSV from the template headers plus the given rows. */
+// No 'Consent Form Reference' since Phase 23 - the column was removed from
+// the template along with the requirement. The template download is checked
+// against these headings further down, including a check that the removed
+// column has not come back.
 const HEADERS = [
   'Reference', 'Student Name', 'Programme', 'Board', 'Year', 'Score', 'Score Is',
-  'Highlight', 'Subjects', 'Consent Form Reference', 'Permission: Show Result',
+  'Highlight', 'Subjects', 'Permission: Show Result',
   'Permission: Show Name', 'Permission: Show Photograph', 'Name Shown As', 'Photograph File',
 ];
 const row = (o = {}) =>
   [
     o.reference ?? '', o.name ?? '', o.programme ?? '', o.board ?? '', o.year ?? '',
-    o.score ?? '', o.unit ?? '', o.highlight ?? '', o.subjects ?? '', o.consentRef ?? '',
+    o.score ?? '', o.unit ?? '', o.highlight ?? '', o.subjects ?? '',
     o.cResult ?? '', o.cName ?? '', o.cPhoto ?? '', o.nameShown ?? '', o.photo ?? '',
   ].map((v) => (String(v).includes(',') || String(v).includes('"') ? `"${String(v).replace(/"/g, '""')}"` : v)).join(',');
 const csv = (rows) => [HEADERS.join(','), ...rows].join('\n') + '\n';
@@ -228,6 +232,13 @@ try {
     check(templateText.includes(h), `template has the "${h}" column`);
   }
   check(!/Publish|On Website/i.test(templateText.split('\n')[0] ?? ''), 'the template has NO publish column');
+  // Phase 23. The field was removed from the result form and from the rule that
+  // required it; a template still collecting it would be writing into a column
+  // nothing reads.
+  check(
+    !/Consent Form Reference/i.test(templateText),
+    'the template has NO consent-form-reference column',
+  );
   check(templateText.includes('ZZTEST'), 'the template example row is unmistakably synthetic');
 
   /* ================================================= 3. THE DRY RUN ===== */
@@ -284,7 +295,7 @@ try {
   section('5. IMPORTING');
 
   const realRows = csv([
-    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100`, programme: 'Class 12 Commerce', board: 'CBSE', year: 2026, score: 91.5, unit: 'Percent', subjects: 'Accountancy:95; Economics:88', consentRef: `${PREFIX}-CONSENT-100`, cResult: 'Yes', cName: 'Yes', nameShown: 'Full name' }),
+    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100`, programme: 'Class 12 Commerce', board: 'CBSE', year: 2026, score: 91.5, unit: 'Percent', subjects: 'Accountancy:95; Economics:88', cResult: 'Yes', cName: 'Yes', nameShown: 'Full name' }),
     row({ reference: `${PREFIX}-101`, name: `${PREFIX} Student 101`, programme: 'CA Foundation', year: 2026, score: 340, unit: 'Marks' }),
   ]);
 
@@ -331,7 +342,7 @@ try {
   section('6. RE-IMPORTING — a correction, not a duplicate');
 
   const corrected = csv([
-    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100 Corrected`, programme: 'Class 12 Commerce', board: 'CBSE', year: 2026, score: 93, unit: 'Percent', subjects: 'Accountancy:97', consentRef: `${PREFIX}-CONSENT-100`, cResult: 'Yes', cName: 'Yes', nameShown: 'Full name' }),
+    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100 Corrected`, programme: 'Class 12 Commerce', board: 'CBSE', year: 2026, score: 93, unit: 'Percent', subjects: 'Accountancy:97', cResult: 'Yes', cName: 'Yes', nameShown: 'Full name' }),
     row({ reference: `${PREFIX}-101`, name: `${PREFIX} Student 101`, programme: 'CA Foundation', year: 2026, score: 340, unit: 'Marks' }),
   ]);
   const check3 = await checkFile(corrected, 'corrected.csv');
@@ -370,7 +381,7 @@ try {
 
   // Withdrawing consent from a live record must be refused with an explanation.
   const withdraw = csv([
-    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100 Corrected`, programme: 'Class 12 Commerce', year: 2026, score: 93, consentRef: `${PREFIX}-CONSENT-100`, cResult: 'No' }),
+    row({ reference: `${PREFIX}-100`, name: `${PREFIX} Student 100 Corrected`, programme: 'Class 12 Commerce', year: 2026, score: 93, cResult: 'No' }),
   ]);
   const withdrawRun = await checkFile(withdraw, 'withdraw.csv');
   const withdrawHtml = readable(await withdrawRun.text());

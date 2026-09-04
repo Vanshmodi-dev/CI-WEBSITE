@@ -37,7 +37,7 @@ export function GalleryStrip({ items }: { items: readonly PublicGalleryItem[] })
               reader would otherwise announce, which is useless for choosing.
             */
             aria-label={`Gallery: ${item.alt}`}
-            className="group block w-full min-w-0 overflow-hidden rounded-md border border-rule bg-surface transition-colors hover:border-navy-600/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
+            className="tile-link group bg-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
           >
             {/*
               The same fixed 4:3 box the gallery grid uses, so the homepage and
