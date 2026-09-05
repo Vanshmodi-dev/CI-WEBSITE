@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute, publishedCourses } from '@/config/institute';
 import { getSiteContent, getContactBlock } from '@/lib/site-content';
 import { fieldFor } from '@/config/site-content';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import {
   Section,
   SectionHeader,
@@ -12,11 +12,13 @@ import {
 } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'About',
-  description: `${institute.name} — ${institute.tagline}, in ${institute.locality}.`,
-  path: '/about',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'About',
+    description: `${institute.name} — ${institute.tagline}, in ${institute.locality}.`,
+    path: '/about',
+  });
+}
 
 /**
  * About.

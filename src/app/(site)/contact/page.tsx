@@ -1,17 +1,19 @@
 import type { Metadata } from 'next';
 import { institute, addressFull } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { Hidden } from '@/components/primitives/empty-state';
 import { MapPanel } from '@/components/domain/map-panel';
 
-export const metadata: Metadata = pageMetadata({
-  title: `Contact — ${institute.locality}`,
-  description: `Address, phone and directions for ${institute.name}, ${addressFull}.`,
-  path: '/contact',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: `Contact — ${institute.locality}`,
+    description: `Address, phone and directions for ${institute.name}, ${addressFull}.`,
+    path: '/contact',
+  });
+}
 
 /**
  * Contact — Master Plan §04 and §15.

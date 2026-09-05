@@ -94,6 +94,18 @@ const storedValue = async () =>
   (await prisma.siteSetting.findUnique({ where: { key: KEY }, select: { value: true } }))?.value ??
   null;
 
+/**
+ * Who last wrote the row, captured so the teardown can put it back.
+ *
+ * `updatedBy` is how `seed:demo:clean` recognises its own copy rows, so a
+ * restore that rebuilt the value and dropped this column would quietly orphan
+ * the demo dataset's map point - it would still be on the page and no longer
+ * removable by the documented reset.
+ */
+const storedAuthor = async () =>
+  (await prisma.siteSetting.findUnique({ where: { key: KEY }, select: { updatedBy: true } }))
+    ?.updatedBy ?? null;
+
 /* ---------------------------------------------------------- start clean -- */
 
 const hoursValue = async () =>
@@ -105,6 +117,7 @@ const hoursValue = async () =>
   )?.value ?? null;
 
 const originalValue = await storedValue();
+const originalAuthor = await storedAuthor();
 /** Read so the teardown can prove this suite did not blank a field it never tested. */
 const hoursAtStart = await hoursValue();
 await prisma.siteSetting.deleteMany({ where: { key: KEY } });
@@ -1090,8 +1103,8 @@ section('10. CLEANUP');
   if (originalValue !== null) {
     await prisma.siteSetting.upsert({
       where: { key: KEY },
-      update: { value: originalValue },
-      create: { key: KEY, value: originalValue },
+      update: { value: originalValue, updatedBy: originalAuthor },
+      create: { key: KEY, value: originalValue, updatedBy: originalAuthor },
     });
   }
   const finalValue = await storedValue();

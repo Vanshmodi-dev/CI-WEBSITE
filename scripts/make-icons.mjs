@@ -97,6 +97,40 @@ const ico = Buffer.concat([header, png]);
 await writeFile('public/favicon.ico', ico);
 console.log(`  ${'public/favicon.ico'.padEnd(26)} 48x48  ${ico.length} bytes`);
 
+
+/**
+ * The SHARE CARD — what a link to this site looks like in WhatsApp.
+ *
+ * WHY THIS EXISTS. Phase 26 audited the metadata every public page emits and
+ * found `twitter:card = summary_large_image` declared on all of them with no
+ * image to go in it, and no `og:image` anywhere on the site. Every link the
+ * institute sent - and WhatsApp is the primary conversion path, Master Plan
+ * section 07 - unfurled as a bare grey rectangle with a URL under it.
+ *
+ * ⚠ IT IS THE LOGO, LETTERBOXED. NOTHING IS ADDED.
+ * No headline, no address, no "Admissions open" - a share card is the one
+ * asset nobody reviews again once it is generated, and text baked into an
+ * image cannot be corrected from the admin panel when it goes stale. The
+ * institute can replace this with a photograph of their own from
+ * Admin -> Website text -> Link previews, which is the editable path.
+ *
+ * `fit: 'contain'` on white keeps the full lock-up - emblem, wordmark and
+ * tagline - inside the 1.91:1 frame Facebook, WhatsApp and X all crop to.
+ * The master is square, so this letterboxes rather than cropping: no part of
+ * the mark is cut off at any aspect ratio a platform chooses.
+ */
+const CARD = { path: 'public/brand/share-card.png', width: 1200, height: 630 };
+
+const card = await sharp(SOURCE)
+  .resize(CARD.width, CARD.height, { fit: 'contain', background: '#ffffff' })
+  .png({ compressionLevel: 9 })
+  .toFile(CARD.path);
+
+console.log(`  ${CARD.path.padEnd(26)} ${CARD.width}x${CARD.height}  ${card.size} bytes`);
 console.log('');
 console.log('Done. src/app/icon.png and src/app/apple-icon.png are picked up by');
-console.log('file convention; public/favicon.ico is served as a static file.');
+console.log('file convention; public/favicon.ico and public/brand/share-card.png');
+console.log('are served as static files.');
+console.log('');
+console.log('The share card is the FALLBACK. src/lib/share-image.ts prefers a');
+console.log('photograph the institute has chosen in the admin, when there is one.');

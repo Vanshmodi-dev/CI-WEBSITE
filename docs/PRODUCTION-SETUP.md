@@ -19,10 +19,20 @@ been; what remains needs accounts and credentials only you can create.
 
 ## Before you start
 
+> ⚠ **The hosting and database providers changed on 5 September 2026.** The
+> infrastructure audit found that **Vercel's Hobby plan forbids commercial
+> use**, which this build is, and that Neon's free tier suspends compute for the
+> rest of the month once its 100 CU-hour allowance is spent. The target is now
+> **Netlify + Prisma Postgres + Cloudinary**, and the authoritative
+> environment-variable list and manual steps are
+> [`NETLIFY-DEPLOYMENT.md`](NETLIFY-DEPLOYMENT.md). Steps 2, 3, 4 and 7 below
+> are unaffected; Steps 1, 5 and 6 are superseded and annotated in place.
+
 | You need | Cost |
 | --- | --- |
-| A Neon account | Free |
-| A Vercel account | Free |
+| A Prisma Postgres account (was: Neon) | Free, no card |
+| A Netlify account (was: Vercel) | Free |
+| A Cloudinary account, for media | Free — no card required |
 | A domain name | ~₹800–1,200/year |
 | A mailbox on that domain | ₹0–200/month |
 
@@ -30,7 +40,14 @@ Total recurring: **the domain, and optionally the mailbox.** Nothing else.
 
 ---
 
-## Step 1 — Database (Neon)
+## Step 1 — Database (~~Neon~~ → **Prisma Postgres**)
+
+> **SUPERSEDED** — see [`NETLIFY-DEPLOYMENT.md`](NETLIFY-DEPLOYMENT.md) §3. The
+> one substantive difference: Prisma Postgres offers a `prisma://` Accelerate
+> URL *and* a **direct TCP** string, and this application needs the **direct TCP
+> one** — `@prisma/adapter-pg` speaks the PostgreSQL wire protocol and cannot
+> use Accelerate. The instruction below to prefer a "pooled" string is Neon's
+> vocabulary, not Prisma's.
 
 1. Sign up at <https://neon.tech>. No card required.
 2. Create a project. **Region: Singapore (`ap-southeast-1`)** or Mumbai —
@@ -109,7 +126,13 @@ the process list.
 
 Minimum 12 characters. Use a password manager.
 
-## Step 5 — Deploy (Vercel)
+## Step 5 — Deploy (~~Vercel~~ → **Netlify**)
+
+> **SUPERSEDED.** Follow [`NETLIFY-DEPLOYMENT.md`](NETLIFY-DEPLOYMENT.md)
+> instead. The variable list below is still correct as far as it goes, but it is
+> incomplete — it predates the three `CLOUDINARY_*` variables — and the warning at
+> the end of this step turned out to be decisive rather than a caution. Kept for
+> the record, not for use.
 
 1. Import the GitHub repository at <https://vercel.com>.
 2. Framework preset: **Next.js** (auto-detected).
@@ -130,6 +153,11 @@ Minimum 12 characters. Use a password manager.
 > overlook.
 
 ## Step 6 — Domain
+
+> **SUPERSEDED** — add the domain in Netlify → Project → Domain management. The
+> shape of the step is unchanged; only the provider is. Do this **after** the
+> preview deployment passes the checks in
+> [`NETLIFY-DEPLOYMENT.md`](NETLIFY-DEPLOYMENT.md) §4.
 
 1. Add the domain in Vercel → Project → Domains.
 2. Point the registrar's nameservers or records at Vercel as instructed.

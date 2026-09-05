@@ -246,6 +246,59 @@ export async function signIn(
       'scrypt$131072$8$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
     const passwordOk = await verifyPassword(password, stored);
 
+    /*
+      ======================================================================
+      DEVELOPMENT-ONLY SIGN-IN DIAGNOSTICS
+      ======================================================================
+      Structurally impossible in production: the guard is `NODE_ENV`, which the
+      framework sets and an operator cannot supply, and this is the reason it is
+      NOT routed through `log`. That module deliberately redacts `email`, so a
+      diagnostic printed through it would say `[redacted]` where the whole point
+      is to see which address was looked up. Tunnelling around the redaction net
+      for production logging would be the wrong trade; running beneath it in
+      development is not.
+
+      THE PASSWORD IS NEVER PRINTED — only its length and whether it carries
+      edge whitespace, which is what distinguishes a typo from a browser autofill
+      that appended a space.
+
+      `database` is here because it is the field that actually resolves this
+      class of failure. A long-running `next dev` captured its DATABASE_URL and
+      its Prisma client at start-up, so editing `.env.local` afterwards changes
+      nothing until the server is restarted — and the only symptom is a correct
+      password rejected against a database that never had the account. Seeing
+      the host on the same line as `accountFound: false` ends that hunt.
+    */
+    if (process.env.NODE_ENV !== 'production') {
+      let database = '(unparseable DATABASE_URL)';
+      try {
+        // Host and database name only. Never the user, password or full string.
+        const u = new URL(process.env.DATABASE_URL ?? '');
+        database = `${u.host}${u.pathname}`;
+      } catch {
+        /* leave the placeholder */
+      }
+      console.warn(
+        '[dev sign-in] ' +
+          JSON.stringify({
+            database,
+            lookedUp: normalisedEmail,
+            accountFound: Boolean(admin),
+            accountActive: admin?.active ?? null,
+            verifyPassword: passwordOk,
+            passwordLength: password.length,
+            passwordEdgeWhitespace: password !== password.trim(),
+            verdict: !admin
+              ? 'NO ACCOUNT with that email in THIS database'
+              : !admin.active
+                ? 'account exists but is deactivated'
+                : passwordOk
+                  ? 'OK'
+                  : 'account found, password did not verify',
+          }),
+      );
+    }
+
     if (!admin || !admin.active || !passwordOk) {
       // Email is NOT logged — a failed sign-in log full of addresses is a
       // credential-stuffing list waiting to leak.

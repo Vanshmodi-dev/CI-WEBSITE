@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata, listingIndexing } from '@/lib/seo';
+import { listingIndexing } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublishedGallery, getGalleryCategories } from '@/lib/public-data';
 import { getSiteContent, getContactBlock } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
@@ -78,7 +79,7 @@ export async function generateMetadata({
     launch. `pageMetadata` merges the two correctly, which is why /results
     passes them in rather than merging by hand.
   */
-  return pageMetadata({
+  return publicPageMetadata({
     title: category ? `Gallery — ${CATEGORY_LABEL[category]}` : 'Gallery',
     description: `Photographs from ${institute.name} in ${institute.locality}.`,
     path: '/gallery',

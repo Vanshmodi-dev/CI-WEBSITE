@@ -51,6 +51,12 @@ desktop.ini
 # vercel
 .vercel
 
+# netlify — local CLI state and build output. `netlify.toml` IS committed; this
+# directory is not. It holds the linked site id and a copy of the build, and on
+# Next 16.3 its .next cache also records the environment variables the build
+# read (which is why netlify.toml omits that path from secret scanning).
+.netlify/
+
 # python (used only for brand-colour tooling)
 __pycache__/
 *.pyc

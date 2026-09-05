@@ -9,6 +9,7 @@ import { Button } from '@/components/primitives/button';
 import type { FieldView, FieldGroup } from '@/config/site-content';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import { Checkbox } from '@/components/primitives/checkbox';
+import { MediaField } from '@/components/admin/media-field';
 
 const initial: WebsiteFormState = { status: 'idle' };
 
@@ -91,6 +92,13 @@ export function GroupForm({
                 field={field}
                 checked={(values[field.key] ?? 'on') === 'on'}
               />
+            ) : field.kind === 'media' ? (
+              <MediaRow
+                key={field.key}
+                field={field}
+                value={values[field.key] ?? ''}
+                error={errors[field.key]}
+              />
             ) : (
               <Field
                 key={field.key}
@@ -163,6 +171,50 @@ function ToggleRow({ field, checked }: { field: FieldView; checked: boolean }) {
       defaultChecked={checked}
       label={field.label}
       description={field.help}
+    />
+  );
+}
+
+/**
+ * A photograph field inside the website editor.
+ *
+ * ⚠ IT IS THE SAME CONTROL EVERY OTHER PHOTO FIELD USES, ON PURPOSE.
+ *
+ * `MediaField` already carries the upload, the client-side preview, the
+ * "choose one you have already uploaded" library and the take-a-photo path on
+ * a phone. Writing a second, simpler picker here - a text box for a path, say -
+ * would reintroduce exactly the thing the media pipeline was built to remove,
+ * and it would be the only photo field on the site that behaved differently.
+ *
+ * `required` is false because clearing this field is meaningful: an empty value
+ * is stored, and `resolveContent` turns it back into the generated brand card.
+ * That is the registry's usual "clearing a box is an undo" rule, and the reason
+ * this field is not `blankable` - see `SHARING_FIELDS` in site-content.ts.
+ */
+function MediaRow({
+  field,
+  value,
+  error,
+}: {
+  field: FieldView;
+  value: string;
+  error?: string;
+}) {
+  /*
+    The stored fallback is a static asset rather than an uploaded one, and
+    `MediaField` renders a preview for anything it is given. Passing the brand
+    card through unchanged is right: the teacher sees the picture that is
+    actually in use today, which is what makes "replace it" an informed choice
+    rather than a blind one.
+  */
+  return (
+    <MediaField
+      name={field.key}
+      label={field.label}
+      value={value}
+      hint={field.help}
+      error={error}
+      required={false}
     />
   );
 }

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata, listingIndexing } from '@/lib/seo';
+import { listingIndexing } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublishedVideos, getVideoSubjects } from '@/lib/public-data';
 import { getSiteContent, getContactBlock } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
@@ -64,7 +65,7 @@ export async function generateMetadata({
     in lets `pageMetadata` merge them with the launch state, which is why
     /results has always done it this way.
   */
-  return pageMetadata({
+  return publicPageMetadata({
     title: subject ? `Videos — ${SUBJECT_LABEL[subject]}` : 'Videos',
     description: `Teaching videos from ${institute.name} in ${institute.locality}.`,
     path: '/videos',

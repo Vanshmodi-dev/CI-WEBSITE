@@ -1,0 +1,112 @@
+# Commerce Insight — Netlify deployment configuration
+# =============================================================================
+# Every key here exists because something MEASURABLY breaks or becomes
+# non-deterministic without it. Netlify auto-detects Next.js and installs its
+# own adapter, so most of a netlify.toml is unnecessary noise; this file is
+# deliberately five settings long.
+#
+# NOT IN HERE, ON PURPOSE:
+#
+#   [[plugins]] @netlify/plugin-nextjs
+#       Netlify installs and updates the Next.js adapter itself. Pinning it in
+#       the repository opts this project OUT of those updates and is the
+#       documented cause of "works on my last deploy" adapter drift. The
+#       adapter supports every Next version from 13.5, including 16.3.2.
+#
+#   [functions] external_node_modules = ["sharp"]
+#       Not needed. `sharp` is already on Next's built-in
+#       `serverExternalPackages` list, so Next emits a native `require()` for it
+#       rather than bundling it, and the adapter traces the real module into the
+#       function. Verified against node_modules/next/dist/docs/01-app/
+#       03-api-reference/05-config/01-next-config-js/serverExternalPackages.md,
+#       which lists `sharp`, `pg` and `@prisma/client`. Adding it here would be
+#       cargo cult. If a deployed upload ever fails with
+#       "Could not load the sharp module", THIS is the first thing to try.
+#
+#   Any secret, of any kind.
+#       DATABASE_URL, ADMIN_SESSION_SECRET, ENQUIRY_SECRET and the three
+#       CLOUDINARY_* values are set in the Netlify UI and never in the repository
+#       (Master Plan §19). See docs/NETLIFY-DEPLOYMENT.md for the exact list.
+
+[build]
+  # Explicit rather than auto-detected, so the deploy log shows the same command
+  # CI runs. `postinstall` already runs `prisma generate`, so the client exists
+  # before `next build` starts.
+  #
+  # ⚠ `prisma migrate deploy` is deliberately NOT chained here. A build that
+  # migrates is a build that can alter the production schema by accident — on a
+  # rollback, on a rebuilt preview, on a re-run of a cached deploy. Migrations
+  # are run once, deliberately, by a human. See docs/NETLIFY-DEPLOYMENT.md.
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # -------------------------------------------------------------------------
+  # NODE_VERSION — pinned, because Netlify does NOT read engines.node.
+  # -------------------------------------------------------------------------
+  # package.json declares `>=20.9.0` and the deployment contract recommends
+  # "22.x or 24.x". Netlify's version precedence is .node-version / .nvmrc, then
+  # NODE_VERSION, then the UI, then the build image default — package.json is
+  # not consulted at all. Without this line the Node version is whatever the
+  # build image happens to ship this month, which is exactly the kind of drift
+  # RUNTIME in src/lib/deployment-contract.ts exists to prevent.
+  #
+  # 22 matches .github/workflows/ci.yml, so CI and production agree.
+  NODE_VERSION = "22"
+
+  # -------------------------------------------------------------------------
+  # SECRETS_SCAN_OMIT_KEYS — insurance, not a known failure.
+  # -------------------------------------------------------------------------
+  # Netlify fails a build when the VALUE of an environment variable appears in
+  # the build output. NEXT_PUBLIC_SITE_URL is *supposed* to appear there: Next
+  # inlines every NEXT_PUBLIC_ variable into client JavaScript, and this one
+  # also lands in the sitemap, robots.txt and every canonical tag.
+  #
+  # It is a public https origin, not a credential, so smart detection is
+  # unlikely to flag it on its own — but a well-meaning operator marking it
+  # "secret" in the Netlify UI would break every subsequent build with an error
+  # that reads like a leak. One line, no downside, removes that failure mode.
+  #
+  # ⚠ NEVER add a real secret name to this list. The correct response to a
+  # scanner hit on DATABASE_URL, ADMIN_SESSION_SECRET, ENQUIRY_SECRET or a
+  # CLOUDINARY_API_SECRET is to find out why a secret reached the build output and
+  # rotate it — never to silence the scanner.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SITE_URL"
+
+  # -------------------------------------------------------------------------
+  # SECRETS_SCAN_OMIT_PATHS — scoped to build caches only.
+  # -------------------------------------------------------------------------
+  # Next 16.3 persists Turbopack build state between runs, and that state
+  # records the environment variables the build read. The cache is not served to
+  # anyone — it is not part of the deployed output — but the scanner walks it
+  # and reports the values it finds there as exposed secrets.
+  #
+  # Narrowed to the two cache directories. The deployed artefacts are still
+  # scanned in full, which is the half that actually matters.
+  SECRETS_SCAN_OMIT_PATHS = ".next/cache/**,.netlify/.next/cache/**"
+
+# =============================================================================
+# IMAGE CDN — the remote allowlist
+# =============================================================================
+# `next/image` is served by Netlify Image CDN on this platform, and Netlify
+# requires remote source hosts to be allowlisted HERE. Netlify's own
+# documentation does not state that the Next adapter derives this list from
+# `images.remotePatterns` in next.config.ts, and an un-allowlisted host fails
+# closed: every YouTube thumbnail on /videos and the homepage video band 404s.
+#
+# These entries MIRROR `images.remotePatterns` in next.config.ts. The two lists
+# must stay in step — if a host is ever added there, add it here.
+#
+# ⚠ TOML LITERAL STRINGS (single quotes), not basic strings. `\.` is not a legal
+# escape in a double-quoted TOML string and the file fails to parse. The regex
+# needs the backslashes, so the quoting has to be the kind that leaves them
+# alone.
+[images]
+  remote_images = [
+    'https://i\.ytimg\.com/.*',
+    # Cloudinary image delivery (5 Sep 2026). Mirrors the second remotePattern
+    # in next.config.ts. Uploaded photographs are served same-origin through
+    # /media/[key] and need no entry here; this covers next/image being pointed
+    # at a Cloudinary URL directly.
+    'https://res\.cloudinary\.com/[^/]+/image/upload/.*',
+  ]

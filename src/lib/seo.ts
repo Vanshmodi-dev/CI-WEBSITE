@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { institute, addressFull } from '@/config/institute';
 import { isIndexable } from '@/config/launch';
+import type { ShareImage } from '@/lib/share-image';
 
 /**
  * SEO helpers — Master Plan §17.
@@ -27,14 +28,11 @@ export function canonicalUrl(path: string): string {
   return new URL(path, SITE_URL).toString();
 }
 
-export function pageMetadata({
-  title,
-  description,
-  path = '/',
-  canonical,
-  noindex = false,
-  robots,
-}: {
+/**
+ * Everything `pageMetadata` needs. Named so the async wrapper in
+ * `share-image.ts` can accept the same shape minus the part it resolves itself.
+ */
+export type PageMetadataArgs = {
   title: string;
   description: string;
   path?: string;
@@ -52,7 +50,30 @@ export function pageMetadata({
    * `isIndexable()` already agrees; otherwise the sitewide noindex stands.
    */
   robots?: { index: boolean; follow: boolean };
-}): Metadata {
+  /**
+   * The picture an unfurled link shows, resolved by `getShareImage()`.
+   *
+   * ⚠ PASSED IN RATHER THAN READ HERE, and for the reason `instituteJsonLd`
+   * takes its contact block as an argument: this module is pure and
+   * synchronous, and the image lives behind a database read. Keeping the read
+   * outside means `seo.ts` stays importable by a unit test in plain Node.
+   *
+   * Optional so that a caller with no database access still produces valid
+   * metadata - one without a picture, which is what this function did for
+   * every page until Phase 26.
+   */
+  image?: ShareImage;
+};
+
+export function pageMetadata({
+  title,
+  description,
+  path = '/',
+  canonical,
+  noindex = false,
+  robots,
+  image,
+}: PageMetadataArgs): Metadata {
   const url = canonicalUrl(canonical ?? path);
 
   let effectiveRobots: { index: boolean; follow: boolean } | undefined;
@@ -65,6 +86,27 @@ export function pageMetadata({
     effectiveRobots = robots;
   }
 
+  /*
+    ONE ENTRY, SPELLED OUT FOR BOTH CONSUMERS.
+
+    `twitter.images` is set explicitly rather than left to fall back to
+    `openGraph.images`. Next does apply that fallback today, but `twitter.card`
+    here is `summary_large_image` - a format that renders as nothing BUT a
+    picture - and leaving the picture to an inherited default is how this came
+    to be broken in the first place. Two lines buy the guarantee that the
+    declared card format and the thing filling it are decided in the same place.
+  */
+  const images = image
+    ? [
+        {
+          url: image.url,
+          alt: image.alt,
+          ...(image.width ? { width: image.width } : {}),
+          ...(image.height ? { height: image.height } : {}),
+        },
+      ]
+    : undefined;
+
   return {
     title,
     description,
@@ -76,11 +118,13 @@ export function pageMetadata({
       siteName: institute.name,
       locale: 'en_IN',
       type: 'website',
+      ...(images ? { images } : {}),
     },
     twitter: {
       card: 'summary_large_image',
       title: `${title} — ${TITLE_SUFFIX}`,
       description,
+      ...(images ? { images } : {}),
     },
     ...(effectiveRobots ? { robots: effectiveRobots } : {}),
   };

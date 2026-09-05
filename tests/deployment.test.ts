@@ -55,7 +55,7 @@ import {
   institute,
 } from '../src/config/institute.ts';
 import { isIndexable, indexingBlockedBecause } from '../src/config/launch.ts';
-import { S3_ENV_VARS } from '../src/lib/media/s3-config.ts';
+import { CLOUDINARY_ENV_VARS } from '../src/lib/media/cloudinary-config.ts';
 
 /* ------------------------------------------------------------ helpers ---- */
 
@@ -158,16 +158,38 @@ describe('environment contract', () => {
    * it names them from the module that defines them rather than from a copy.
    */
   test('every media storage variable is declared in the contract', () => {
-    for (const name of S3_ENV_VARS) {
+    for (const name of CLOUDINARY_ENV_VARS) {
       assert.ok(
         ENV_NAMES.includes(name),
-        `${name} is read by src/lib/media/s3.ts but is not in the deployment contract`,
+        `${name} is read by src/lib/media/cloudinary-config.ts but is not in the deployment contract`,
       );
     }
-    assert.ok(
-      ENV_NAMES.includes('MEDIA_S3_REGION'),
-      'MEDIA_S3_REGION is read but not declared',
-    );
+  });
+
+  /**
+   * The provider migration must not leave a ghost behind.
+   *
+   * On 5 September 2026 the media backend moved from Cloudflare R2 to
+   * Cloudinary. The five MEDIA_S3_* names came out of the contract at the same
+   * time, and this asserts they stay out: a name left in ENV_CONTRACT is an
+   * instruction to an operator to configure something, and configuring a
+   * provider the application can no longer talk to is worse than configuring
+   * nothing.
+   */
+  test('the retired R2 variables are gone from the contract', () => {
+    const retired = [
+      'MEDIA_S3_ENDPOINT',
+      'MEDIA_S3_BUCKET',
+      'MEDIA_S3_ACCESS_KEY_ID',
+      'MEDIA_S3_SECRET_ACCESS_KEY',
+      'MEDIA_S3_REGION',
+    ];
+    for (const name of retired) {
+      assert.ok(
+        !ENV_NAMES.includes(name),
+        `${name} is retired but is still declared in the deployment contract`,
+      );
+    }
   });
 
   test('every required variable appears in .env.example', () => {

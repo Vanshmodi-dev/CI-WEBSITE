@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata, listingIndexing } from '@/lib/seo';
+import { listingIndexing } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublishedStoriesPage } from '@/lib/public-data';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -26,7 +27,7 @@ export async function generateMetadata({
   const page = readPage(await searchParams);
   const { canonical, robots } = listingIndexing({ path: '/stories', filtered: false, page });
 
-  return pageMetadata({
+  return publicPageMetadata({
     title: page > 1 ? `Student stories — page ${page}` : 'Student stories',
     description: `How students at ${institute.name} got to their results, in their own words.`,
     path: '/stories',

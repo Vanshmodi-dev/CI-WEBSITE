@@ -1,17 +1,19 @@
 import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublishedFaculty } from '@/lib/public-data';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { FacultyCard } from '@/components/domain/public-cards';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Our teachers',
-  description: `The people who teach at ${institute.name} in ${institute.locality}.`,
-  path: '/faculty',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'Our teachers',
+    description: `The people who teach at ${institute.name} in ${institute.locality}.`,
+    path: '/faculty',
+  });
+}
 
 export const revalidate = 900;
 

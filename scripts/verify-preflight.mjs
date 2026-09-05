@@ -65,7 +65,7 @@ import {
   EXPECTED_PRE_LAUNCH,
 } from '../src/lib/deployment-contract.ts';
 import { unverifiedFacts, AWAITING_CLIENT } from '../src/config/institute.ts';
-import { readS3Config, isLoopbackEndpoint } from '../src/lib/media/s3-config.ts';
+import { readCloudinaryConfig } from '../src/lib/media/cloudinary-config.ts';
 
 /* ============================================================ options ===== */
 
@@ -2216,7 +2216,7 @@ function checkMediaStorage() {
   say('');
   say('--- 9b. MEDIA STORAGE ---');
 
-  const verdict = readS3Config();
+  const verdict = readCloudinaryConfig();
   const ephemeral = Boolean(
     env.VERCEL || env.AWS_LAMBDA_FUNCTION_NAME || env.NETLIFY || env.CF_PAGES,
   );
@@ -2227,7 +2227,7 @@ function checkMediaStorage() {
       'P-MEDIA-01',
       'media storage configuration is complete or absent, never partial',
       `missing: ${verdict.missing.join(', ')}`,
-      'Set all four MEDIA_S3_* variables or none. A partial configuration is refused at ' +
+      'Set all three CLOUDINARY_* variables or none. A partial configuration is refused at ' +
         'runtime rather than falling back to local disk, which on an ephemeral host loses ' +
         'every photograph at the next deploy.',
     );
@@ -2236,14 +2236,14 @@ function checkMediaStorage() {
       'P-MEDIA-01',
       'media storage configuration is complete or absent, never partial',
       verdict.reason,
-      'Correct MEDIA_S3_ENDPOINT / MEDIA_S3_BUCKET. The endpoint is the service address ' +
-        'with no bucket name and no path.',
+      'Cloudinary shows one CLOUDINARY_URL of the form cloudinary://key:secret@cloud. Split ' +
+        'it into the three variables; do not paste the whole string into any one of them.',
     );
   } else {
     pass(
       'P-MEDIA-01',
       'media storage configuration is complete or absent, never partial',
-      verdict.state === 'ready' ? 'all four variables present' : 'none set',
+      verdict.state === 'ready' ? 'all three variables present' : 'none set',
     );
   }
 
@@ -2253,9 +2253,8 @@ function checkMediaStorage() {
       'P-MEDIA-02',
       'an ephemeral host has durable media storage',
       'the filesystem is discarded between deploys and no object storage is configured',
-      'Provision an S3-compatible bucket (Cloudflare R2 is the documented recommendation) ' +
-        'and set the four MEDIA_S3_* variables. Until then every upload is refused, which ' +
-        'is correct but means the media feature does not work.',
+      'Create a Cloudinary account and set the three CLOUDINARY_* variables. Until then ' +
+        'every upload is refused, which is correct but means the media feature does not work.',
     );
   } else if (!ephemeral && verdict.state !== 'ready') {
     record(
@@ -2266,61 +2265,65 @@ function checkMediaStorage() {
       '',
     );
   } else {
-    pass('P-MEDIA-02', 'an ephemeral host has durable media storage', 'object storage configured');
+    pass('P-MEDIA-02', 'an ephemeral host has durable media storage', 'Cloudinary configured');
   }
 
   /*
-    P-MEDIA-03 - storage on loopback is local disk wearing a different hat.
+    P-MEDIA-03 - the API secret cannot reach a browser.
 
-    `http://127.0.0.1:9000` is a legitimate MinIO deployment on a VPS, which is
-    why the configuration check allows it. On a host whose disk is discarded it
-    is not storage at all, and it would pass P-MEDIA-01 and P-MEDIA-02 while
-    losing everything, so it is refused explicitly.
+    ⚠ REPURPOSED ON 5 SEPTEMBER 2026. This id used to ask whether the storage
+    endpoint pointed at loopback - "local disk wearing a different hat" - which
+    was a real failure mode for a self-hosted MinIO and has no analogue on a
+    hosted SaaS with no endpoint to misconfigure. The id is kept rather than
+    renumbered so that documentation referring to P-MEDIA-04 and P-MEDIA-05 does
+    not silently shift underneath it.
+
+    What it asks now is the one Cloudinary-specific mistake with a permanent
+    consequence: Next inlines every NEXT_PUBLIC_* variable into client
+    JavaScript, so a secret that acquires that prefix is published to every
+    visitor and stays published in build artefacts and caches. Rotating is then
+    the only remedy. This is cheap to check and impossible to notice by eye.
   */
-  if (verdict.state === 'ready' && isLoopbackEndpoint(verdict.config.endpoint)) {
-    if (ephemeral) {
-      fail(
-        'P-MEDIA-03',
-        'media storage is not on a disk this host will discard',
-        'MEDIA_S3_ENDPOINT points at loopback on an ephemeral host',
-        'Loopback storage on a serverless host is local disk by another name. Point it at ' +
-          'a real bucket.',
-      );
-    } else {
-      warn(
-        'P-MEDIA-03',
-        'media storage is not on a disk this host will discard',
-        'storage is on loopback (a self-hosted MinIO or similar)',
-        'Legitimate on a machine you control. Make sure that machine is backed up: nothing ' +
-          'else holds these photographs.',
-      );
-    }
+  const publishedCloudinaryVars = Object.keys(env).filter(
+    (name) => name.startsWith('NEXT_PUBLIC_') && name.toUpperCase().includes('CLOUDINARY'),
+  );
+  if (publishedCloudinaryVars.length > 0) {
+    fail(
+      'P-MEDIA-03',
+      'no Cloudinary credential is exposed to the browser',
+      `these are inlined into client JavaScript: ${publishedCloudinaryVars.join(', ')}`,
+      'Remove the NEXT_PUBLIC_ prefix. If the value was an API secret, ROTATE IT FIRST - it ' +
+        'has been shipped to every visitor and is in every cached build artefact.',
+    );
   } else {
-    pass('P-MEDIA-03', 'media storage is not on a disk this host will discard');
+    pass('P-MEDIA-03', 'no Cloudinary credential is exposed to the browser');
   }
 
-  /* P-MEDIA-04 - the endpoint carries no credential, and https off-machine. */
+  /*
+    P-MEDIA-04 - the key and the secret have not been swapped.
+
+    Also repurposed: there is no endpoint to validate. Cloudinary's API key is
+    all digits and its secret is not, so a swap is detectable, and a swap
+    otherwise presents as an opaque 401 on the first upload.
+  */
   if (verdict.state === 'ready') {
-    const endpoint = verdict.config.endpoint;
-    const hasCredential = /:\/\/[^/@]*@/.test(endpoint);
-    const insecure = endpoint.startsWith('http://') && !isLoopbackEndpoint(endpoint);
-    if (hasCredential || insecure) {
+    if (/^[0-9]+$/.test(verdict.config.apiSecret)) {
       fail(
         'P-MEDIA-04',
-        'the storage endpoint is safe to transmit credentials to',
-        hasCredential ? 'the endpoint embeds a credential' : 'the endpoint is plain http',
-        'Use a bare https:// service address. The keys go in MEDIA_S3_ACCESS_KEY_ID and ' +
-          'MEDIA_S3_SECRET_ACCESS_KEY, never in the URL.',
+        'the API key and API secret are not swapped',
+        'CLOUDINARY_API_SECRET is all digits, which is the shape of an API key',
+        'Check the two values against the Cloudinary console. The all-digit value is the ' +
+          'API key; the secret is the opaque one.',
       );
     } else {
-      pass('P-MEDIA-04', 'the storage endpoint is safe to transmit credentials to');
+      pass('P-MEDIA-04', 'the API key and API secret are not swapped');
     }
   } else {
     record(
       'P-MEDIA-04',
-      'the storage endpoint is safe to transmit credentials to',
+      'the API key and API secret are not swapped',
       'NOT APPLICABLE',
-      'no endpoint configured',
+      'no credentials configured',
       '',
     );
   }
@@ -2328,17 +2331,20 @@ function checkMediaStorage() {
   /*
     P-MEDIA-05 - whether the credentials WORK is not knowable from here.
 
-    Reported honestly rather than guessed. A pre-flight check that claimed to
-    have verified a bucket it never contacted would be worse than no check.
+    Still true, and still reported honestly rather than guessed: this process
+    makes no network calls. What CHANGED on 5 September 2026 is that there is
+    now a command which does. `npm run verify:storage` performs a real upload,
+    existence check and delete against Cloudinary, so the remediation below is
+    a command rather than "deploy and see".
   */
   if (verdict.state === 'ready') {
     record(
       'P-MEDIA-05',
       'the storage credentials are known to work',
       'NOT TESTED',
-      'configuration is well-formed; reaching the bucket needs a live network call',
-      'After deploying, upload one photograph through Admin -> Photos and confirm it appears. ' +
-        'That is the only proof the credentials are right.',
+      'configuration is well-formed; reaching Cloudinary needs a live network call',
+      'Run: npm run verify:storage - it uploads, verifies and deletes a throwaway asset ' +
+        'and exits non-zero unless the whole round trip succeeds.',
     );
   } else {
     record(

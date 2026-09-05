@@ -3,8 +3,8 @@ import 'server-only';
 import { mkdir, readFile, writeFile, unlink, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { isMediaKey } from './format.ts';
-import { S3MediaStore } from './s3.ts';
-import { readS3Config } from './s3-config.ts';
+import { CloudinaryMediaStore } from './cloudinary.ts';
+import { readCloudinaryConfig } from './cloudinary-config.ts';
 
 /**
  * Where uploaded images live.
@@ -220,7 +220,7 @@ function assertKey(key: string): void {
  * was no production adapter to be ready.
  */
 export function mediaStorageIsProductionReady(): boolean {
-  return readS3Config().state === 'ready';
+  return readCloudinaryConfig().state === 'ready';
 }
 
 /**
@@ -302,7 +302,7 @@ let store: MediaStore | null = null;
 export function getMediaStore(): MediaStore {
   if (store) return store;
 
-  const verdict = readS3Config();
+  const verdict = readCloudinaryConfig();
 
   if (verdict.state === 'partial') {
     store = new MisconfiguredStore(
@@ -311,7 +311,7 @@ export function getMediaStore(): MediaStore {
   } else if (verdict.state === 'invalid') {
     store = new MisconfiguredStore(verdict.reason);
   } else if (verdict.state === 'ready') {
-    store = new S3MediaStore(verdict.config);
+    store = new CloudinaryMediaStore(verdict.config);
   } else if (hostDiscardsItsDisk()) {
     /*
       On an ephemeral host the local adapter is NOT offered, even though it

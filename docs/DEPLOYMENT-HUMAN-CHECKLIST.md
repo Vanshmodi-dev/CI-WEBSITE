@@ -291,11 +291,11 @@ is the one part of this nobody else can do.
 
 | # | Action | Why it matters | Done |
 | --- | --- | --- | --- |
-| M1 | Create a Cloudflare account and enable R2 | The recommended option: free egress, an S3-compatible API, and roughly thirty thousand photographs inside the free tier | ☐ |
-| M2 | Add a payment card | Cloudflare requires one before R2 can be enabled, **even on the free tier**. Nothing is charged inside the free limits | ☐ |
+| M1 | Create a Cloudinary account | Free tier, **no payment card required**. Replaced Cloudflare R2 on 5 Sep 2026 | ☐ |
+| M2 | Set a usage alert in the Cloudinary console | The free tier is credit-based. An alert turns an open-ended meter into a known one | ☐ |
 | M3 | Create a **private** bucket | Objects are served through the site, never directly. A public bucket would hand out a directory of student photographs to anyone who guessed the hostname | ☐ |
 | M4 | Create an API token scoped to that one bucket, read + write only | An account-wide key in a web application's environment is a much larger blast radius than this needs | ☐ |
-| M5 | Set all four `MEDIA_S3_*` variables in the host | **All four or none.** Three of four is refused, on purpose | ☐ |
+| M5 | Set all three `CLOUDINARY_*` variables in the host | **All three or none.** Two of three is refused, on purpose. Then run `npm run verify:storage` | ☐ |
 | M6 | Run `npm run verify:preflight` and confirm `P-MEDIA-01`…`04` pass | The configuration is checked mechanically, not by eye | ☐ |
 | M7 | Upload one photograph through Admin → Photos and confirm it appears | `P-MEDIA-05` reports NOT TESTED because credentials cannot be verified without a live call. **This step is that call** | ☐ |
 | M8 | Turn on bucket versioning or a retention policy | A `pg_dump` does not back up photographs. Nothing else holds them | ☐ |

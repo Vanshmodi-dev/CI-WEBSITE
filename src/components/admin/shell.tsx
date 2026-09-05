@@ -71,7 +71,19 @@ const NAV: readonly NavGroup[] = [
   },
   {
     heading: 'Media',
-    items: [{ href: '/admin/media', label: 'Photos' }],
+    /*
+      ⚠ `/admin/media` IS MARKED `exact` BECAUSE IT NOW HAS A CHILD.
+
+      Both the sidebar highlight and the mobile "which page am I on?" title use
+      `item.exact ? pathname === item.href : pathname.startsWith(item.href)`.
+      Without `exact`, `/admin/media/storage` matches BOTH entries: two items
+      light up at once, and the mobile header reads "Photos" while showing the
+      storage page, because `find()` returns the first match.
+    */
+    items: [
+      { href: '/admin/media', label: 'Photos', exact: true },
+      { href: '/admin/media/storage', label: 'Storage usage' },
+    ],
   },
   {
     heading: 'Data',

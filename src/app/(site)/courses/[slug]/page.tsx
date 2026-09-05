@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { institute, publishedCourses } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
-import { pageMetadata, breadcrumbJsonLd, jsonLdScript, SITE_URL } from '@/lib/seo';
+import { breadcrumbJsonLd, jsonLdScript, SITE_URL } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Container, Section } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -28,7 +29,7 @@ export async function generateMetadata({
   const course = findCourse(slug);
   if (!course) return {};
 
-  return pageMetadata({
+  return publicPageMetadata({
     title: `${course.name} coaching in ${institute.locality}`,
     description: `${course.name} at ${institute.name}, ${institute.locality}. Ask us about batches and admissions.`,
     path: `/courses/${course.slug}`,

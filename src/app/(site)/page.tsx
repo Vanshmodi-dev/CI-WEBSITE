@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { institute, publishedCourses } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { getPublicReviews } from '@/lib/reviews/fetch';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import {
   getPublishedResults,
   getPublishedStories,
@@ -33,11 +33,13 @@ import { GalleryStrip } from '@/components/domain/gallery-strip';
 import { HeroPortrait } from '@/components/domain/hero-portrait';
 import { VideoStrip } from '@/components/domain/video-strip';
 
-export const metadata: Metadata = pageMetadata({
-  title: `Commerce coaching in ${institute.locality}`,
-  description: `${institute.name} — ${institute.tagline}. Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA in ${institute.locality}.`,
-  path: '/',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: `Commerce coaching in ${institute.locality}`,
+    description: `${institute.name} — ${institute.tagline}. Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA in ${institute.locality}.`,
+    path: '/',
+  });
+}
 
 export const revalidate = 900;
 

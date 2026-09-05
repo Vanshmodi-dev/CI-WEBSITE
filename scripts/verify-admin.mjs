@@ -90,10 +90,40 @@ async function waitForPublic(path, predicate, tries = 8) {
 
 /* ------------------------------------------------------------ snapshot -- */
 
-/** Everything in the settings table, so the teardown can prove what changed. */
+/**
+ * Everything in the settings table, so the teardown can prove what changed.
+ *
+ * ⚠ `updatedBy` IS PART OF THE ROW, AND DROPPING IT BROKE DEMO CLEANUP.
+ *
+ * This used to select `{ key, value }` only, and the teardown below recreated
+ * every row from that pair - so each run silently rewrote `updatedBy` to null
+ * across the WHOLE table. The assertion at the end still passed, because it
+ * compared the same two columns it had captured: the suite proved the table was
+ * unchanged in exactly the respect it had bothered to look at.
+ *
+ * The column is not decoration. `scripts/seed-demo.mjs` stamps its own copy
+ * rows with `updatedBy = 'ZZSHOW demo seed'` and that string is the ONLY way
+ * `seed:demo:clean` knows which settings are demo text. After one run of this
+ * suite the marker was gone, `seed:demo -- count` reported "Website copy
+ * fields 0" while eleven ZZSHOW rows sat in the table, and the documented reset
+ * could no longer remove the demo homepage copy. Found 5 Sep 2026 with eleven
+ * such rows stranded.
+ */
 async function snapshot() {
-  const rows = await prisma.siteSetting.findMany({ select: { key: true, value: true } });
-  return Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const rows = await prisma.siteSetting.findMany({
+    select: { key: true, value: true, updatedBy: true },
+  });
+  return Object.fromEntries(rows.map((r) => [r.key, { value: r.value, updatedBy: r.updatedBy }]));
+}
+
+/** Re-insert a snapshot exactly as it was taken, `updatedBy` included. */
+async function restore(snap) {
+  await prisma.siteSetting.deleteMany({});
+  for (const [key, row] of Object.entries(snap)) {
+    await prisma.siteSetting.create({
+      data: { key, value: row.value, updatedBy: row.updatedBy },
+    });
+  }
 }
 const before = await snapshot();
 
@@ -130,7 +160,7 @@ const SUITE_MARKERS = new Set(
 );
 
 const polluted = Object.entries(before).filter(
-  ([, v]) => /ZZADM|ZZNAV/.test(v) || SUITE_MARKERS.has(v),
+  ([, row]) => /ZZADM|ZZNAV/.test(row.value) || SUITE_MARKERS.has(row.value),
 );
 if (polluted.length > 0) {
   console.log(
@@ -321,6 +351,36 @@ function markerFor(field, index) {
         value: 'https://www.instagram.com/zzadmmarker',
         find: 'instagram.com/zzadmmarker',
       };
+
+    /*
+      THE SHARE IMAGE: A PATH, AND IT IS NOT RENDERED AS TEXT.
+
+      Two reasons a `ZZADM` marker is wrong here, and they are the two reasons
+      already worked through above for the PIN code and for the coordinates.
+
+      It VALIDATES. `validateShareImage` accepts our own generated card or a
+      path from the media pipeline, and nothing else - deliberately, because
+      this value becomes an `og:image` that other people's servers fetch and
+      publish beside the institute's name. A marker that is not one of those two
+      is refused by the action and never stored, which is the application
+      working exactly as designed.
+
+      It RENDERS AS A META TAG, not as words on the page - the same situation as
+      `contact.coordinates`, whose observable effect is a map panel appearing
+      rather than its own value showing up in the prose. What a visitor's
+      BROWSER never displays, a crawler still reads, so the assertion is that
+      the path reaches the `og:image` in the served HTML.
+
+      The key is 32 hex characters because that is what the media route accepts;
+      no such object exists, which is correct for this suite - it is asserting
+      that the value the teacher chose reaches the page, not that a fixture was
+      uploaded. The suite restores the original immediately afterwards.
+    */
+    case 'seo.shareImage':
+      return {
+        value: '/media/adadadadadadadadadadadadadadadad.png',
+        find: '/media/adadadadadadadadadadadadadadadad.png',
+      };
     default: {
       const marker = `ZZADM${String(index).padStart(2, '0')}`;
       // Nav labels are capped at 24 characters; keep every marker short.
@@ -359,10 +419,43 @@ const skipped = [];
  * detect its own reason for existing is just a disabled test.
  */
 async function unavailableReason(field) {
-  if (field.key !== 'home.section.reviews.heading') return null;
-  const home = await (await fetch(`${BASE}/`)).text();
-  if (home.includes('id="home-reviews"')) return null;
-  return 'the reviews band is hidden because the Review Engine returns none for this client';
+  if (field.key === 'home.section.reviews.heading') {
+    const home = await (await fetch(`${BASE}/`)).text();
+    if (home.includes('id="home-reviews"')) return null;
+    return 'the reviews band is hidden because the Review Engine returns none for this client';
+  }
+
+  /*
+    THE TWO VIDEO FIELDS, WHEN NOTHING IS PUBLISHED TO VIDEO.
+    ---------------------------------------------------------------------------
+    `home.section.videos.heading` labels the homepage videos band, which renders
+    only when a published video exists. `page.videos.standfirst` is the sentence
+    under the /videos heading, and that page deliberately swaps it for different
+    wording while it has nothing to show - the honesty copy, which is code-owned
+    on purpose and is asserted elsewhere.
+
+    Both are therefore correctly absent whenever no video is published, and the
+    demo dataset publishes none: a synthetic YouTube id has no poster image, so
+    `scripts/seed-demo.mjs` seeds those rows as drafts rather than putting four
+    broken images on the site. See the note above `videos()` in that file.
+
+    ⚠ THE PRECONDITION IS MEASURED, NOT ASSUMED, exactly as the reviews skip
+    above measures its own. Publish one video and both fields stop being skipped
+    and start being tested, which is what keeps this from being a disabled test
+    wearing an explanation.
+  */
+  if (field.key === 'home.section.videos.heading') {
+    const home = await (await fetch(`${BASE}/`)).text();
+    if (home.includes('id="home-videos"')) return null;
+    return 'the homepage videos band is hidden because no video is published';
+  }
+  if (field.key === 'page.videos.standfirst') {
+    const videos = await (await fetch(`${BASE}/videos`)).text();
+    if (!videos.includes('No videos here yet')) return null;
+    return 'the /videos standfirst is replaced by the empty-state wording while no video is published';
+  }
+
+  return null;
 }
 
 for (const [index, field] of textFields.entries()) {
@@ -1147,10 +1240,7 @@ section('10. RESTORE EVERYTHING THIS SUITE TOUCHED');
     "" is a stored value with its own meaning, and the table may legitimately
     have had no row at all.
   */
-  await prisma.siteSetting.deleteMany({});
-  for (const [key, value] of Object.entries(before)) {
-    await prisma.siteSetting.create({ data: { key, value } });
-  }
+  await restore(before);
 
   /*
     ⚠ RESTORING THE ROWS IS NOT RESTORING THE WEBSITE.
@@ -1170,7 +1260,7 @@ section('10. RESTORE EVERYTHING THIS SUITE TOUCHED');
   for (const group of groups) {
     const field = EDITABLE_FIELDS.find((f) => f.group === group);
     if (!field) continue;
-    await saveOne(field.key, before[field.key] ?? '');
+    await saveOne(field.key, before[field.key]?.value ?? '');
   }
 
   /*
@@ -1185,10 +1275,13 @@ section('10. RESTORE EVERYTHING THIS SUITE TOUCHED');
     stored value and no row at all render the same shipped text, so the pages
     stay correct.
   */
-  await prisma.siteSetting.deleteMany({});
-  for (const [key, value] of Object.entries(before)) {
-    await prisma.siteSetting.create({ data: { key, value } });
-  }
+  /*
+    Restored with `updatedBy` intact. The revalidation pass above went through
+    `saveWebsiteContent`, which stamps the signed-in administrator's name onto
+    every row it writes - so without this the demo seeder's ownership marker
+    would be replaced by "ZZ Verify" rather than merely nulled.
+  */
+  await restore(before);
 
   // And prove the pages actually caught up, rather than assuming they did.
   const markerGone = await waitForPublic('/contact', (h) => !h.includes('ZZADM'));
@@ -1197,10 +1290,21 @@ section('10. RESTORE EVERYTHING THIS SUITE TOUCHED');
   check(homeClean.ok, 'nor on the homepage', `after ${homeClean.attempt} request(s)`);
 
   const after = await snapshot();
-  const changed = Object.keys({ ...before, ...after }).filter((k) => before[k] !== after[k]);
+  /*
+    COMPARES `updatedBy` TOO, WHICH IS THE WHOLE POINT.
+
+    The previous version compared only the text, so it went green through a
+    teardown that had wiped the ownership marker off every row. A restore
+    assertion that ignores a column cannot see that column being destroyed.
+  */
+  const changed = Object.keys({ ...before, ...after }).filter(
+    (k) =>
+      before[k]?.value !== after[k]?.value ||
+      (before[k]?.updatedBy ?? null) !== (after[k]?.updatedBy ?? null),
+  );
   check(
     changed.length === 0,
-    'the settings table is exactly as this suite found it',
+    'the settings table is exactly as this suite found it, updatedBy included',
     changed.join(', '),
   );
   check(

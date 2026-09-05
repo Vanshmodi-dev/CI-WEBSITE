@@ -1,18 +1,20 @@
 import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { issueFormToken } from '@/lib/crypto';
 import { Section, PageHeader } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { Hidden } from '@/components/primitives/empty-state';
 import { EnquiryForm } from './enquiry-form';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Admissions and enquiries',
-  description: `Enquire about Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA coaching at ${institute.name}, ${institute.locality}.`,
-  path: '/admissions',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'Admissions and enquiries',
+    description: `Enquire about Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA coaching at ${institute.name}, ${institute.locality}.`,
+    path: '/admissions',
+  });
+}
 
 /**
  * The form carries a signed, time-stamped token, which must be minted per

@@ -18,6 +18,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client.ts';
 import { hashPassword } from '../src/lib/password.ts';
+import { setAdminPassword } from '../src/lib/admin-password.ts';
 import { env, exit } from 'node:process';
 import { randomBytes, createHmac } from 'node:crypto';
 
@@ -467,7 +468,40 @@ try {
     data: { href: 'javascript:alert(1)' },
   });
   const jsHref = await html('/announcements');
-  check(!/href="javascript:/i.test(jsHref), 'a javascript: URL never reaches an href attribute');
+  /*
+    ⚠ REACT'S DEFENCE LOOKS LIKE THE ATTACK TO A NAIVE REGEX.
+
+    This used to be `!/href="javascript:/i.test(jsHref)`, and that assertion was
+    wrong in BOTH directions.
+
+    When React meets a `javascript:` URL in an href it does not drop the
+    attribute - it replaces the value with a throw statement and renders
+
+        href="javascript:throw new Error('React has blocked a javascript: URL
+        as a security precaution.')"
+
+    which is the defence working. The old pattern matched that string and
+    reported a security failure on a page that was correctly protected.
+
+    And when the page happened to be served from ISR cache - written before the
+    hostile row existed - there was no javascript: href of any kind, so the
+    check passed without ever exercising its claim. It was therefore vacuous on
+    a stale page and a false alarm on a fresh one, which between them is every
+    page. Both observed 5 Sep 2026.
+
+    What actually matters is whether the ATTACKER's URL survives as something a
+    browser would run. So React's own replacement is excluded by name and
+    anything else carrying a javascript: scheme is a failure with its value
+    printed.
+  */
+  const liveJsHrefs = [...jsHref.matchAll(/href="(javascript:[^"]*)"/gi)]
+    .map((m) => m[1])
+    .filter((href) => !href.startsWith('javascript:throw new Error('));
+  check(
+    liveJsHrefs.length === 0,
+    'a javascript: URL never reaches an href attribute',
+    liveJsHrefs.join(', ') || 'nothing but the neutralised placeholder React itself writes',
+  );
   await prisma.announcement.updateMany({ where: { message: { startsWith: PREFIX } }, data: { href: null } });
 
   // JSON-LD is injected with dangerouslySetInnerHTML — `</script>` must not
@@ -1132,6 +1166,160 @@ try {
         `status ${headerless.status}`);
 
   /* ================= 21. UNKNOWN ACCOUNTS CANNOT BUY UNLIMITED SCRYPT == */
+  /* ================== 20b. A PASSWORD CHANGE REVOKES EVERY SESSION == */
+  /**
+   * THE PROPERTY: changing the password ends every session opened with the old
+   * one, everywhere, at once - including the browser the owner is holding.
+   *
+   * =========================================================================
+   * WHY THIS SECTION EXISTS
+   * =========================================================================
+   * `sessionsValidFrom` is this project's revocation boundary and section 19
+   * proves it works for SIGN-OUT. It was written in exactly one place, though -
+   * `signOut()` - and the only path that changes a password wrote
+   * `passwordHash` and left the boundary alone. So the one action a person
+   * takes when they believe a password is compromised did not end the sessions
+   * that password had opened: a captured cookie kept working for the rest of
+   * its eight hours, on any device.
+   *
+   * Section 19's checks all passed throughout. Revocation was never broken;
+   * nothing had ever asked whether a PASSWORD CHANGE reached it.
+   *
+   * =========================================================================
+   * IT CHANGES THE PASSWORD THE WAY THE PRODUCT DOES
+   * =========================================================================
+   * Through `setAdminPassword()` - the same function `scripts/create-admin.mjs`
+   * calls, which is the only password-change path this application has. A test
+   * that moved `sessionsValidFrom` by hand would be asserting that Postgres can
+   * store a date, not that changing a password revokes anything.
+   *
+   * It puts the original password back at the end, so the sections after it and
+   * every other suite still sign in normally.
+   */
+  section('20b. A PASSWORD CHANGE REVOKES EVERY SESSION');
+
+  {
+    // The sections above deliberately burn this account's failure budget. Same
+    // reasoning as section 19: without clearing it, these checks would measure
+    // the throttle instead of the revocation boundary.
+    await prisma.adminUser.update({
+      where: { email: EMAIL },
+      data: { failedLoginCount: 0, firstFailedLoginAt: null },
+    });
+
+    /** Sign in with an arbitrary password, so the OLD one can be tried later. */
+    const signInWith = async (password) => {
+      signInSeq += 1;
+      const page = await (await req('/admin/login', { noCookie: true })).text();
+      const res = await post('/admin/login', {
+        ...fieldsOf(page, 'password'),
+        email: EMAIL,
+        password,
+      }, { noCookie: true, headers: { 'x-forwarded-for': `192.0.2.${signInSeq}` } });
+      const jar = res.setCookie.find((c) => c.startsWith('ci_admin_session='));
+      return { res, cookie: jar ? jar.split(';')[0] : null };
+    };
+
+    const reach = async (jar) =>
+      (await fetch(`${BASE}/admin`, { redirect: 'manual', headers: { Cookie: jar } })).status;
+
+    // --- A and B: two live sessions, on two "devices" --------------------
+    const deviceA = await signInWith(PASSWORD);
+    const deviceB = await signInWith(PASSWORD);
+    check(
+      Boolean(deviceA.cookie) && Boolean(deviceB.cookie),
+      'setup: two sessions exist before the password change',
+      deviceA.cookie && deviceB.cookie ? '' : 'sign-in was refused - throttled rather than broken?',
+    );
+    check((await reach(deviceA.cookie)) === 200, 'setup: session A reaches the admin');
+    check((await reach(deviceB.cookie)) === 200, 'setup: session B reaches the admin');
+
+    const boundaryBefore = (
+      await prisma.adminUser.findUnique({
+        where: { email: EMAIL },
+        select: { sessionsValidFrom: true },
+      })
+    ).sessionsValidFrom;
+
+    // --- the password change, through the product's own function ---------
+    const NEW_PASSWORD = `ZZSEC-rotated-${randomBytes(12).toString('base64url')}`;
+    await setAdminPassword(prisma, {
+      email: EMAIL,
+      displayName: 'ZZSEC Admin',
+      passwordHash: await hashPassword(NEW_PASSWORD),
+    });
+
+    const boundaryAfter = (
+      await prisma.adminUser.findUnique({
+        where: { email: EMAIL },
+        select: { sessionsValidFrom: true },
+      })
+    ).sessionsValidFrom;
+    check(
+      boundaryAfter.getTime() > boundaryBefore.getTime(),
+      'the password change moved the revocation boundary forward',
+      `${boundaryBefore.toISOString()} -> ${boundaryAfter.toISOString()}`,
+    );
+
+    // --- THE ASSERTIONS THIS SECTION EXISTS FOR --------------------------
+    check(
+      (await reach(deviceA.cookie)) !== 200,
+      'SESSION A IS DEAD after the password change',
+      'a session opened with the old password still reaches the admin',
+    );
+    check(
+      (await reach(deviceB.cookie)) !== 200,
+      'SESSION B IS DEAD TOO - every device, not just one',
+      'a second device kept its session through a password change',
+    );
+
+    // --- the old password no longer signs in -----------------------------
+    const withOld = await signInWith(PASSWORD);
+    check(withOld.cookie === null, 'the OLD password is refused');
+    check(
+      withOld.cookie === null || (await reach(withOld.cookie)) !== 200,
+      'and cannot reach the admin even if a cookie were issued',
+    );
+
+    // --- the new password does, and its session works --------------------
+    const withNew = await signInWith(NEW_PASSWORD);
+    check(Boolean(withNew.cookie), 'the NEW password signs in');
+    check(
+      Boolean(withNew.cookie) && (await reach(withNew.cookie)) === 200,
+      'and the session issued after the change is accepted',
+    );
+
+    /*
+      The boundary case from the other side: a session minted AFTER the change
+      is live at the same moment sessions minted before it are refused. Without
+      this pair, a boundary set far in the future would pass every check above
+      by killing everything.
+    */
+    check(
+      (await reach(deviceA.cookie)) !== 200,
+      'the pre-change session is still refused once a new one exists',
+    );
+
+    // --- put the original password back ----------------------------------
+    await setAdminPassword(prisma, {
+      email: EMAIL,
+      displayName: 'ZZSEC Admin',
+      passwordHash: await hashPassword(PASSWORD),
+    });
+    check(
+      (await reach(withNew.cookie)) !== 200,
+      'restoring the password revokes again - the rule is the change, not the value',
+    );
+
+    const restored = await signInWith(PASSWORD);
+    check(
+      Boolean(restored.cookie) && (await reach(restored.cookie)) === 200,
+      'the suite can sign in again with the original password',
+    );
+    // Hand the rest of the suite a live session, as section 19 does.
+    cookie = restored.cookie;
+  }
+
   /**
    * The per-account throttle cannot see an address that has no account, and
    * those attempts still reach the timing-equalisation hash - an N=2^17,

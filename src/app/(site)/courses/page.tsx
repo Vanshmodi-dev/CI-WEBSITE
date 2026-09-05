@@ -1,17 +1,19 @@
 import type { Metadata } from 'next';
 import { institute, publishedCourses } from '@/config/institute';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getUpcomingBatches } from '@/lib/public-data';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { CourseCard } from '@/components/domain/public-cards';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Courses',
-  description: `Commerce programmes taught at ${institute.name}, ${institute.locality} — Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA.`,
-  path: '/courses',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'Courses',
+    description: `Commerce programmes taught at ${institute.name}, ${institute.locality} — Class XI and XII Commerce, CA Foundation, CA Intermediate and CMA.`,
+    path: '/courses',
+  });
+}
 
 /** Batches change, so this revalidates rather than being frozen at build. */
 export const revalidate = 3600;

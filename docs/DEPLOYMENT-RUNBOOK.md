@@ -184,6 +184,13 @@ the server's disk. On Vercel, and on every serverless host, the filesystem is
 discarded between deploys, so a photograph written to disk survives until the
 next deployment and then silently disappears.
 
+> **SUPERSEDED FOR MEDIA STORAGE (5 September 2026).** Media moved from
+> Cloudflare R2 to **Cloudinary**. Everything below about buckets, R2 tokens,
+> `MEDIA_S3_*` variables and payment cards for R2 no longer applies. The
+> authoritative source is [`MEDIA-STORAGE-CLOUDINARY.md`](MEDIA-STORAGE-CLOUDINARY.md);
+> the three variables to set are `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`
+> and `CLOUDINARY_API_SECRET`. Kept for the record, not for use.
+
 **Cloudflare R2 is the recommendation**, for two reasons that are about cost
 rather than fashion: its egress is free and unmetered, and it speaks the S3 API,
 so nothing here is locked to it. Backblaze B2, Wasabi, MinIO and AWS S3 all work

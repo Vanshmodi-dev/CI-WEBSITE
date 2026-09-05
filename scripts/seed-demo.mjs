@@ -355,6 +355,45 @@ const prisma = new PrismaClient({
  * once each filter has three or more videos"), and the other two do not, so the
  * "fewer than three does not get a filter" rule is visible by eye.
  */
+/**
+ * Videos.
+ *
+ * =============================================================================
+ * ⚠ EVERY ROW HERE IS A DRAFT, AND THAT IS NOT AN OVERSIGHT
+ * =============================================================================
+ * A `youtubeId` is the ONLY thing this table stores about a video: the poster
+ * image is derived from it (`thumbnailUrl` -> i.ytimg.com) and so is the embed.
+ * There is deliberately no thumbnail column - the schema note explains why.
+ *
+ * That means a SYNTHETIC id cannot produce a working card. `ZZSHOW00001` is a
+ * well-formed YouTube id - eleven characters of [A-Za-z0-9_-], so it satisfies
+ * `isYouTubeId` and the CHECK constraint - but no such video exists, so
+ * `https://i.ytimg.com/vi/ZZSHOW00001/mqdefault.jpg` returns 404 and Next's
+ * image optimiser returns 404 in turn. Measured, 5 Sep 2026: four published
+ * demo videos put four broken images on /videos and one on the homepage.
+ *
+ * THE THREE WAYS OUT, AND WHY THIS ONE.
+ *
+ *   1. Use a real YouTube id. Refused. It would embed somebody else's video
+ *      inside a band captioned as teaching from this institute - a fabricated
+ *      claim of exactly the kind the rebuild exists to remove, and worse for
+ *      being borrowed from a real channel.
+ *   2. Make the components fall back to a placeholder when a poster 404s.
+ *      That is a change to the PUBLIC site to accommodate demo data, and it
+ *      would also mask a genuine production failure - a video deleted from
+ *      YouTube would then look fine on the website.
+ *   3. Seed the rows unpublished. Chosen.
+ *
+ * So the admin gets a populated Videos section - list, edit, ordering, the
+ * publish toggle, the subject filter, a draft to publish and unpublish - while
+ * the public /videos page shows its honest empty state and never renders a
+ * broken poster. The rows are real CMS records; only their publication is held
+ * back, by the same `published` flag a teacher uses.
+ *
+ * TO SEE THE VIDEO BAND: put one real YouTube id on one of these rows in the
+ * admin and tick "show on the website". That is a one-field change and it is
+ * the institute's own content decision to make, not this seeder's.
+ */
 function videos() {
   const id = (n) => `ZZSHOW${String(n).padStart(5, '0')}`;
 
@@ -365,7 +404,7 @@ function videos() {
       description: `${P} synthetic description. A worked example, start to finish.`,
       subject: 'ECONOMICS',
       priority: 100,
-      published: true,
+      published: false,
     },
     {
       youtubeId: id(2),
@@ -373,7 +412,7 @@ function videos() {
       description: `${P} deliberately long synthetic description, written to run past a single line on a narrow screen so the card layout can be judged with realistic body copy rather than with three short words that would fit anywhere.`,
       subject: 'ECONOMICS',
       priority: 0,
-      published: true,
+      published: false,
     },
     {
       youtubeId: id(3),
@@ -381,7 +420,7 @@ function videos() {
       description: null,
       subject: 'ECONOMICS',
       priority: 0,
-      published: true,
+      published: false,
     },
     {
       youtubeId: id(4),
@@ -389,10 +428,11 @@ function videos() {
       description: `${P} synthetic description.`,
       subject: 'BUSINESS_STUDIES',
       priority: 0,
-      published: true,
+      published: false,
     },
     {
-      // Draft: must never appear publicly. The demo's own negative control.
+      // Was the demo's negative control back when the others were published.
+      // They are all drafts now; this one is kept distinct by its subject.
       youtubeId: id(5),
       title: `${P} Exam preparation: still a draft, must not be public`,
       description: `${P} synthetic description for an unpublished row.`,
@@ -608,11 +648,61 @@ function siteContent() {
 
     /*
       The map panel is hidden entirely without a coordinate, so an owner
-      reviewing the contact page would never see the feature. This is the same
-      synthetic point verify-map uses.
+      reviewing the contact page would never see the feature.
+
+      ⚠ DELIBERATELY NOT THE POINT verify-map AND verify-admin USE.
+
+      It used to be exactly '26.849123,75.805456', described here as "the same
+      synthetic point verify-map uses". That sharing had a cost nobody had
+      noticed: `markerFor()` in scripts/verify-admin.mjs writes the identical
+      string as its own marker for this key, and that suite opens by DELETING
+      every row whose value matches one of its markers - on the correct theory
+      that such a row is wreckage from a crashed earlier run.
+
+      So every verify:admin run silently deleted the demo's map point, and the
+      contact page lost its map until the next reseed. Measured 5 Sep 2026: 15
+      of the 16 demo copy rows survived a run and this was the one that did not.
+
+      A different point costs nothing and removes the ambiguity. It is still
+      obviously synthetic and still inside Jaipur, so the panel it draws looks
+      like the real feature.
     */
-    ['contact.coordinates', '26.849123,75.805456'],
+    ['contact.coordinates', '26.851777,75.812345'],
   ];
+}
+
+/**
+ * WHICH settings rows belong to this dataset.
+ *
+ * =============================================================================
+ * ⚠ `updatedBy` ALONE IS NOT ENOUGH, AND THAT IS NOT A BUG IN ANYTHING
+ * =============================================================================
+ * The seeder stamps `updatedBy = 'ZZSHOW demo seed'` and cleanup used to delete
+ * on that alone. The marker does not survive, and the thing that removes it is
+ * behaving correctly: `saveWebsiteContent` records WHO saved a row, so any save
+ * through the real admin - a teacher's, or a verification suite's restore pass -
+ * legitimately replaces the marker with that person's name.
+ *
+ * Measured 5 Sep 2026: after a verify:cms run, fifteen of the sixteen demo copy
+ * rows still held exactly the demo's text and were stamped "ZZ Verify". Cleanup
+ * ignored all fifteen, `seed:demo -- count` reported "Website copy fields 1",
+ * and the documented reset would have left the demo homepage copy in place.
+ *
+ * So a row is ours if it is STILL MARKED ours, or if it is one of our keys and
+ * still holds exactly the text we wrote. The second half is what makes cleanup
+ * survive a re-stamp - and comparing the value is also what protects a teacher:
+ * a key they have since typed their own words into no longer matches, so it is
+ * left alone rather than deleted by a demo reset.
+ */
+async function demoSettingKeys() {
+  const seeded = new Map(siteContent());
+  const rows = await prisma.siteSetting.findMany({
+    where: { key: { in: [...seeded.keys()] } },
+    select: { key: true, value: true, updatedBy: true },
+  });
+  return rows
+    .filter((row) => row.updatedBy === SETTINGS_AUTHOR || row.value === seeded.get(row.key))
+    .map((row) => row.key);
 }
 
 async function clean({ quiet = false } = {}) {
@@ -635,7 +725,7 @@ async function clean({ quiet = false } = {}) {
     gallery: (await prisma.galleryItem.deleteMany({ where: { alt: { startsWith: P } } })).count,
     videos: (await prisma.video.deleteMany({ where: { title: { startsWith: P } } })).count,
     websiteCopy: (
-      await prisma.siteSetting.deleteMany({ where: { updatedBy: SETTINGS_AUTHOR } })
+      await prisma.siteSetting.deleteMany({ where: { key: { in: await demoSettingKeys() } } })
     ).count,
   };
   if (!quiet) {
@@ -738,7 +828,7 @@ async function count() {
   const publishedStories = await prisma.studentStory.count({
     where: { studentName: { startsWith: P }, published: true },
   });
-  const websiteCopy = await prisma.siteSetting.count({ where: { updatedBy: SETTINGS_AUTHOR } });
+  const websiteCopy = (await demoSettingKeys()).length;
   const withPhoto = await prisma.topper.count({
     where: { studentName: { startsWith: P }, photoUrl: { not: null } },
   });
@@ -791,6 +881,27 @@ try {
       console.log(`    ${s.key}  ${String(byScenario[s.key] ?? 0).padStart(2)} records  -  ${s.label}`);
     }
     console.log('\n  Run `npm run seed:demo:clean` to remove all of it.');
+    console.log('');
+    /*
+      ⚠ THE CACHED PAGES DO NOT KNOW THIS HAPPENED.
+
+      Everything above went straight to Postgres through Prisma, which fires no
+      revalidation - so the cached public routes keep serving whatever they
+      rendered last. The homepage, /faculty and /announcements are the ISR ones
+      and will show the PREVIOUS dataset for up to fifteen minutes; the admin,
+      /results, /stories, /gallery and /videos are dynamic and update at once.
+
+      That is the same hazard scripts/verify-admin.mjs records for its own
+      direct writes, and it reads exactly like a broken seeder: you run this,
+      open the homepage, and see the data you just deleted. Measured 5 Sep 2026
+      after a clean - the database held zero faculty and /faculty still showed
+      a teacher. Restarting the server is the quickest way to make every route
+      agree with the database.
+    */
+    console.log('  NOTE: the homepage, /faculty and /announcements are cached for up');
+    console.log('        to 15 minutes and will keep showing the PREVIOUS content.');
+    console.log('        Restart the server to see this dataset on every route');
+    console.log('        immediately. The admin is never cached.');
     console.log('');
     console.log('  NOTE: this dataset no longer conflicts with verify:integration.');
     console.log('        Three of its assertions used to require an empty content');

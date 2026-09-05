@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { institute } from '@/config/institute';
-import { pageMetadata, listingIndexing } from '@/lib/seo';
+import { listingIndexing } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublishedResults, asProgramme } from '@/lib/public-data';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
@@ -51,7 +52,7 @@ export async function generateMetadata({
     year ? String(year) : null,
   ].filter(Boolean);
 
-  return pageMetadata({
+  return publicPageMetadata({
     title: scope.length > 0 ? `Results — ${scope.join(' ')}` : 'Results',
     description: `Student results published by ${institute.name}, ${institute.locality}.`,
     path: '/results',

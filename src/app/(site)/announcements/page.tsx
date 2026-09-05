@@ -1,17 +1,19 @@
 import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getActiveAnnouncements } from '@/lib/public-data';
 import { Section, PageHeader } from '@/components/primitives/section';
 import { Button } from '@/components/primitives/button';
 import { AnnouncementCard } from '@/components/domain/public-cards';
 import { getSiteContent } from '@/lib/site-content';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Updates',
-  description: `Latest updates and notices from ${institute.name}, ${institute.locality}.`,
-  path: '/announcements',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'Updates',
+    description: `Latest updates and notices from ${institute.name}, ${institute.locality}.`,
+    path: '/announcements',
+  });
+}
 
 export const revalidate = 900;
 

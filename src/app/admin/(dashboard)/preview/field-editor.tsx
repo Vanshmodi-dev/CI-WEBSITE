@@ -8,6 +8,7 @@ import { Button } from '@/components/primitives/button';
 import { inputClass, textareaClass } from '@/components/primitives/field';
 import { EDIT_TOKEN_FIELD } from '@/lib/stale-edit';
 import type { FieldView } from '@/config/site-content';
+import { MediaField } from '@/components/admin/media-field';
 
 const initial: WebsiteFormState = { status: 'idle' };
 
@@ -179,6 +180,31 @@ export function FieldEditor({
             </p>
           ) : null}
 
+          {/*
+            A PHOTOGRAPH IS EDITED WITH THE PICKER, NOT TYPED AS A PATH.
+
+            Without this branch a `media` field falls through to the textarea
+            below and the teacher is shown `/media/9f2c...c1.jpg` to edit by
+            hand - which is precisely the interface the media pipeline was
+            built to delete, reappearing in the one screen that is meant to be
+            the friendliest in the admin.
+
+            It stays IN the preview rather than being filtered out of it: the
+            preview's contract, asserted by verify-cms.mjs section 8, is that
+            it lists every registered field and nothing else. A field that is
+            editable in one editor and invisible in the other is how a teacher
+            concludes the setting does not exist.
+          */}
+          {field.kind === 'media' ? (
+            <MediaField
+              name={field.key}
+              label={field.label}
+              value={value}
+              hint={field.help}
+              error={error}
+              required={false}
+            />
+          ) : (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={inputId} className="text-small font-medium text-text">
               {field.blankable ? 'Text (may be left blank)' : 'Text'}
@@ -224,8 +250,11 @@ export function FieldEditor({
                 : ' Clear it to put the original wording back.'}
             </p>
           </div>
+          )}
 
-          {field.fallback.trim() !== '' ? (
+          {/* A path is not "wording", so the original-value panel below is
+              suppressed for a photograph - the picker already shows it. */}
+          {field.kind !== 'media' && field.fallback.trim() !== '' ? (
             <div className="rounded-md border border-rule bg-surface p-3">
               <p className="text-[12px] font-medium text-muted">Original wording</p>
               <p className="mt-1 whitespace-pre-line text-[13px] text-text">

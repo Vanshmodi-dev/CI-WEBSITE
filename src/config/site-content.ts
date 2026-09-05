@@ -2,6 +2,7 @@ import { institute, addressFull, publishedCourses } from './institute.ts';
 import { primaryNav, footerNav, HIDDEN_UNTIL_POPULATED } from './nav.ts';
 import { validateCoordinates } from '../lib/location.ts';
 import { validateEmail, validateSocial } from '../lib/contact-links.ts';
+import { keyFromPath } from '../lib/media/format.ts';
 
 /**
  * THE EDITABLE-CONTENT REGISTRY.
@@ -52,7 +53,17 @@ export type FieldKind =
   /** A short list — one item per line. */
   | 'lines'
   /** "on" or "" — rendered as a checkbox. */
-  | 'toggle';
+  | 'toggle'
+  /**
+   * A photograph, chosen with the same picker every other photo field uses.
+   *
+   * The stored value is a PATH and never bytes: either `/media/<key>` for
+   * something uploaded through the Topic 5 pipeline, or the one static asset
+   * declared in `SHARE_CARD_PATH`. `validateShareImage` below refuses
+   * everything else, so this can never become a field that points the website
+   * at an arbitrary remote URL.
+   */
+  | 'media';
 
 /**
  * WHERE A FIELD ACTUALLY APPEARS ON THE PUBLIC SITE.
@@ -103,7 +114,8 @@ export type FieldGroupId =
   | 'about'
   | 'courses'
   | 'pages'
-  | 'navigation';
+  | 'navigation'
+  | 'sharing';
 
 export type FieldGroup = {
   id: FieldGroupId;
@@ -152,6 +164,13 @@ export const FIELD_GROUPS: readonly FieldGroup[] = [
     title: 'Menu and footer',
     blurb:
       'What each menu entry is called, and whether it is shown. Where each one goes is fixed, because a menu link to a page that does not exist is the worst kind of broken link.',
+    affects: ['*'],
+  },
+  {
+    id: 'sharing',
+    title: 'Link previews',
+    blurb:
+      'The picture that appears when somebody shares a link to this website on WhatsApp. It is the same picture for every page.',
     affects: ['*'],
   },
 ];
@@ -1075,6 +1094,96 @@ const CLOSING_FIELDS: readonly EditableField[] = CLOSING_COPY.flatMap((page) => 
   },
 ]);
 
+/**
+ * THE SHARE CARD — what a link to this website looks like in a chat.
+ *
+ * =============================================================================
+ * WHY THIS FIELD EXISTS
+ * =============================================================================
+ * Phase 26 read the metadata every public page actually emits. Every one of
+ * them declared `twitter:card = summary_large_image` - the format that is
+ * nothing BUT a large image - and not one of them emitted an image, because
+ * `pageMetadata()` never set one and no `opengraph-image` file existed. So
+ * every link the institute has ever sent unfurled as a grey rectangle.
+ *
+ * That is not a cosmetic loss on this project specifically. Master Plan section
+ * 07 makes WhatsApp the primary conversion path: the link a teacher pastes into
+ * a parents group IS the marketing, and an unfurled card with the institute's
+ * mark on it is the difference between a message that looks like the institute
+ * and one that looks like a forwarded spam link.
+ *
+ * =============================================================================
+ * WHY IT IS EDITABLE, WHEN THE SEARCH TITLE AND DESCRIPTION ARE NOT
+ * =============================================================================
+ * `CODE_OWNED` at the foot of this file records a deliberate decision that the
+ * words in a search result stay in code: an editable search title is an
+ * invitation to stuff it with keywords, and stuffed metadata harms a local
+ * listing. That argument is about WORDS, and it does not reach a picture - a
+ * photograph of the classroom cannot be keyword-stuffed, and choosing which
+ * photograph represents the institute is exactly the kind of decision the
+ * owner should not need a developer for.
+ *
+ * So the words stay code-owned and the picture does not. The distinction is
+ * recorded in CODE_OWNED itself so the list stays a true account.
+ *
+ * =============================================================================
+ * WHY THE FALLBACK IS A PATH AND NOT AN EMPTY STRING
+ * =============================================================================
+ * This field is deliberately NOT `blankable`. Every other optional field on
+ * this site renders nothing when it is empty, and nothing is the correct
+ * outcome for an absent phone number or an unwritten course description.
+ * It is the wrong outcome here, because "no share image" is the exact defect
+ * this field was added to fix. So clearing the box restores the generated
+ * brand card rather than removing the picture - the same "clearing is an undo"
+ * rule the rest of the registry follows, pointed at a safe default instead of
+ * at silence.
+ */
+export const SHARE_CARD_PATH = '/brand/share-card.png';
+
+/** The generated card's real dimensions. Asserted against the file by a test. */
+export const SHARE_CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/**
+ * A share image is one of exactly two things, and never a URL.
+ *
+ * ⚠ THE POINT OF THIS VALIDATOR IS THE THIRD CASE IT REFUSES.
+ *
+ * `og:image` is consumed by other people's servers - WhatsApp, Facebook and X
+ * all fetch whatever this names and show it under the institute's name. A field
+ * that accepted `https://…` would let anything stored in this row become a
+ * picture published beside the institute's brand, from a host nobody here
+ * controls, without ever appearing on a page a person would notice. That is a
+ * remote-content trust boundary, not a formatting preference, and the master
+ * directive's rule for media is that it goes through the upload pipeline where
+ * it is sniffed, re-encoded and re-hosted.
+ *
+ * So: our own generated card, or a photograph already ingested by that
+ * pipeline. Nothing else, and `keyFromPath` - the same function the media route
+ * and the reference counter use - is what decides the second case.
+ */
+export function validateShareImage(value: string): string | null {
+  if (value === SHARE_CARD_PATH) return null;
+  if (keyFromPath(value) !== null) return null;
+  return 'Choose a photograph you have uploaded, or clear this to use the Commerce Insight logo card.';
+}
+
+const SHARING_FIELDS: readonly EditableField[] = [
+  {
+    key: 'seo.shareImage',
+    group: 'sharing',
+    renders: { route: '*', section: 'Link preview picture' },
+    label: 'Picture shown when a link is shared',
+    help:
+      'Appears on WhatsApp and social media when somebody shares any page of this website. A wide photograph works best. Clear it to go back to the Commerce Insight logo card.',
+    kind: 'media',
+    // Comfortably over `/media/` plus a 32-character key and an extension, and
+    // matched to the `photoUrl` columns every other photo field stores into.
+    maxLength: 500,
+    fallback: SHARE_CARD_PATH,
+    validate: validateShareImage,
+  },
+];
+
 export const EDITABLE_FIELDS: readonly EditableField[] = [
   ...CONTACT_FIELDS,
   ...HOME_FIELDS,
@@ -1088,6 +1197,7 @@ export const EDITABLE_FIELDS: readonly EditableField[] = [
   ...NAV_FIELDS,
   ...FOOTER_FIELDS,
   ...FOOTER_EXTRA_FIELDS,
+  ...SHARING_FIELDS,
 ];
 
 const BY_KEY = new Map(EDITABLE_FIELDS.map((f) => [f.key, f]));
@@ -1267,6 +1377,21 @@ export function cleanValue(field: EditableField, raw: unknown): string {
         .slice(0, 12)
         .join('\n')
         .slice(0, field.maxLength);
+    /*
+      A path, so ALL whitespace goes rather than collapsing to single spaces.
+      No path this field can legitimately hold contains one, and a stray space
+      from a copy-paste would otherwise survive cleaning and then fail
+      validation with a message about choosing a photograph - which is not
+      what went wrong.
+
+      Truncation is deliberately absent, for the same reason it is present
+      everywhere else: a truncated sentence is a shorter sentence, but a
+      truncated path is a broken one. An over-long value is left intact so
+      `validateValue` refuses it with a message, rather than being quietly cut
+      down to something that would 404 inside somebody's chat window.
+    */
+    case 'media':
+      return stripped.replace(/\s+/g, '');
   }
 }
 
@@ -1426,8 +1551,8 @@ export const CODE_OWNED: ReadonlyArray<{ label: string; why: string }> = [
     why: 'A web address is how every existing link finds the page. Renaming one breaks every poster, WhatsApp message and search result that already points at it.',
   },
   {
-    label: 'Titles and descriptions shown in Google results',
-    why: 'An editable search title is an invitation to stuff it with keywords, and stuffed metadata actively harms a local listing. These are generated from the page content instead.',
+    label: 'The WORDS shown in a Google result and on a shared link',
+    why: 'An editable search title is an invitation to stuff it with keywords, and stuffed metadata actively harms a local listing. These are generated from the page content instead. The PICTURE on a shared link is yours to change, under Link previews - a photograph cannot be keyword-stuffed, and which one represents the institute is your decision rather than a developer’s.',
   },
   {
     label: 'The institute name and tagline',

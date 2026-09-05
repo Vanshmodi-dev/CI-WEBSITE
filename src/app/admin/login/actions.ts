@@ -33,6 +33,31 @@ export async function signInAction(
   const email = String(formData.get('email') ?? '');
   const password = String(formData.get('password') ?? '');
 
+  /*
+    DEVELOPMENT-ONLY. See the matching block in src/lib/auth.ts for why this is
+    a bare console.warn rather than `log` (that module redacts `email`, which is
+    the field being diagnosed) and why NODE_ENV is the right guard.
+
+    This half reports what the BROWSER actually sent, before any normalisation.
+    `signIn` trims and lowercases the email, so by the time it runs the evidence
+    of an autofill that appended a space is already gone — and a password is
+    deliberately never trimmed, because a space can be a legitimate character in
+    one. Whether the raw values arrived clean is therefore only observable here.
+  */
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(
+      '[dev sign-in] ' +
+        JSON.stringify({
+          stage: 'received from browser',
+          emailRaw: email,
+          emailWillBeNormalisedTo: email.trim().toLowerCase(),
+          emailEdgeWhitespace: email !== email.trim(),
+          passwordLength: password.length,
+          passwordEdgeWhitespace: password !== password.trim(),
+        }),
+    );
+  }
+
   const ip = clientIpFrom(await headers());
   const ipHash = hashIp(ip);
 

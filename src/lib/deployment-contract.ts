@@ -96,8 +96,18 @@ export const ENV_CONTRACT: readonly EnvSpec[] = [
     secret: true,
     clientExposed: false,
     purpose: 'PostgreSQL connection string. Everything depends on it.',
+    /*
+      "Pooled, not direct" was Neon's vocabulary and it inverts on Prisma
+      Postgres, which offers a `prisma://` Accelerate URL alongside a direct TCP
+      one. The adapter speaks the PostgreSQL wire protocol and cannot use
+      Accelerate at all, so the rule that actually holds across providers is
+      about the PROTOCOL, not the word on the dashboard button.
+    */
     remediation:
-      'Set it to the pooled connection string from your PostgreSQL provider. Use the POOLED string, not the direct one - the driver adapter opens a connection per invocation.',
+      'Set it to a postgresql:// (or postgres://) connection string that goes through your ' +
+      "provider's connection pooler - the driver adapter opens a connection per invocation. " +
+      'On Prisma Postgres that is the DIRECT TCP string from API Keys, not the prisma:// ' +
+      'Accelerate URL, which this adapter cannot speak. On Neon it is the pooled string.',
   },
   {
     name: 'ENQUIRY_SECRET',
@@ -149,68 +159,58 @@ export const ENV_CONTRACT: readonly EnvSpec[] = [
 
   /*
     ===========================================================================
-    MEDIA STORAGE (Phase 17)
+    MEDIA STORAGE — Cloudinary (migrated from Cloudflare R2, 5 Sep 2026)
     ===========================================================================
-    All four are OPTIONAL as a group and MANDATORY as a set. Nothing set means a
-    developer's machine, where local disk is correct. All four set means real
-    object storage. THREE set is a mistake, and `readS3Config()` refuses rather
-    than falling back — a half-configured deployment that quietly wrote to a
-    disk it is about to lose is exactly the failure Topic 5 declined to ship.
+    All three are OPTIONAL as a group and MANDATORY as a set. Nothing set means
+    a developer's machine, where local disk is correct. All three set means real
+    object storage. TWO set is a mistake, and `readCloudinaryConfig()` refuses
+    rather than falling back — a half-configured deployment that quietly wrote to
+    a disk it is about to lose is exactly the failure Topic 5 declined to ship.
 
     The pre-flight check enforces the same rule mechanically (P-MEDIA-01..05),
     so this is not a note somebody has to remember to act on.
+
+    WHAT REPLACED WHAT. MEDIA_S3_ENDPOINT, MEDIA_S3_BUCKET,
+    MEDIA_S3_ACCESS_KEY_ID, MEDIA_S3_SECRET_ACCESS_KEY and MEDIA_S3_REGION were
+    removed here on 5 September 2026. Nothing reads them any more; leaving them
+    in the contract would make the pre-flight check ask an operator to configure
+    a provider the application can no longer talk to.
   */
   {
-    name: 'MEDIA_S3_ENDPOINT',
+    name: 'CLOUDINARY_CLOUD_NAME',
     requirement: 'optional',
     secret: false,
     clientExposed: false,
     purpose:
-      'S3-compatible storage endpoint, e.g. https://<account>.r2.cloudflarestorage.com. ' +
-      'The service address only - no bucket name, no path.',
+      'Cloudinary account (cloud) name. The short account name only - never the ' +
+      'whole cloudinary:// URL.',
     remediation:
-      'Set all four MEDIA_S3_* variables together, or none of them. Photographs are ' +
+      'Set all three CLOUDINARY_* variables together, or none of them. Photographs are ' +
       'lost on the next deploy if an ephemeral host has no durable storage.',
   },
   {
-    name: 'MEDIA_S3_BUCKET',
+    name: 'CLOUDINARY_API_KEY',
     requirement: 'optional',
     secret: false,
     clientExposed: false,
-    purpose: 'The bucket photographs are stored in. Must NOT be publicly listable.',
+    purpose: 'Cloudinary API key. All digits. Identifies the caller; not itself a secret.',
     remediation:
-      'Create a private bucket. Objects are served through /media/[key], never directly, ' +
-      'so the bucket needs no public access at all.',
+      'Copy it from the Cloudinary console. If it is not all digits you have pasted ' +
+      'the wrong field, most often the whole cloudinary:// URL.',
   },
   {
-    name: 'MEDIA_S3_ACCESS_KEY_ID',
+    name: 'CLOUDINARY_API_SECRET',
     requirement: 'optional',
     secret: true,
     clientExposed: false,
-    purpose: 'Access key id for the storage bucket.',
-    remediation:
-      'Issue a token scoped to this ONE bucket with object read/write only. ' +
-      'Never an account-wide key.',
-  },
-  {
-    name: 'MEDIA_S3_SECRET_ACCESS_KEY',
-    requirement: 'optional',
-    secret: true,
-    clientExposed: false,
-    purpose: 'Secret key for the storage bucket. Signs every request; never transmitted.',
-    remediation:
-      'Store it only in the host\'s environment settings. If it ever appears in a ' +
-      'repository or a log, rotate it first and worry about history second.',
-  },
-  {
-    name: 'MEDIA_S3_REGION',
-    requirement: 'optional',
-    secret: false,
-    clientExposed: false,
+    minLength: 16,
     purpose:
-      'SigV4 signing region. Defaults to "auto", which is what Cloudflare R2 wants. ' +
-      'A real AWS S3 bucket needs its own region here.',
-    remediation: 'Leave unset for R2. Set it to the bucket region for AWS S3.',
+      'Cloudinary API secret. Signs every upload, delete and Admin API call; ' +
+      'SERVER-SIDE ONLY and never transmitted to a browser.',
+    remediation:
+      "Store it only in the host's environment settings. It must never be prefixed " +
+      'NEXT_PUBLIC_. If it ever appears in a repository, a log or a client bundle, ' +
+      'rotate it first and worry about history second.',
   },
 ] as const;
 
@@ -1162,6 +1162,26 @@ export const ROUTES: readonly RouteSpec[] = [
     note:
       'Photo library. Uploads are re-encoded through sharp and stored under a ' +
       'content hash; deletion refuses while a record still references the file.',
+  },
+  {
+    path: '/admin/media/storage',
+    kind: 'admin',
+    requiresAuth: true,
+    /*
+      `mutates: false` is the accurate answer and it is worth being precise
+      about. The one Server Action here refreshes a cached READ from Cloudinary;
+      it writes nothing to the database, nothing to storage, and nothing to the
+      account. It is rate limited because the provider's Admin API is, not
+      because it changes anything.
+    */
+    mutates: false,
+    inSitemap: false,
+    crawlable: false,
+    note:
+      'Storage usage. Reports this site\'s own media_assets totals alongside ' +
+      'Cloudinary account usage, kept separate on purpose - the provider meters ' +
+      'one pool of credits and publishes no storage-only allowance, so no ' +
+      '"storage remaining" figure is shown.',
   },
   {
     path: '/admin/website',

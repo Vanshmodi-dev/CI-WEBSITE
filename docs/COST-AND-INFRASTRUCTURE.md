@@ -131,7 +131,7 @@ So the requirement list that used to sit here as future work is done.
 
 | Implementation | Chosen when |
 | --- | --- |
-| `S3MediaStore` | All four `MEDIA_S3_*` variables are set. Real object storage |
+| `CloudinaryMediaStore` | All three `CLOUDINARY_*` variables are set. Real object storage |
 | `LocalDiskStore` | Nothing set, and the host keeps its filesystem. A developer |
 | `UnconfiguredStore` | Nothing set, and the host discards its filesystem. Refuses |
 | `MisconfiguredStore` | **Some** variables set. Refuses, everywhere, always |
@@ -161,7 +161,10 @@ Judged on what actually matters for photographs that may include children.
 | Private objects | Yes | Yes | Yes | Yes |
 | Card required | **Yes, even on the free tier** | Yes | Existing Vercel account | Yes |
 
-**Recommendation: Cloudflare R2.**
+**Recommendation (superseded 5 Sep 2026): Cloudflare R2.** The project moved to
+**Cloudinary** instead - see [`MEDIA-STORAGE-CLOUDINARY.md`](MEDIA-STORAGE-CLOUDINARY.md).
+The comparison below is kept because the reasoning about egress pricing is still
+the right way to judge an object store; only the conclusion changed.
 
 Two things decide it. Egress is free and unmetered, which removes the single
 cost that can surprise a small institute — a gallery page that gets shared

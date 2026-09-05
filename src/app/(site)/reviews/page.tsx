@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { institute } from '@/config/institute';
-import { pageMetadata } from '@/lib/seo';
+import { publicPageMetadata } from '@/lib/share-image';
 import { getPublicReviews } from '@/lib/reviews/fetch';
 import { getSiteContent, getContactBlock, whatsappLink } from '@/lib/site-content';
 import { Section, PageHeader, ClosingCta } from '@/components/primitives/section';
@@ -8,11 +8,13 @@ import { Button } from '@/components/primitives/button';
 import { ReviewCard } from '@/components/domain/public-cards';
 import { ReviewProvenance } from '@/components/domain/review-provenance';
 
-export const metadata: Metadata = pageMetadata({
-  title: 'Reviews',
-  description: `What people say about ${institute.name} in ${institute.locality}.`,
-  path: '/reviews',
-});
+export async function generateMetadata(): Promise<Metadata> {
+  return publicPageMetadata({
+    title: 'Reviews',
+    description: `What people say about ${institute.name} in ${institute.locality}.`,
+    path: '/reviews',
+  });
+}
 
 /**
  * Six hours, matched to the Review Engine's harvest cadence.

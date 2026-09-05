@@ -154,9 +154,49 @@ const nextConfig: NextConfig = {
     // Optimised renders are immutable for a given source+width+quality, so a
     // short TTL only buys repeated work. One week.
     minimumCacheTTL: 604800,
+    /*
+      ⚠ ONE ENTRY PER HOST, EACH WITH A PATH. No wildcard hostnames.
+
+      Every entry here is a host this site will ask its own image optimiser to
+      fetch from on request. A wildcard would turn the optimiser into an open
+      proxy that anybody can point at anything by crafting a URL.
+
+      If a host is added here, `netlify.toml`'s `[images] remote_images` needs
+      the matching entry too — Netlify Image CDN keeps its own allowlist and
+      fails closed without it.
+    */
     remotePatterns: [
-      // YouTube thumbnails (Phase 5). Nothing else is permitted.
+      // YouTube thumbnails (Phase 5).
       { protocol: 'https', hostname: 'i.ytimg.com', pathname: '/**' },
+      /*
+        Cloudinary (5 Sep 2026), scoped to this account's delivery prefix.
+
+        Uploaded photographs are normally served through `/media/[key]`, which
+        is same-origin and needs no entry here at all. This exists so that
+        `next/image` can also be pointed at a Cloudinary URL directly — the
+        share-card and any future direct-CDN rendering — without reopening the
+        allowlist later under time pressure.
+
+        The pathname is NOT `/**`: it is narrowed to Cloudinary's IMAGE DELIVERY
+        path, so the optimiser cannot be aimed at the raw/video/fetch endpoints
+        on that host. It does NOT pin the cloud name — that value arrives from
+        the environment at runtime and is not reliably present when this config
+        is evaluated at build time, so hardcoding it would break the build on a
+        host that sets it later. The residual exposure is images from other
+        Cloudinary accounts, which is a public CDN either way.
+
+        The CSP is deliberately unchanged. `img-src` does not list
+        res.cloudinary.com because nothing renders a Cloudinary URL directly:
+        `/media/[key]` is same-origin, and `next/image` re-serves optimised
+        output from `/_next/image`, which is also same-origin. Add the host to
+        `src/lib/csp.ts` only when something genuinely emits a bare Cloudinary
+        `<img src>`.
+      */
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/*/image/upload/**',
+      },
     ],
   },
 

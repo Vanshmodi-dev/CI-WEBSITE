@@ -330,6 +330,17 @@ const LISTS = [
   '/admin/faculty', '/admin/reviews', '/admin/gallery', '/admin/videos', '/admin/batches',
   '/admin/announcements', '/admin/preview', '/admin/media', '/admin/data',
 ];
+
+/*
+  Sub-pages reached FROM a list, which are not lists themselves.
+
+  ⚠ NOT IN `LISTS`, and the distinction is load-bearing. A top-level section
+  must not carry a back link ("back" from a section is meaningless); a page
+  reached from one MUST. Filing /admin/media/storage under LISTS made the
+  back-link assertion below fail on a page whose back link is correct - the
+  suite was right and the categorisation was wrong.
+*/
+const SUBPAGES = ['/admin/media/storage'];
 const NEW = [
   '/admin/students/new', '/admin/stories/new', '/admin/faculty/new',
   '/admin/gallery/new', '/admin/videos/new', '/admin/batches/new',
@@ -348,7 +359,7 @@ for (const [prefix, id] of DETAIL) {
   else console.log(`  SKIP  ${prefix}[id] — no record exists to open`);
 }
 
-const ROUTES = [...LISTS, ...NEW, ...detailRoutes];
+const ROUTES = [...LISTS, ...SUBPAGES, ...NEW, ...detailRoutes];
 
 section(`1. EVERY ADMIN ROUTE AT ${WIDTHS.join(', ')} px (${ROUTES.length} routes)`);
 {
@@ -390,7 +401,7 @@ section(`1. EVERY ADMIN ROUTE AT ${WIDTHS.join(', ')} px (${ROUTES.length} route
  */
 section('2. EVERY PAGE OPENED FROM A LIST OFFERS A WAY BACK TO IT');
 {
-  const fromAList = [...NEW, ...detailRoutes];
+  const fromAList = [...SUBPAGES, ...NEW, ...detailRoutes];
   const missing = [];
   const undersized = [];
   const wrongTarget = [];
